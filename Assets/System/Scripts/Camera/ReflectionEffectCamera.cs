@@ -232,90 +232,106 @@ namespace MassiveHadronLtd
 		}
 
 		// ===================================================================
-		// UpdateEffect
+		// UpdateEffect - Now only rebuilds material when mode actually changes
 		// ===================================================================
 		private void UpdateEffect(EffectMode value)
 		{
+			if (value == EffectMode.Null)
+				value = EffectMode.Debug;
+
+			bool modeChanged = (effectMode != value) || (effectMaterial == null) || (lastAppliedMode != value);
+
 			effectMode = value;
 
-			// Explicit cleanup of dynamic resources from previous mode
-			if (effectMaterial != null && isMaterialDynamic)
+			if (modeChanged)
 			{
-				DestroyImmediate(effectMaterial);
-				effectMaterial = null;
-			}
-			if (noiseTexture != null && isTextureDynamic)
-			{
-				DestroyImmediate(noiseTexture);
-				noiseTexture = null;
-				isTextureDynamic = false;
-			}
-			isMaterialDynamic = false;
+				// Heavy path: recreate material and setup
+				Debug.Log($"[ReflectionEffectCamera] Rebuilding material for mode: {effectMode}", this);
 
-			// Mode-specific material creation
-			switch (effectMode)
-			{
-				case EffectMode.PerfectMirror:
-					effectMaterial = MaterialUtils.CreatePerfectMirrorOpaqueMaterial(renderTexture, mirrorTint);
-					isMaterialDynamic = true;
-					break;
-
-				case EffectMode.SurfaceFilm:
-					noiseTexture = WangTileGenerator.GenerateWangTileAtlas();
-					isTextureDynamic = true;
-					effectMaterial = MaterialUtils.CreatePerlinWangOpaque(renderTexture, mirrorTint, noiseTexture, mirrorTint.a, noiseScale);
-					isMaterialDynamic = true;
-					break;
-
-				case EffectMode.FrostEffect:
-					noiseTexture = WangTileGenerator.GenerateWangTileAtlas();
-					isTextureDynamic = true;
-					effectMaterial = MaterialUtils.CreateFrostOpaqueMaterial(mirrorTint, frostDepth, renderTexture, noiseTexture, noiseStrength);
-					isMaterialDynamic = true;
-					break;
-
-				case EffectMode.Water:
-					effectMaterial = MaterialUtils.CreateWaterMaterialOpaque(mirrorTint, renderTexture, rippleSpeed, rippleAmplitude, rippleFrequency, rippleOffset, reflectionStrength, null);
-					isMaterialDynamic = true;
-					break;
-
-				case EffectMode.OceanEffect:
-					noiseTexture = WangTileGenerator.GenerateWangTileAtlas();
-					isTextureDynamic = true;
-					effectMaterial = MaterialUtils.CreateOceanOpaqueMaterial(mirrorTint, rippleSpeed, rippleAmplitude, rippleFrequency, rippleOffset, frostDepth, noiseStrength, frostThreshold, frostFadeRange, null, noiseTexture);
-					isMaterialDynamic = true;
-					break;
-
-				default:
+				// Explicit cleanup of dynamic resources from previous mode
+				if (effectMaterial != null && isMaterialDynamic)
+				{
+					DestroyImmediate(effectMaterial);
 					effectMaterial = null;
-					var defaultData = mainCamera.gameObject.GetComponent<UniversalAdditionalCameraData>();
-					defaultData.cameraStack.Clear();
-					defaultData.cameraStack.Add(reflectionCamera);
-					break;
+				}
+				if (noiseTexture != null && isTextureDynamic)
+				{
+					DestroyImmediate(noiseTexture);
+					noiseTexture = null;
+					isTextureDynamic = false;
+				}
+				isMaterialDynamic = false;
+
+				// Mode-specific material creation
+				switch (effectMode)
+				{
+					case EffectMode.PerfectMirror:
+						effectMaterial = MaterialUtils.CreatePerfectMirrorOpaqueMaterial(renderTexture, mirrorTint);
+						isMaterialDynamic = true;
+						break;
+
+					case EffectMode.SurfaceFilm:
+						noiseTexture = WangTileGenerator.GenerateWangTileAtlas();
+						isTextureDynamic = true;
+						effectMaterial = MaterialUtils.CreatePerlinWangOpaque(renderTexture, mirrorTint, noiseTexture, mirrorTint.a, noiseScale);
+						isMaterialDynamic = true;
+						break;
+
+					case EffectMode.FrostEffect:
+						noiseTexture = WangTileGenerator.GenerateWangTileAtlas();
+						isTextureDynamic = true;
+						effectMaterial = MaterialUtils.CreateFrostOpaqueMaterial(mirrorTint, frostDepth, renderTexture, noiseTexture, noiseStrength);
+						isMaterialDynamic = true;
+						break;
+
+					case EffectMode.Water:
+						effectMaterial = MaterialUtils.CreateWaterMaterialOpaque(mirrorTint, renderTexture, rippleSpeed, rippleAmplitude, rippleFrequency, rippleOffset, reflectionStrength, null);
+						isMaterialDynamic = true;
+						break;
+
+					case EffectMode.OceanEffect:
+						noiseTexture = WangTileGenerator.GenerateWangTileAtlas();
+						isTextureDynamic = true;
+						effectMaterial = MaterialUtils.CreateOceanOpaqueMaterial(mirrorTint, rippleSpeed, rippleAmplitude, rippleFrequency, rippleOffset, frostDepth, noiseStrength, frostThreshold, frostFadeRange, null, noiseTexture);
+						isMaterialDynamic = true;
+						break;
+
+					default:
+						effectMaterial = null;
+						var defaultData = mainCamera.gameObject.GetComponent<UniversalAdditionalCameraData>();
+						if (defaultData != null)
+						{
+							defaultData.cameraStack.Clear();
+							defaultData.cameraStack.Add(reflectionCamera);
+						}
+						break;
+				}
+
+				// Final setup for cameras
+				if (effectMaterial != null)
+				{
+					if (textureCamera)
+					{
+						textureCamera.targetTexture = renderTexture;
+						textureCamera.enabled = true;
+					}
+					if (reflectionCamera) reflectionCamera.targetTexture = renderTexture;
+				}
+				else
+				{
+					if (textureCamera)
+					{
+						textureCamera.targetTexture = null;
+						textureCamera.enabled = false;
+					}
+					if (reflectionCamera) reflectionCamera.targetTexture = null;
+				}
+
+				lastAppliedMode = effectMode;
 			}
 
-			// Final setup for cameras and mesh
-			if (effectMaterial != null)
-			{
-				if (textureCamera)
-				{
-					textureCamera.targetTexture = renderTexture;
-					textureCamera.enabled = true;
-				}
-				if (reflectionCamera) reflectionCamera.targetTexture = renderTexture;
-			}
-			else
-			{
-				if (textureCamera)
-				{
-					textureCamera.targetTexture = null;
-					textureCamera.enabled = false;
-				}
-				if (reflectionCamera) reflectionCamera.targetTexture = null;
-			}
-
+			// Always update material properties (cheap operation)
 			UpdateMaterialProperties();
-			lastAppliedMode = effectMode;
 		}
 
 		private void UpdateMaterialProperties()
@@ -408,21 +424,22 @@ namespace MassiveHadronLtd
 			if (!isActiveAndEnabled) return;
 
 			if (Application.isPlaying && lastAppliedMode == effectMode)
+			{
+				// Mode didn't change → just update properties
 				UpdateMaterialProperties();
+			}
 			else
+			{
+				// Mode changed or first time → apply defaults and rebuild
 				ApplyDefaults(effectMode);
-
-			if (mainCamera == null) return;
-
-			if (effectMode != lastAppliedMode || lastAppliedMode == EffectMode.Null)
 				Invoke(nameof(DeferredRebuild), 0f);
+			}
 
-			lastAppliedMode = effectMode;
-
-			void DeferredRebuild() => UpdateEffect(effectMode);
+			lastAppliedMode = effectMode; // Keep this for OnValidate detection
 		}
 
-		//need to get this out of reflection camera
+		private void DeferredRebuild() => UpdateEffect(effectMode);
+
 		public void OnRenderSettingsChanged(UnityRenderSettings renderSettings)
 		{
 			foreach (var childCam in GetComponentsInChildren<Camera>(true))
@@ -430,7 +447,7 @@ namespace MassiveHadronLtd
 				var overrideComp = childCam.gameObject.GetOrAddComponent<CameraRenderSettingsOverride>();
 				overrideComp.OverrideSettings = renderSettings;
 			}
-			tintedSkyboxTexture = CubemapUtility.GetTintedCubemap(renderSettings.skybox).Clone();//tintedSkyboxTexture = CubemapUtility.GetSkyboxAsCubemap(renderSettings.skybox).Clone(); - debug
+			tintedSkyboxTexture = CubemapUtility.GetTintedCubemap(renderSettings.skybox).Clone();
 			UpdateMaterialProperties();
 		}
 
