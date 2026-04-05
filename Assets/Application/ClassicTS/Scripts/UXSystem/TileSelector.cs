@@ -123,23 +123,7 @@ namespace ClassicTilestorm
 			ReadyCallbackRegistry.Raise(this);
 		}
 
-		//private IEnumerator Start()
-		//{
-		//	yield return null;
-		//	yield return null;
-		//	RebuildAtlas();
-		//}
-
-		private void OnEnable()
-		{
-			StartCoroutine(DelayRebuild());
-			IEnumerator DelayRebuild()
-			{
-				yield return null;
-				yield return null;
-				RebuildAtlas();
-			}
-		}
+		private void Start() => RebuildAtlas();// private IEnumerator Start() { yield return null; RebuildAtlas(); }//we don't appear to need to do this any more
 
 		public void RebuildAtlas()
 		{

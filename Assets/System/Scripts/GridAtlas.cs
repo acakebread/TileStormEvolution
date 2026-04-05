@@ -11,10 +11,6 @@ namespace MassiveHadronLtd
 		int CellSize { get; }
 		int Columns { get; }
 		int Rows { get; }
-
-		// If you need to highlight / pick icons later:
-		// bool TryGetUVRect(int index, out Rect uvRect);
-		// or bool TryGetUVRect(object key, out Rect uvRect);  // if you use HashId or something
 	}
 
 	[Serializable]
@@ -120,33 +116,6 @@ namespace MassiveHadronLtd
 
 		protected abstract Texture2D GenerateIcon(IDisposable renderer, object item, int index);
 
-		//private void SetFallbackPixels(int x, int y, int size)
-		//{
-		//	var pixels = new Color32[size * size];
-		//	int margin = size / 4;
-		//	int thick = size / 16;
-		//	var color = new Color32(51, 128, 255, 255); // blue-ish
-
-		//	for (int py = 0; py < size; py++)
-		//		for (int px = 0; px < size; px++)
-		//		{
-		//			bool inH = px >= margin && px < size - margin;
-		//			bool inV = py >= margin && py < size - margin;
-		//			if (!inH || !inV) continue;
-
-		//			bool onEdge =
-		//				(py >= margin && py < margin + thick) ||
-		//				(py >= size - margin - thick && py < size - margin) ||
-		//				(px >= margin && px < margin + thick) ||
-		//				(px >= size - margin - thick && px < size - margin);
-
-		//			if (onEdge)
-		//				pixels[py * size + px] = color;
-		//		}
-
-		//	Texture.SetPixels32(x, y, size, size, pixels);
-		//}
-
 		public bool TryGetUVRect(int index, out Rect uvRect)
 		{
 			uvRect = default;
@@ -185,10 +154,3 @@ namespace MassiveHadronLtd
 		}
 	}
 }
-
-//// Optional: convenience constructor for very simple cases that don't need extra setup
-//protected GridIconAtlas(int cellSize, int columns, IEnumerable<object> items, Color? background = null)
-//{
-//	// Just forward — real work happens in Initialize
-//	Initialize(cellSize, columns, items, background);
-//}

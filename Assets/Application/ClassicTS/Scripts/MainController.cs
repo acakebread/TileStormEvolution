@@ -21,17 +21,9 @@ namespace ClassicTilestorm
 
 		private void Awake()
 		{
-			//workaround for shader problem in command buffer - doesn't appear to be needed any more - comment out for now
-			//var cam = Camera.main;
-			//if (null != cam)
-			//	cam.gameObject.GetOrAddComponent<CameraShaderPrimer>();
-
-			//var mainReflection = cam?.GetComponent<ReflectionEffectCamera>();
-			//if (null != mainReflection) SkyboxUtility.OnSkyboxChanged += mainReflection.OnSkyboxChanged;
-
 			// === ADD AUDIO MANAGER AUTOMATICALLY ===
-			gameObject.AddComponent<AudioManager>(); //audioManager = gameObject.AddComponent<AudioManager>();
-			AssetConfiguration.Initialize(); // Sets initial remapper + roots
+			gameObject.AddComponent<AudioManager>();
+			AssetConfiguration.Initialize();
 			AssetRegistry<GameObject>.NameRemapper = ApplicationSettings.RemapGeometry ? ClassicTileStormAssetRemapHelper.RemapName : null;
 			ApplicationSettings.OnRemapGeometryChanged += (value) =>
 			{
@@ -52,7 +44,7 @@ namespace ClassicTilestorm
 
 		private void Update() => eggbotController?.UpdateEggbot(CurrentMap);
 
-		public void OnApplicationFocus(bool hasFocus) => EditorCameraMovement.OnApplicationFocus(hasFocus);//disabled for now as it wasn't working properly anyway
+		public void OnApplicationFocus(bool hasFocus) => EditorCameraMovement.OnApplicationFocus(hasFocus);
 
 		public void SetPreviewMode(ApplicationMode mode)
 		{
@@ -141,7 +133,6 @@ namespace ClassicTilestorm
 			editorController?.Initialise(CurrentMap);
 		}
 
-		//public void ReloadCurrentMap() { if (null != mapManager && null != mapManager.CurrentMap) LoadMap(mapManager.CurrentMap.name); }
 		public void HandleChangeMap(int delta)
 		{
 			var maps = ResourceManager.Maps;
