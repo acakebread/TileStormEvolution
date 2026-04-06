@@ -103,6 +103,8 @@ namespace MassiveHadronLtd
 			var w = Mathf.RoundToInt(currentSize.x);
 			var h = Mathf.RoundToInt(currentSize.y);
 
+			reflectionEffect.SetExternalOutputTexture(null);
+
 			previewCam.aspect = (float)w / h;
 			var outputTexture = UpdateRenderTexture(w, h);
 
