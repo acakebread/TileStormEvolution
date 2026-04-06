@@ -68,7 +68,8 @@ namespace MassiveHadronLtd
 		private Camera reflectionCamera;
 		private Camera textureCamera;
 		private Camera postProcessingCamera;
-		private RenderTexture renderTexture;
+		private RenderTexture effectRT;
+		private RenderTexture outputRT;
 
 		private Mesh effectMesh;
 		private Material effectMaterial;
@@ -115,7 +116,7 @@ namespace MassiveHadronLtd
 			else
 				UpdateEffect(startMode);
 
-			CreateOrResizeReflectionTexture(Screen.width, Screen.height);
+			UpdateEffectRT(Screen.width, Screen.height);
 		}
 
 		private void OnBeforeRenderingTransparents(RasterCommandBuffer cmd, Camera cam)
@@ -254,23 +255,23 @@ namespace MassiveHadronLtd
 				switch (value)
 				{
 					case EffectMode.PerfectMirror:
-						effectMaterial = MaterialUtils.CreatePerfectMirrorOpaqueMaterial(renderTexture, mirrorTint);
+						effectMaterial = MaterialUtils.CreatePerfectMirrorOpaqueMaterial(effectRT, mirrorTint);
 						break;
 
 					case EffectMode.SurfaceFilm:
 						noiseTexture = WangTileGenerator.GenerateWangTileAtlas();
 						isTextureDynamic = true;
-						effectMaterial = MaterialUtils.CreatePerlinWangOpaque(renderTexture, mirrorTint, noiseTexture, mirrorTint.a, noiseScale);
+						effectMaterial = MaterialUtils.CreatePerlinWangOpaque(effectRT, mirrorTint, noiseTexture, mirrorTint.a, noiseScale);
 						break;
 
 					case EffectMode.FrostEffect:
 						noiseTexture = WangTileGenerator.GenerateWangTileAtlas();
 						isTextureDynamic = true;
-						effectMaterial = MaterialUtils.CreateFrostOpaqueMaterial(mirrorTint, frostDepth, renderTexture, noiseTexture, noiseStrength);
+						effectMaterial = MaterialUtils.CreateFrostOpaqueMaterial(mirrorTint, frostDepth, effectRT, noiseTexture, noiseStrength);
 						break;
 
 					case EffectMode.Water:
-						effectMaterial = MaterialUtils.CreateWaterMaterialOpaque(mirrorTint, renderTexture, rippleSpeed, rippleAmplitude, rippleFrequency, rippleOffset, reflectionStrength, null);
+						effectMaterial = MaterialUtils.CreateWaterMaterialOpaque(mirrorTint, effectRT, rippleSpeed, rippleAmplitude, rippleFrequency, rippleOffset, reflectionStrength, null);
 						break;
 
 					case EffectMode.OceanEffect:
@@ -295,10 +296,10 @@ namespace MassiveHadronLtd
 				{
 					if (textureCamera)
 					{
-						textureCamera.targetTexture = renderTexture;
+						textureCamera.targetTexture = effectRT;
 						textureCamera.enabled = true;
 					}
-					if (reflectionCamera) reflectionCamera.targetTexture = renderTexture;
+					if (reflectionCamera) reflectionCamera.targetTexture = effectRT;
 				}
 				else
 				{
@@ -319,25 +320,25 @@ namespace MassiveHadronLtd
 			switch (effectMode)
 			{
 				case EffectMode.PerfectMirror:
-					effectMaterial.SetTexture("_MainTex", renderTexture);
+					effectMaterial.SetTexture("_MainTex", effectRT);
 					effectMaterial.SetColor("_DimColor", mirrorTint);
 					break;
 				case EffectMode.SurfaceFilm:
-					effectMaterial.SetTexture("_MainTex", renderTexture);
+					effectMaterial.SetTexture("_MainTex", effectRT);
 					effectMaterial.SetColor("_DimColor", mirrorTint);
 					effectMaterial.SetFloat("_FilmIntensity", mirrorTint.a);
 					effectMaterial.SetFloat("_NoiseScale", noiseScale);
 					if (noiseTexture != null) effectMaterial.SetTexture("_NoiseTex", noiseTexture);
 					break;
 				case EffectMode.FrostEffect:
-					effectMaterial.SetTexture("_MainTex", renderTexture);
+					effectMaterial.SetTexture("_MainTex", effectRT);
 					effectMaterial.SetColor("_BaseColor", mirrorTint);
 					effectMaterial.SetFloat("_Depth", frostDepth);
 					effectMaterial.SetFloat("_NoiseStrength", noiseStrength);
 					if (noiseTexture != null) effectMaterial.SetTexture("_NoiseTex", noiseTexture);
 					break;
 				case EffectMode.Water:
-					effectMaterial.SetTexture("_MainTex", renderTexture);
+					effectMaterial.SetTexture("_MainTex", effectRT);
 					effectMaterial.SetColor("_BaseColor", mirrorTint);
 					effectMaterial.SetFloat("_RippleSpeed", rippleSpeed);
 					effectMaterial.SetFloat("_RippleAmplitude", rippleAmplitude);
@@ -347,7 +348,7 @@ namespace MassiveHadronLtd
 					if (tintedSkyboxTexture != null) effectMaterial.SetTexture("_Skybox", tintedSkyboxTexture);
 					break;
 				case EffectMode.OceanEffect:
-					effectMaterial.SetTexture("_MainTex", renderTexture);
+					effectMaterial.SetTexture("_MainTex", effectRT);
 					effectMaterial.SetColor("_BaseColor", mirrorTint);
 					effectMaterial.SetFloat("_RippleSpeed", rippleSpeed);
 					effectMaterial.SetFloat("_RippleAmplitude", rippleAmplitude);
@@ -376,17 +377,17 @@ namespace MassiveHadronLtd
 
 		private void CheckForScreenResize()
 		{
-			if (renderTexture == null) return;
+			if (effectRT == null) return;
 
 			int currentWidth = Screen.width;
 			int currentHeight = Screen.height;
 
-			if (currentWidth != renderTexture.width || currentHeight != renderTexture.height)
+			if (currentWidth != effectRT.width || currentHeight != effectRT.height)
 			{
 				if (currentWidth > 0 && currentHeight > 0)
 				{
-					Debug.Log($"[ReflectionEffectCamera] Screen resized from {renderTexture.width}×{renderTexture.height} → {currentWidth}×{currentHeight}");
-					CreateOrResizeReflectionTexture(currentWidth, currentHeight);
+					Debug.Log($"[ReflectionEffectCamera] Screen resized from {effectRT.width}×{effectRT.height} → {currentWidth}×{currentHeight}");
+					UpdateEffectRT(currentWidth, currentHeight);
 				}
 			}
 		}
@@ -447,24 +448,28 @@ namespace MassiveHadronLtd
 			UpdateEffect(effectMode);
 		}
 
-		public void SetExternalOutputTexture(RenderTexture value)
+		public RenderTexture SetExternalOutputMiode(Vector2Int value)
 		{
-			if (!mainCamera) return;
+			if (!mainCamera) return null;
 
-			mainCamera.targetTexture = value;
-
+			mainCamera.targetTexture = null;
 			if (value != null)
-				CreateOrResizeReflectionTexture(value.width, value.height);
+			{
+				mainCamera.targetTexture = UpdateOutputRT(value.x, value.y);
+				UpdateEffectRT(value.x, value.y);
+			}
 			else
-				CreateOrResizeReflectionTexture(Screen.width, Screen.height);
+				UpdateEffectRT(Screen.width, Screen.height);
+
+			return mainCamera.targetTexture;
 		}
 
-		private void CreateOrResizeReflectionTexture(int targetWidth, int targetHeight)
+		private void UpdateEffectRT(int targetWidth, int targetHeight)
 		{
 			targetWidth = Mathf.Max(16, targetWidth);
 			targetHeight = Mathf.Max(16, targetHeight);
 
-			bool needsResize = renderTexture == null || renderTexture.width != targetWidth || renderTexture.height != targetHeight;
+			var needsResize = effectRT == null || effectRT.width != targetWidth || effectRT.height != targetHeight;
 			if (!needsResize) return;
 
 			RenderTexture.active = null;
@@ -472,13 +477,13 @@ namespace MassiveHadronLtd
 			if (reflectionCamera) reflectionCamera.targetTexture = null;
 			if (textureCamera) textureCamera.targetTexture = null;
 
-			if (renderTexture != null)
+			if (effectRT != null)
 			{
-				DestroyImmediate(renderTexture);
-				renderTexture = null;
+				DestroyImmediate(effectRT);
+				effectRT = null;
 			}
 
-			renderTexture = new RenderTexture(targetWidth, targetHeight, 24, RenderTextureFormat.ARGB32)
+			effectRT = new RenderTexture(targetWidth, targetHeight, 24, RenderTextureFormat.ARGB32)
 			{
 				name = $"Reflection_{effectMode}",
 				useMipMap = false,
@@ -486,17 +491,41 @@ namespace MassiveHadronLtd
 				filterMode = FilterMode.Bilinear,
 				useDynamicScale = true
 			};
-			renderTexture.Create();
+			effectRT.Create();
 
-			if (reflectionCamera) reflectionCamera.targetTexture = renderTexture;
+			if (reflectionCamera) reflectionCamera.targetTexture = effectRT;
 			if (textureCamera)
 			{
-				textureCamera.targetTexture = renderTexture;
+				textureCamera.targetTexture = effectRT;
 				textureCamera.enabled = effectMaterial != null;
 			}
 
 			if (effectMaterial != null && effectMaterial.HasProperty("_MainTex"))
-				effectMaterial.SetTexture("_MainTex", renderTexture);
+				effectMaterial.SetTexture("_MainTex", effectRT);
+		}
+
+		private RenderTexture UpdateOutputRT(int targetWidth, int targetHeight)
+		{
+			var needsResize = outputRT == null || outputRT.width != targetWidth || outputRT.height != targetHeight;
+			if (needsResize)
+			{
+				if (outputRT != null)
+				{
+					DestroyImmediate(outputRT);
+					outputRT = null;
+				}
+
+				outputRT = new RenderTexture(targetWidth, targetHeight, 24, RenderTextureFormat.ARGB32)
+				{
+					name = $"Output_{effectMode}",
+					useMipMap = false,
+					autoGenerateMips = false,
+					filterMode = FilterMode.Bilinear,
+					useDynamicScale = true
+				};
+				outputRT.Create();
+			}
+			return outputRT;
 		}
 
 		void OnDestroy()
@@ -506,10 +535,11 @@ namespace MassiveHadronLtd
 			if (reflectionCamera) reflectionCamera.targetTexture = null;
 			if (textureCamera) textureCamera.targetTexture = null;
 
-			if (effectMaterial != null) DestroyImmediate(effectMaterial);
-			if (effectMesh != null) DestroyImmediate(effectMesh);
-			if (renderTexture != null) DestroyImmediate(renderTexture);
-			if (isTextureDynamic && noiseTexture != null) DestroyImmediate(noiseTexture);
+			if (effectMaterial) DestroyImmediate(effectMaterial);
+			if (effectMesh) DestroyImmediate(effectMesh);
+			if (effectRT) DestroyImmediate(effectRT);
+			if (outputRT) DestroyImmediate(outputRT);
+			if (isTextureDynamic && noiseTexture) DestroyImmediate(noiseTexture);
 
 			if (reflectionCamera) DestroyImmediate(reflectionCamera.gameObject);
 			if (textureCamera) DestroyImmediate(textureCamera.gameObject);

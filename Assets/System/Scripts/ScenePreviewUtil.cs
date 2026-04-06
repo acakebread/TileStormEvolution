@@ -103,14 +103,10 @@ namespace MassiveHadronLtd
 			var w = Mathf.RoundToInt(currentSize.x);
 			var h = Mathf.RoundToInt(currentSize.y);
 
-			reflectionEffect.SetExternalOutputTexture(null);
-
 			previewCam.aspect = (float)w / h;
-			var outputTexture = UpdateRenderTexture(w, h);
 
-			reflectionEffect.SetExternalOutputTexture(outputTexture);
-
-			targetRawImage.texture = outputTexture;
+			targetRawImage.texture = null;
+			targetRawImage.texture = reflectionEffect.SetExternalOutputMiode(new(w, h));
 		}
 
 		public static void SetPreviewUI(RawImage rawImage = null)
@@ -126,38 +122,9 @@ namespace MassiveHadronLtd
 				Object.DestroyImmediate(root);
 			root = null;
 
-			if (outputRenderTexture)
-				Object.DestroyImmediate(outputRenderTexture);
-			outputRenderTexture = null;
-
 			previewCam = null;
 			targetRawImage = null;
 			lastKnownSize = Vector2.zero;
-		}
-
-		private static RenderTexture outputRenderTexture;
-		private static RenderTexture UpdateRenderTexture(int targetWidth, int targetHeight)
-		{
-			var outputNeedsResize = outputRenderTexture == null || outputRenderTexture.width != targetWidth || outputRenderTexture.height != targetHeight;
-			if (outputNeedsResize)
-			{
-				if (outputRenderTexture != null)
-				{
-					Object.DestroyImmediate(outputRenderTexture);
-					outputRenderTexture = null;
-				}
-
-				outputRenderTexture = new RenderTexture(targetWidth, targetHeight, 24, RenderTextureFormat.ARGB32)
-				{
-					name = "preview render texture",//  "$"Output_{effectMode}",
-					useMipMap = false,
-					autoGenerateMips = false,
-					filterMode = FilterMode.Bilinear,
-					useDynamicScale = true
-				};
-				outputRenderTexture.Create();
-			}
-			return outputRenderTexture;
 		}
 	}
 }
