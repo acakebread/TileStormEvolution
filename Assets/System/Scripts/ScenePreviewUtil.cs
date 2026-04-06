@@ -106,7 +106,7 @@ namespace MassiveHadronLtd
 			previewCam.aspect = (float)w / h;
 
 			targetRawImage.texture = null;
-			targetRawImage.texture = reflectionEffect.SetExternalOutputMiode(new(w, h));
+			targetRawImage.texture = reflectionEffect.UpdateExternalOutput(new(w, h));
 		}
 
 		public static void SetPreviewUI(RawImage rawImage = null)

@@ -448,7 +448,7 @@ namespace MassiveHadronLtd
 			UpdateEffect(effectMode);
 		}
 
-		public RenderTexture SetExternalOutputMiode(Vector2Int value)
+		public RenderTexture UpdateExternalOutput(Vector2Int value)
 		{
 			if (!mainCamera) return null;
 
