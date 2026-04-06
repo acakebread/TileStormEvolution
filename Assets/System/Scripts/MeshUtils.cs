@@ -40,11 +40,11 @@ namespace MassiveHadronLtd
 				}
 				finally
 				{
-					UnityEngine.Object.DestroyImmediate(tempGO);
+					Object.DestroyImmediate(tempGO);
 				}
 
 				// Fallback for non-skinned readable meshes
-				var simpleCopy = UnityEngine.Object.Instantiate(source);
+				var simpleCopy = Object.Instantiate(source);
 				simpleCopy.name += nameSuffix;
 				simpleCopy.MarkDynamic();
 				return simpleCopy;
@@ -96,7 +96,7 @@ namespace MassiveHadronLtd
 			}
 			finally
 			{
-				UnityEngine.Object.DestroyImmediate(temp);
+				Object.DestroyImmediate(temp);
 			}
 		}
 
@@ -136,7 +136,7 @@ namespace MassiveHadronLtd
 			}
 			finally
 			{
-				UnityEngine.Object.DestroyImmediate(tempGO);
+				Object.DestroyImmediate(tempGO);
 			}
 		}
 
@@ -216,15 +216,8 @@ namespace MassiveHadronLtd
 				center + right * half - up * half,   // bottom-right
 			};
 
-			int[] triangles = new[] { 0, 1, 2, 0, 2, 3 };
-
-			Vector2[] uvs = new Vector2[4]
-			{
-				new Vector2(0,        0),
-				new Vector2(0,        uvScale),
-				new Vector2(uvScale,  uvScale),
-				new Vector2(uvScale,  0)
-			};
+			var triangles = new[] { 0, 1, 2, 0, 2, 3 };
+			var uvs = new Vector2[4] { new(0, 0), new(0, uvScale), new(uvScale, uvScale), new(uvScale, 0) };
 
 			var mesh = new Mesh
 			{
