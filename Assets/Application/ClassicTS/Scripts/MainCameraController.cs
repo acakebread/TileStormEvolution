@@ -135,55 +135,6 @@ namespace ClassicTilestorm
 			return (srcPos, dstPos);
 		}
 
-		////todo improve the fov size fitting to scale to screen width ansd screen height spearately rather than simply max iMap.Width, iMap.Height
-		//private (Vector3 srcPos, Vector3 dstPos) GetInitialEditorCameraPosition(float fov = 60f)
-		//{
-		//	if (null == iMap)
-		//		return (new Vector3(0f, 1f, -1f), Vector3.zero);
-
-		//	var dstPos = new Vector3(iMap.Width, 0f, iMap.Height) * 0.5f;
-		//	var fovTan = Mathf.Tan(fov * Mathf.Deg2Rad);
-		//	var distance = Mathf.Max(iMap.Width, iMap.Height) * fovTan * 0.5f;
-		//	var srcPos = dstPos + new Vector3(0f, distance * 0.75f, -distance);
-		//	return (srcPos, dstPos);
-		//}
-
-		//private (Vector3 srcPos, Vector3 dstPos) GetInitialEditorCameraPosition(float fov = 60f)
-		//{
-		//	if (null == iMap)
-		//		return (new Vector3(0f, 1f, -1f), Vector3.zero);
-
-		//	var dstPos = new Vector3(iMap.Width * 0.5f, 0f, iMap.Height * 0.5f);
-
-		//	// Half-sizes of the map (from center to edge)
-		//	float halfWidth = iMap.Width * 0.5f;
-		//	float halfHeight = iMap.Height * 0.5f;
-
-		//	float fovRad = fov * Mathf.Deg2Rad;
-		//	float halfFovTan = Mathf.Tan(fovRad * 0.5f);   // tan(verticalFOV / 2)
-
-		//	// Required distance to fit height (vertical)
-		//	float distanceForHeight = halfHeight / halfFovTan;
-
-		//	// Required distance to fit width (horizontal)
-		//	// We use the camera's aspect ratio to convert vertical tan to horizontal
-		//	float aspect = Camera.main != null ? Camera.main.aspect : (Screen.width / (float)Screen.height);
-		//	float distanceForWidth = halfWidth / (halfFovTan * aspect);
-
-		//	// Take the larger distance so the map fits in both directions
-		//	float distance = Mathf.Max(distanceForHeight, distanceForWidth);
-
-		//	// Optional: add a small margin so the map doesn't touch the exact edge
-		//	// distance *= 1.05f;  // or 1.1f for more breathing room
-
-		//	// Your original style: camera is elevated and pulled back along -Z
-		//	// (Y offset = 75% of distance, Z offset = -distance)
-		//	var srcPos = dstPos + new Vector3(0f, distance * 0.75f, -distance);
-
-		//	return (srcPos, dstPos);
-		//}
-
-
 		private (Vector3 srcPos, Vector3 dstPos) GetInitialEditorCameraPosition(float fov = 60f)
 		{
 			if (iMap == null)
