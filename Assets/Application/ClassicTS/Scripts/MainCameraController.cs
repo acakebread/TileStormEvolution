@@ -111,11 +111,12 @@ namespace ClassicTilestorm
 
 		protected override (Vector3 srcPos, Vector3 dstPos) GetInitialCameraPositions()
 		{
-			if (iMap == null)
-				return (new Vector3(0f, 14f, -14f), Vector3.zero);
+			if (null == iMap)
+				return (new Vector3(0f, 1f, -1f), Vector3.zero);
 
-			var dstPos = new Vector3(iMap.Width * 0.5f, 0f, iMap.Height * 0.5f);
-			var srcPos = dstPos + new Vector3(0f, 14f, -14f);
+			var dstPos = new Vector3(iMap.Width, 0f, iMap.Height) * 0.75f;
+			var distance = Mathf.Max(iMap.Width, iMap.Height);
+			var srcPos = dstPos + new Vector3(0f, distance, -distance);
 
 			var waypoints = iMap.GetWaypoints();
 			if (waypoints.Length > 0)
@@ -131,7 +132,68 @@ namespace ClassicTilestorm
 					dstPos = view.VDst + tilePos;
 				}
 			}
+			return (srcPos, dstPos);
+		}
 
+		////todo improve the fov size fitting to scale to screen width ansd screen height spearately rather than simply max iMap.Width, iMap.Height
+		//private (Vector3 srcPos, Vector3 dstPos) GetInitialEditorCameraPosition(float fov = 60f)
+		//{
+		//	if (null == iMap)
+		//		return (new Vector3(0f, 1f, -1f), Vector3.zero);
+
+		//	var dstPos = new Vector3(iMap.Width, 0f, iMap.Height) * 0.5f;
+		//	var fovTan = Mathf.Tan(fov * Mathf.Deg2Rad);
+		//	var distance = Mathf.Max(iMap.Width, iMap.Height) * fovTan * 0.5f;
+		//	var srcPos = dstPos + new Vector3(0f, distance * 0.75f, -distance);
+		//	return (srcPos, dstPos);
+		//}
+
+		//private (Vector3 srcPos, Vector3 dstPos) GetInitialEditorCameraPosition(float fov = 60f)
+		//{
+		//	if (null == iMap)
+		//		return (new Vector3(0f, 1f, -1f), Vector3.zero);
+
+		//	var dstPos = new Vector3(iMap.Width * 0.5f, 0f, iMap.Height * 0.5f);
+
+		//	// Half-sizes of the map (from center to edge)
+		//	float halfWidth = iMap.Width * 0.5f;
+		//	float halfHeight = iMap.Height * 0.5f;
+
+		//	float fovRad = fov * Mathf.Deg2Rad;
+		//	float halfFovTan = Mathf.Tan(fovRad * 0.5f);   // tan(verticalFOV / 2)
+
+		//	// Required distance to fit height (vertical)
+		//	float distanceForHeight = halfHeight / halfFovTan;
+
+		//	// Required distance to fit width (horizontal)
+		//	// We use the camera's aspect ratio to convert vertical tan to horizontal
+		//	float aspect = Camera.main != null ? Camera.main.aspect : (Screen.width / (float)Screen.height);
+		//	float distanceForWidth = halfWidth / (halfFovTan * aspect);
+
+		//	// Take the larger distance so the map fits in both directions
+		//	float distance = Mathf.Max(distanceForHeight, distanceForWidth);
+
+		//	// Optional: add a small margin so the map doesn't touch the exact edge
+		//	// distance *= 1.05f;  // or 1.1f for more breathing room
+
+		//	// Your original style: camera is elevated and pulled back along -Z
+		//	// (Y offset = 75% of distance, Z offset = -distance)
+		//	var srcPos = dstPos + new Vector3(0f, distance * 0.75f, -distance);
+
+		//	return (srcPos, dstPos);
+		//}
+
+
+		private (Vector3 srcPos, Vector3 dstPos) GetInitialEditorCameraPosition(float fov = 60f)
+		{
+			if (iMap == null)
+				return (new Vector3(0f, 1f, -1f), Vector3.zero);
+
+			var dstPos = new Vector3(iMap.Width, 0f, iMap.Height) * 0.5f;
+			var aspect = Camera.main?.aspect ?? Screen.height / (float)Screen.width;
+			var t = 1f / Mathf.Tan(fov * Mathf.Deg2Rad);
+			var distance = Mathf.Max(iMap.Height * t * aspect, iMap.Width * t);
+			var srcPos = dstPos + new Vector3(0f, distance * 0.75f, -distance) * 0.75f;//arbitrary scale constant to offset the fact that the distance vector is applied in two axes
 			return (srcPos, dstPos);
 		}
 
@@ -192,9 +254,10 @@ namespace ClassicTilestorm
 				return ppController;
 			}
 
-			var (srcPos, dstPos) = GetInitialCameraPositions();
+			var (srcEditor, dstEditor) = GetInitialEditorCameraPosition(60f);//camera.fieldOfView = 60f; in GameCameraEditor
+			RegisterCamera(new GameCameraEditor(camera) { iorigin = srcEditor, itarget = dstEditor, PostProcessingEnabled = ApplicationSettings.DetailLevel >= 2 }, CameraModeRegistry.Editor);
 
-			RegisterCamera(new GameCameraEditor(camera) { iorigin = srcPos, itarget = dstPos, PostProcessingEnabled = ApplicationSettings.DetailLevel >= 2 }, CameraModeRegistry.Editor);
+			var (srcPos, dstPos) = GetInitialCameraPositions();
 			RegisterCamera(new GameCameraFollow(camera) { iorigin = srcPos, itarget = GetTargetPosition().Invoke(), targetFn = GetTargetPosition(), PostProcessingEnabled = ApplicationSettings.DetailLevel >= 1 }, CameraModeRegistry.Follow);
 			RegisterCamera(new GameCameraPreset(camera) { iorigin = srcPos, itarget = dstPos, originFn = () => srcPos, targetFn = GetTargetPosition(), PostProcessingEnabled = ApplicationSettings.DetailLevel >= 1 }, CameraModeRegistry.Preset);
 			RegisterCamera(new GameCameraOrbit(camera) { iorigin = srcPos, itarget = dstPos, targetFn = GetTargetPosition(), PostProcessingEnabled = ApplicationSettings.DetailLevel >= 1 }, CameraModeRegistry.Orbit);
