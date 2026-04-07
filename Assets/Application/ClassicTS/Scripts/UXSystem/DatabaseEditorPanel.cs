@@ -216,8 +216,8 @@ namespace ClassicTilestorm
 		public void OnColourTogglePressed(Toggle src)
 		{
 			if (currentClone == null) return;
-			if (src == ambientColourAutoToggle) currentClone.AutoAmbient = src.isOn;
-			if (src == directionalColourAutoToggle) currentClone.AutoSunlight = src.isOn;
+			if (src == ambientColourAutoToggle) currentClone.ambient = src.isOn ? null : currentClone.AmbientRGB.ToHexString(includeAlpha: true);
+			if (src == directionalColourAutoToggle) currentClone.sunlight = src.isOn ? null : currentClone.SunlightRGB.ToHexString(includeAlpha: true);
 			currentClone.UpdateLighting();
 
 			SyncColorButtonsToCurrentMap();

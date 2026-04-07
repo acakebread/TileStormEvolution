@@ -428,9 +428,6 @@ namespace ClassicTilestorm
 
 				if (name == "ambient")
 				{
-					if (null == propValue)//'AutoAmbient'
-						continue;
-
 					writer.WritePropertyName("ambient");
 
 					// Use the Color property instead of the string field
@@ -445,9 +442,6 @@ namespace ClassicTilestorm
 
 				if (name == "sunlight")
 				{
-					if (null == propValue)//'AutoSunlight'
-						continue;
-
 					writer.WritePropertyName("sunlight");
 
 					// Use the Color property instead of the string field

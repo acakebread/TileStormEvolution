@@ -138,9 +138,6 @@ namespace ClassicTilestorm
 			set => sunlight = value.ToHexString(includeAlpha: true);
 		}
 
-		[JsonIgnore] public bool AutoAmbient { set => ambient = value ? null : ambientRGB.ToHexString(includeAlpha: true); }
-		[JsonIgnore] public bool AutoSunlight { set => sunlight = value ? null : sunlightRBG.ToHexString(includeAlpha: true); }
-
 		[JsonIgnore] private DirectionalLightUtility directionalLight;
 
 		[JsonIgnore] public Material SkyboxMaterial => SkyboxUtility.GetSkyboxMaterialForName(Skybox);
@@ -374,18 +371,12 @@ namespace ClassicTilestorm
 				waypoints = this.GenerateWaypoints();
 			parent.gameObject.GetOrAddComponent<WindController>();
 
-			//SkyboxUtility.OnSkyboxChanged += OnSkyboxChanged;
-
-			//OnRenderSettingsChanged?.Invoke(RenderSettings);
-
 			return true;
 		}
 
 		public void Destroy()
 		{
 			OnMapEdited = null;
-
-			// SkyboxUtility.OnSkyboxChanged -= OnSkyboxChanged;
 
 			DestroyAllGraphTiles();
 
