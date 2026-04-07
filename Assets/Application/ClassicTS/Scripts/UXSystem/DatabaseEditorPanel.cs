@@ -235,25 +235,19 @@ namespace ClassicTilestorm
 
 			// Open the panel and get reference to it in one line
 			UIController.ClosePanel<ColourSelectorPanel>();
-			ColourSelectorPanel colourPanel = UIController.OpenPanel<ColourSelectorPanel>(closeOthers: false);
+			var colourPanel = UIController.OpenPanel<ColourSelectorPanel>(closeOthers: false);
 
-			if (colourPanel != null)
+			if (null != colourPanel)
 			{
 				// Prime the panel with the current color from the button
-				Color currentColor = src.GetComponent<Image>().color;
-
-				colourPanel.SetInitialColor(currentColor);
+				colourPanel.SetInitialColor(src.GetComponent<Image>().color);
 
 				// Set initial color
 				colourPanel.onValueChanged = (selectedColor) =>
 				{
 					src.GetComponent<Image>().color = selectedColor;
-					if (src == ambientColourButton)
-						currentClone.AmbientRGB = selectedColor;
-
-					if (src == directionalColourButton)
-						currentClone.SunlightRGB = selectedColor;
-
+					if (src == ambientColourButton) currentClone.AmbientRGB = selectedColor;
+					if (src == directionalColourButton) currentClone.SunlightRGB = selectedColor;
 					currentClone.UpdateLighting();
 
 					UpdateMapPreview();
@@ -375,7 +369,7 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			for (int i = 0; i < maps.Count; i++)
+			for (var i = 0; i < maps.Count; i++)
 				CreateMapListItem(maps[i], i);
 
 			SetSelectedMapIndex(lastSelectedMapIndex);
@@ -404,7 +398,7 @@ namespace ClassicTilestorm
 			var label = go.GetComponentInChildren<TMP_Text>();
 			if (label != null)
 			{
-				string display = map.name ?? "Unnamed";
+				var display = map.name ?? "Unnamed";
 				if (map.width > 0 && map.height > 0)
 					display += $"  ({map.width}×{map.height})";
 
@@ -446,7 +440,7 @@ namespace ClassicTilestorm
 		private void UpdateDeleteButtonState()
 		{
 			if (ButtonDelete == null) return;
-			bool hasSelection = lastSelectedMapIndex >= 0;
+			var hasSelection = lastSelectedMapIndex >= 0;
 			ButtonDelete.interactable = hasSelection;
 
 			if (ButtonDelete.GetComponentInChildren<TMP_Text>() is TMP_Text txt)
@@ -471,7 +465,7 @@ namespace ClassicTilestorm
 				dropdown.SetValueWithoutNotify(0);
 				return;
 			}
-			int index = dropdown.options.FindIndex(opt => opt.text.Equals(currentValue, StringComparison.OrdinalIgnoreCase));
+			var index = dropdown.options.FindIndex(opt => opt.text.Equals(currentValue, StringComparison.OrdinalIgnoreCase));
 			dropdown.SetValueWithoutNotify(index >= 0 ? index : 0);
 		}
 
@@ -530,10 +524,10 @@ namespace ClassicTilestorm
 
 		private void InsertMap()
 		{
-			string newName = GenerateUniqueMapName("Map");
+			var newName = GenerateUniqueMapName("Map");
 			var newMap = new Map(16, 16, newName);
 
-			int insertIndex = (lastSelectedMapIndex >= 0)
+			var insertIndex = (lastSelectedMapIndex >= 0)
 				? lastSelectedMapIndex + 1
 				: ResourceManager.Maps.Count;
 
@@ -549,7 +543,7 @@ namespace ClassicTilestorm
 		{
 			if (lastSelectedMapIndex < 0) return;
 
-			int idx = lastSelectedMapIndex;
+			var idx = lastSelectedMapIndex;
 			var list = ResourceManager.Maps.ToList();
 			list.RemoveAt(idx);
 			ResourceManager.database.maps = list.ToArray();
@@ -563,7 +557,7 @@ namespace ClassicTilestorm
 			if (lastSelectedMapIndex <= 0) return;
 
 			var list = ResourceManager.Maps.ToList();
-			int i = lastSelectedMapIndex;
+			var i = lastSelectedMapIndex;
 			(list[i - 1], list[i]) = (list[i], list[i - 1]);
 			ResourceManager.database.maps = list.ToArray();
 
@@ -577,7 +571,7 @@ namespace ClassicTilestorm
 			if (lastSelectedMapIndex < 0 || lastSelectedMapIndex >= maps.Count - 1) return;
 
 			var list = maps.ToList();
-			int i = lastSelectedMapIndex;
+			var i = lastSelectedMapIndex;
 			(list[i + 1], list[i]) = (list[i], list[i + 1]);
 			ResourceManager.database.maps = list.ToArray();
 
@@ -593,7 +587,7 @@ namespace ClassicTilestorm
 				.ToHashSet(StringComparer.OrdinalIgnoreCase);
 
 			string candidate;
-			int suffix = 1;
+			var suffix = 1;
 			do
 			{
 				candidate = $"{prefix} {suffix++}";
@@ -652,7 +646,7 @@ namespace ClassicTilestorm
 
 			// bounds calculation + reframing (unchanged)
 			var bounds = new Bounds();
-			bool hasRenderers = false;
+			var hasRenderers = false;
 
 			foreach (var rend in currentPreviewRoot.GetComponentsInChildren<Renderer>())
 			{
