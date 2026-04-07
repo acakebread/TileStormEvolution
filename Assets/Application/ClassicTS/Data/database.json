@@ -2,11 +2,42 @@
   "maps": [
     {
       "name": "test 1",
+      "character": "Eggbot Default",
+      "music": "Medieval2",
+      "skybox": "sky-5",
+      "width": 9,
+      "height": 9,
+      "table": [
+        "7U6WJe",
+        "7U6WJe|angle:90.0",
+        "2eq9ii"
+      ],
+      "tiles": [
+        0,
+        40,
+        2,
+        1,
+        0,
+        22,
+        1,
+        1,
+        0,
+        17
+      ],
+      "solve": [
+        0,
+        81
+      ],
+      "waypoints": [],
+      "attachments": []
+    },
+    {
+      "name": "test 2",
       "character": "Eggbot Medieval",
       "music": "Industrial",
       "ambient": "#B0B999",
       "skybox": "Moonscape",
-      "effect": "Frost",
+      "effect": "Water",
       "width": 7,
       "height": 6,
       "table": [
@@ -96,38 +127,7 @@
       ]
     },
     {
-      "name": "Map 1",
-      "character": "Eggbot Default",
-      "music": "Medieval2",
-      "skybox": "sky-5",
-      "width": 9,
-      "height": 9,
-      "table": [
-        "7U6WJe",
-        "7U6WJe|angle:90.0",
-        "2eq9ii"
-      ],
-      "tiles": [
-        0,
-        40,
-        2,
-        1,
-        0,
-        22,
-        1,
-        1,
-        0,
-        17
-      ],
-      "solve": [
-        0,
-        81
-      ],
-      "waypoints": [],
-      "attachments": []
-    },
-    {
-      "name": "test 2",
+      "name": "test 3",
       "ambient": "#595959",
       "skybox": "IndustrialSkybox",
       "effect": "SurfaceFilm",
@@ -173,7 +173,7 @@
       ]
     },
     {
-      "name": "test 3",
+      "name": "test 4",
       "character": "Eggbot Industrial",
       "music": "Industrial",
       "ambient": "#808080",
@@ -499,7 +499,7 @@
       ]
     },
     {
-      "name": "mini map test",
+      "name": "test 5",
       "character": "Eggbot Medieval",
       "ambient": "#B4A587",
       "skybox": "EgyptSkybox",
@@ -685,7 +685,7 @@
       "name": "Industrial 02",
       "character": "Eggbot Industrial",
       "music": "Industrial",
-      "ambient": "#B5F5FF",
+      "ambient": "#3F5675",
       "skybox": "IndustrialSkybox",
       "button": "ls industrial",
       "width": 7,
@@ -945,6 +945,7 @@
         "75XVj1",
         "8jtjX2",
         "8rUptU",
+        "9kreKt|delta:0.120,0.000,0.720",
         "A2F9p5",
         "E61THk",
         "2An3fe",
@@ -985,7 +986,7 @@
         6,
         6,
         17,
-        25,
+        26,
         1,
         20,
         1,
@@ -1029,7 +1030,7 @@
         0,
         0,
         4,
-        27,
+        28,
         7,
         0,
         0,
@@ -1051,25 +1052,25 @@
         11,
         0,
         0,
-        0,
+        23,
         4,
         8,
         16,
         5,
         15,
         2,
-        23,
+        24,
         2,
         16,
         11,
         0,
         0,
         4,
-        29,
+        30,
         6,
         6,
         17,
-        28,
+        29,
         10,
         10,
         1,
@@ -1081,7 +1082,7 @@
         1,
         1,
         1,
-        26,
+        27,
         19,
         10,
         1,
@@ -1093,7 +1094,7 @@
         6,
         6,
         17,
-        24,
+        25,
         19,
         10,
         1,
@@ -1182,62 +1183,6 @@
             0.269474477,
             11.1763773
           ]
-        },
-        {
-          "type": "Emitter",
-          "tile": 42,
-          "data": [
-            0.0,
-            0.15000391,
-            0.0,
-            -0.7071068,
-            0.0,
-            0.0,
-            1.0
-          ],
-          "variant": "spark"
-        },
-        {
-          "type": "Emitter",
-          "tile": 126,
-          "data": [
-            0.0,
-            0.15,
-            0.0,
-            -0.7071068,
-            0.0,
-            0.0,
-            1.0
-          ],
-          "variant": "spark"
-        },
-        {
-          "type": "Emitter",
-          "tile": 123,
-          "data": [
-            0.0,
-            0.15,
-            0.0,
-            -0.7071068,
-            0.0,
-            0.0,
-            1.0
-          ],
-          "variant": "spark"
-        },
-        {
-          "type": "Emitter",
-          "tile": 34,
-          "data": [
-            0.0,
-            0.15,
-            0.0,
-            -0.7071068,
-            0.0,
-            0.0,
-            1.0
-          ],
-          "variant": "spark"
         }
       ]
     },
@@ -1835,48 +1780,6 @@
             0.270951778,
             10.6763706
           ]
-        },
-        {
-          "type": "Emitter",
-          "tile": 102,
-          "data": [
-            0.0,
-            0.15,
-            0.0,
-            -0.7071068,
-            0.0,
-            0.0,
-            1.0
-          ],
-          "variant": "spark"
-        },
-        {
-          "type": "Emitter",
-          "tile": 50,
-          "data": [
-            0.0,
-            0.05,
-            0.0,
-            -0.7071068,
-            0.0,
-            0.0,
-            0.99999994
-          ],
-          "variant": "spark"
-        },
-        {
-          "type": "Emitter",
-          "tile": 66,
-          "data": [
-            0.0,
-            0.05,
-            0.0,
-            -0.7071068,
-            0.0,
-            0.0,
-            0.99999994
-          ],
-          "variant": "flame"
         }
       ]
     },
@@ -20241,6 +20144,7 @@
       "name": "Medieval 01",
       "character": "Eggbot Medieval",
       "music": "Medieval",
+      "skybox": "MedievalSkybox",
       "button": "ls medieval",
       "width": 20,
       "height": 11,
@@ -20630,6 +20534,7 @@
       "name": "Medieval 02",
       "character": "Eggbot Medieval",
       "music": "Medieval",
+      "skybox": "MedievalSkybox",
       "button": "ls medieval",
       "width": 12,
       "height": 10,
@@ -20658,6 +20563,7 @@
         "78F1P9",
         "7WEY7G",
         "9iPRD2",
+        "9kreKt|delta:0.600,0.000,0.370",
         "C7Q1f8",
         "C9YW8X",
         "EKT0Mx",
@@ -20678,7 +20584,7 @@
         2,
         2,
         15,
-        0,
+        24,
         0,
         0,
         0,
@@ -20694,18 +20600,18 @@
         0,
         13,
         2,
-        31,
-        27,
+        32,
+        28,
         23,
         3,
         3,
         3,
         1,
-        25,
+        26,
         2,
         15,
         6,
-        24,
+        25,
         4,
         4,
         17,
@@ -20714,15 +20620,15 @@
         21,
         4,
         4,
-        28,
+        29,
         5,
         9,
         11,
         20,
         1,
         17,
-        30,
-        26,
+        31,
+        27,
         3,
         1,
         20,
@@ -20746,7 +20652,7 @@
         19,
         16,
         1,
-        29,
+        30,
         16,
         19,
         12,
@@ -20854,62 +20760,6 @@
             -0.000184848759,
             17.6763821
           ]
-        },
-        {
-          "type": "Emitter",
-          "tile": 63,
-          "data": [
-            0.0,
-            0.195000038,
-            0.0,
-            -0.7071068,
-            0.0,
-            0.0,
-            1.0
-          ],
-          "variant": "flame"
-        },
-        {
-          "type": "Emitter",
-          "tile": 68,
-          "data": [
-            0.0,
-            0.195000038,
-            0.0,
-            -0.7071068,
-            0.0,
-            0.0,
-            1.0
-          ],
-          "variant": "flame"
-        },
-        {
-          "type": "Emitter",
-          "tile": 45,
-          "data": [
-            0.9992943,
-            1.59281778,
-            0.0,
-            -0.707106948,
-            0.0,
-            0.0,
-            1.0
-          ],
-          "variant": "flame"
-        },
-        {
-          "type": "Emitter",
-          "tile": 37,
-          "data": [
-            -0.105617642,
-            1.69723809,
-            0.0,
-            -0.7071069,
-            0.0,
-            0.0,
-            1.0
-          ],
-          "variant": "flame"
         }
       ]
     },
@@ -20917,6 +20767,7 @@
       "name": "Medieval 03",
       "character": "Eggbot Medieval",
       "music": "Medieval",
+      "skybox": "MedievalSkybox",
       "button": "ls medieval",
       "width": 17,
       "height": 17,
@@ -21304,6 +21155,7 @@
       "name": "Medieval 04",
       "character": "Eggbot Medieval",
       "music": "Medieval",
+      "skybox": "MedievalSkybox",
       "button": "ls medieval",
       "width": 23,
       "height": 20,
@@ -21858,6 +21710,7 @@
       "name": "Medieval 05",
       "character": "Eggbot Medieval",
       "music": "Medieval",
+      "skybox": "MedievalSkybox",
       "button": "ls medieval",
       "width": 12,
       "height": 12,
@@ -22122,6 +21975,7 @@
       "name": "Medieval 06",
       "character": "Eggbot Medieval",
       "music": "Medieval",
+      "skybox": "MedievalSkybox",
       "button": "ls medieval",
       "width": 42,
       "height": 15,
@@ -22701,6 +22555,7 @@
       "name": "Medieval 07",
       "character": "Eggbot Medieval",
       "music": "Medieval",
+      "skybox": "MedievalSkybox",
       "button": "ls medieval",
       "width": 17,
       "height": 16,
@@ -23096,6 +22951,7 @@
       "name": "Medieval 08",
       "character": "Eggbot Medieval",
       "music": "Medieval",
+      "skybox": "MedievalSkybox",
       "button": "ls medieval",
       "width": 11,
       "height": 15,
@@ -23373,6 +23229,7 @@
       "name": "Medieval 09",
       "character": "Eggbot Medieval",
       "music": "Medieval",
+      "skybox": "MedievalSkybox",
       "button": "ls medieval",
       "width": 30,
       "height": 16,
@@ -23843,6 +23700,7 @@
       "name": "Medieval 10",
       "character": "Eggbot Medieval",
       "music": "Medieval",
+      "skybox": "MedievalSkybox",
       "button": "ls medieval",
       "width": 33,
       "height": 17,
@@ -24342,6 +24200,7 @@
       "name": "Medieval 11",
       "character": "Eggbot Medieval",
       "music": "Medieval",
+      "skybox": "MedievalSkybox",
       "button": "ls medieval",
       "width": 11,
       "height": 11,
@@ -24608,6 +24467,7 @@
       "name": "Medieval 12",
       "character": "Eggbot Medieval",
       "music": "Medieval",
+      "skybox": "MedievalSkybox",
       "button": "ls medieval",
       "width": 17,
       "height": 12,
@@ -24929,6 +24789,7 @@
       "name": "Medieval 13",
       "character": "Eggbot Medieval",
       "music": "Medieval",
+      "skybox": "MedievalSkybox",
       "button": "ls medieval",
       "width": 12,
       "height": 12,
@@ -25237,6 +25098,7 @@
       "name": "Medieval 14",
       "character": "Eggbot Medieval",
       "music": "Medieval",
+      "skybox": "MedievalSkybox",
       "button": "ls medieval",
       "width": 31,
       "height": 24,
@@ -25892,6 +25754,7 @@
       "name": "Medieval 15",
       "character": "Eggbot Medieval",
       "music": "Medieval",
+      "skybox": "MedievalSkybox",
       "button": "ls medieval",
       "width": 21,
       "height": 28,
@@ -26398,6 +26261,7 @@
       "name": "Medieval 16",
       "character": "Eggbot Medieval",
       "music": "Medieval",
+      "skybox": "MedievalSkybox",
       "button": "ls medieval",
       "width": 23,
       "height": 27,
@@ -26978,6 +26842,7 @@
       "name": "Medieval 17",
       "character": "Eggbot Medieval",
       "music": "Medieval",
+      "skybox": "MedievalSkybox",
       "button": "ls medieval",
       "width": 17,
       "height": 17,
@@ -27398,6 +27263,7 @@
       "name": "Medieval 18",
       "character": "Eggbot Medieval",
       "music": "Medieval",
+      "skybox": "MedievalSkybox",
       "button": "ls medieval",
       "width": 14,
       "height": 13,
@@ -27709,6 +27575,7 @@
       "name": "Medieval 19",
       "character": "Eggbot Medieval",
       "music": "Medieval",
+      "skybox": "MedievalSkybox",
       "button": "ls medieval",
       "width": 10,
       "height": 9,
@@ -27889,6 +27756,7 @@
       "name": "Medieval 20",
       "character": "Eggbot Medieval",
       "music": "Medieval",
+      "skybox": "MedievalSkybox",
       "button": "ls medieval",
       "width": 14,
       "height": 12,
@@ -28196,6 +28064,7 @@
       "name": "Medieval 21",
       "character": "Eggbot Medieval",
       "music": "Medieval",
+      "skybox": "MedievalSkybox",
       "button": "ls medieval",
       "width": 17,
       "height": 13,
@@ -28542,6 +28411,7 @@
       "name": "Medieval 22",
       "character": "Eggbot Medieval",
       "music": "Medieval",
+      "skybox": "MedievalSkybox",
       "button": "ls medieval",
       "width": 12,
       "height": 12,
@@ -28800,6 +28670,7 @@
       "name": "Medieval 23",
       "character": "Eggbot Medieval",
       "music": "Medieval",
+      "skybox": "MedievalSkybox",
       "button": "ls medieval",
       "width": 12,
       "height": 12,
@@ -29072,6 +28943,7 @@
       "name": "Medieval 24",
       "character": "Eggbot Medieval",
       "music": "Medieval",
+      "skybox": "MedievalSkybox",
       "button": "ls medieval",
       "width": 12,
       "height": 9,
@@ -29271,6 +29143,7 @@
       "name": "Medieval 25",
       "character": "Eggbot Medieval",
       "music": "Medieval",
+      "skybox": "MedievalSkybox",
       "button": "ls medieval",
       "width": 12,
       "height": 12,
