@@ -84,8 +84,6 @@ namespace ClassicTilestorm
 		// Gimbal orbit controller (replaces old auto-orbit)
 		private GimbalOrbitController orbitController;
 
-		//private ReflectionEffectCamera reflectionEffectCamera => Camera.main?.GetComponent<ReflectionEffectCamera>();
-
 		protected override void Awake()
 		{
 			base.Awake();
@@ -206,8 +204,6 @@ namespace ClassicTilestorm
 			if (CurrentMap == null)
 				return;
 
-			//if (null != ambientColourAutoToggle) ambientColourAutoToggle.SetIsOnWithoutNotify(CurrentMap.AutoAmbient);
-			//if (null != directionalColourAutoToggle) directionalColourAutoToggle.SetIsOnWithoutNotify(CurrentMap.AutoSunlight);
 			if (null != ambientColourAutoToggle) ambientColourAutoToggle.SetIsOnWithoutNotify(currentClone.AutoAmbient);
 			if (null != directionalColourAutoToggle) directionalColourAutoToggle.SetIsOnWithoutNotify(currentClone.AutoSunlight);
 		}
@@ -219,12 +215,10 @@ namespace ClassicTilestorm
 
 			if (null != ambientColourButton)
 			{
-				//ambientColourButton.GetComponent<Image>().color = CurrentMap.AmbientLight;
 				ambientColourButton.GetComponent<Image>().color = currentClone.AmbientLight;
 			}
 			if (null != directionalColourButton)
 			{
-				//directionalColourButton.GetComponent<Image>().color = CurrentMap.Sunlight;
 				directionalColourButton.GetComponent<Image>().color = currentClone.Sunlight;
 			}
 		}
@@ -232,13 +226,12 @@ namespace ClassicTilestorm
 		public void OnColourTogglePressed(Toggle src)
 		{
 			if (src == ambientColourAutoToggle)
-				currentClone.AutoAmbient = src.isOn;//CurrentMap.AutoAmbient = src.isOn;
+				currentClone.AutoAmbient = src.isOn;
 
 			if (src == directionalColourAutoToggle)
-				currentClone.AutoSunlight = src.isOn;//CurrentMap.AutoSunlight = src.isOn;
+				currentClone.AutoSunlight = src.isOn;
 
 			currentClone.UpdateLighting();
-			//CurrentMap.UpdateLighting();
 
 			SyncColorButtonsToCurrentMap();
 			UpdateMapPreview();
@@ -269,15 +262,13 @@ namespace ClassicTilestorm
 				{
 					src.GetComponent<Image>().color = selectedColor;
 					if (src == ambientColourButton)
-						currentClone.AmbientLight = selectedColor; //CurrentMap.AmbientLight = selectedColor;
+						currentClone.AmbientLight = selectedColor;
 
 					if (src == directionalColourButton)
-						currentClone.Sunlight = selectedColor; //CurrentMap.Sunlight = selectedColor;
+						currentClone.Sunlight = selectedColor;
 
 					currentClone.UpdateLighting();
-					//CurrentMap.UpdateLighting();
 
-					// Optional: update preview
 					UpdateMapPreview();
 				};
 			}
@@ -335,28 +326,6 @@ namespace ClassicTilestorm
 			RefreshMapList();
 		}
 
-		//private void OnSkyboxDropdownValueChanged(int index)
-		//{
-		//	if (CurrentMap == null) return;
-
-		//	string selected = index >= 0 && index < skyboxDropdown.options.Count
-		//		? skyboxDropdown.options[index].text
-		//		: null;
-
-		//	string newSkybox = (selected == noneSkyboxOptionText) ? null : selected;
-
-		//	if (newSkybox != CurrentMap.Skybox)
-		//	{
-		//		CurrentMap.Skybox = newSkybox;
-		//		CurrentMap.UpdateAmbientLighting();
-		//		CurrentMap.UpdateDirectionalLighting();
-		//		if (CurrentMap.name == MainController.CurrentMap.name) SkyboxUtility.SetSkybox(CurrentMap.skybox);
-		//		UpdateMapPreview();
-		//	}
-		//	SyncColorTogglesToCurrentMap();
-		//	SyncColorButtonsToCurrentMap();
-		//}
-
 		private void OnSkyboxDropdownValueChanged(int index)
 		{
 			if (currentClone == null) return;
@@ -395,24 +364,6 @@ namespace ClassicTilestorm
 			if (newMusic != CurrentMap.music)
 				CurrentMap.music = newMusic;
 		}
-
-		//private void OnEffectDropdownValueChanged(int index)
-		//{
-		//	if (CurrentMap == null) return;
-
-		//	string selected = index >= 0 && index < effectDropdown.options.Count
-		//		? effectDropdown.options[index].text
-		//		: null;
-
-		//	string newEffect = (selected == noneEffectOptionText) ? null : selected;
-
-		//	var newEffectMode = ReflectionEffectCamera.ParseEffectMode(newEffect);
-
-		//	if (newEffectMode != CurrentMap.Effect)
-		//		CurrentMap.Effect = newEffectMode;
-
-		//	UpdateMapPreview();
-		//}
 
 		private void OnEffectDropdownValueChanged(int index)
 		{
@@ -472,8 +423,6 @@ namespace ClassicTilestorm
 
 				label.text = display;
 			}
-
-			//RegisterForBringToFront(go);
 		}
 
 		private void ClearMapListItems()
@@ -730,9 +679,6 @@ namespace ClassicTilestorm
 			ScenePreviewUtil.Update();
 			orbitController?.Reframe(bounds, distanceMultiplier: 1f);
 
-			//CurrentMap.AmbientLight = currentClone.GetAmbientLight();
-			//CurrentMap.Sunlight = currentClone.GetSunlight();
-
 			ScenePreviewUtil.UpdateEffect(currentClone.Effect);
 			ScenePreviewUtil.UpdateRenderSettings(currentClone.RenderSettings);
 
@@ -748,30 +694,6 @@ namespace ClassicTilestorm
 			ScenePreviewUtil.UpdateRenderSettings(currentClone.RenderSettings);
 
 			UpdateMainView();
-
-			//if (null != currentClone)
-			//{
-			//	currentClone.Skybox = CurrentMap.Skybox;
-
-			//	currentClone.AmbientLight = CurrentMap.AmbientLight;
-			//	currentClone.AutoAmbient = CurrentMap.AutoAmbient;
-
-			//	currentClone.AutoSunlight = CurrentMap.AutoSunlight;
-			//	currentClone.Sunlight = CurrentMap.Sunlight;
-
-			//	currentClone.UpdateDirectionalLighting();// currentPreviewRoot.GetComponentInChildren<DirectionalLightUtility>(true));
-			//}
-
-			//ScenePreviewUtil.UpdateEffect(CurrentMap.Effect);
-			//ScenePreviewUtil.UpdateRenderSettings(CurrentMap.RenderSettings);
-
-			//if (CurrentMap.name == MainController.CurrentMap.name)
-			//{
-			//	CurrentMap.UpdateDirectionalLighting();
-			//	var mainReflection = Camera.main?.GetComponent<ReflectionEffectCamera>();
-			//	if (null != mainReflection)
-			//		mainReflection.UpdateRenderSettings(CurrentMap.RenderSettings);
-			//}
 		}
 
 		private void UpdateMainView()
@@ -779,8 +701,6 @@ namespace ClassicTilestorm
 			if (CurrentMap.name == MainController.CurrentMap.name)
 			{
 				CurrentMap.CopyFrom(currentClone);
-
-				//MainController.CurrentMap.UpdateLighting();
 			}
 			else
 			{
@@ -789,18 +709,6 @@ namespace ClassicTilestorm
 				CurrentMap.skybox = currentClone.skybox;
 				CurrentMap.effect = currentClone.effect;
 			}
-
-			//CurrentMap.ambient = currentClone.ambient;
-			//CurrentMap.sunlight = currentClone.sunlight;
-
-			//if (currentClone.skybox != CurrentMap.skybox)
-			//{
-			//	CurrentMap.skybox = currentClone.skybox;
-			//	SkyboxUtility.SetSkybox(currentClone.skybox);
-			//}
-
-			//if (null != reflectionEffectCamera)
-			//	reflectionEffectCamera.UpdateRenderSettings(CurrentMap.RenderSettings);
 		}
 	}
 }
