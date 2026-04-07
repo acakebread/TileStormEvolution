@@ -5,6 +5,80 @@ namespace MassiveHadronLtd
 {
 	public static class ColourUtils
 	{
+		public enum ClampMode
+		{
+			/// <summary>Hard clamp: anything >1 becomes 1.0, anything <0 becomes 0.0</summary>
+			SimpleClamp,
+
+			/// <summary>Scales the color so the brightest component = 1.0 (best for preserving vibrancy)</summary>
+			ClampToMax,
+
+			/// <summary>Simple Reinhard tone mapping (smooth highlight compression)</summary>
+			Reinhard
+		}
+
+		/// <summary>
+		/// Clamps an HDR Color to the 0-1 range before conversion to LDR (e.g. for hex, UI, etc.).
+		/// Uses extension method so you can call it as color.Clamp().
+		/// </summary>
+		/// <param name="color">The color to clamp (supports HDR values > 1)</param>
+		/// <param name="mode">How to handle values above 1.0</param>
+		/// <returns>A new Color with all components clamped to [0, 1]</returns>
+		public static Color Clamp(this Color color, ClampMode mode = ClampMode.SimpleClamp)
+		{
+			switch (mode)
+			{
+				case ClampMode.SimpleClamp:
+					return new Color(
+						Mathf.Clamp01(color.r),
+						Mathf.Clamp01(color.g),
+						Mathf.Clamp01(color.b),
+						Mathf.Clamp01(color.a)
+					);
+
+				case ClampMode.ClampToMax:
+					// Preserves hue and saturation by scaling based on the brightest channel
+					float max = Mathf.Max(color.r, color.g, color.b);
+					if (max <= 1f)
+						return color; // already in range or negative (will be clamped below)
+
+					float scale = 1f / max;
+					return new Color(
+						color.r * scale,
+						color.g * scale,
+						color.b * scale,
+						Mathf.Clamp01(color.a)
+					);
+
+				case ClampMode.Reinhard:
+					// Simple Reinhard tone mapping - good for natural highlight roll-off
+					return new Color(
+						color.r / (1f + color.r),
+						color.g / (1f + color.g),
+						color.b / (1f + color.b),
+						Mathf.Clamp01(color.a)
+					);
+
+				default:
+					return color;
+			}
+		}
+
+
+		/// <summary>
+		/// Clamps all components of the color to the [0, 1] range.
+		/// Useful for HDR colors before converting to hex, Color32, etc.
+		/// </summary>
+		public static Color Clamp(this Color color)
+		{
+			return new Color(
+				Mathf.Clamp01(color.r),
+				Mathf.Clamp01(color.g),
+				Mathf.Clamp01(color.b),
+				Mathf.Clamp01(color.a)
+			);
+		}
+
 		/// <summary>
 		/// Returns the perceived luminance (brightness) of this color using Rec.709 coefficients.
 		/// </summary>

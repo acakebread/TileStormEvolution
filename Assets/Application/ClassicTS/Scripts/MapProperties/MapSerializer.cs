@@ -434,7 +434,7 @@ namespace ClassicTilestorm
 					writer.WritePropertyName("ambient");
 
 					// Use the Color property instead of the string field
-					Color color = map.AmbientLight;
+					Color color = map.AmbientRGB;
 
 					// Decide if you want alpha always or only when < 1
 					string hex = color.ToHexString(includeAlpha: true);   // or false
@@ -451,7 +451,7 @@ namespace ClassicTilestorm
 					writer.WritePropertyName("sunlight");
 
 					// Use the Color property instead of the string field
-					Color color = map.Sunlight;
+					Color color = map.SunlightRGB;
 
 					// Decide if you want alpha always or only when < 1
 					string hex = color.ToHexString(includeAlpha: true);   // or false

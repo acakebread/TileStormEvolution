@@ -209,8 +209,8 @@ namespace ClassicTilestorm
 		private void SyncColorButtonsToCurrentMap()
 		{
 			if (currentClone == null) return;
-			if (null != ambientColourButton) ambientColourButton.GetComponent<Image>().color = currentClone.AmbientLight;
-			if (null != directionalColourButton) directionalColourButton.GetComponent<Image>().color = currentClone.Sunlight;
+			if (null != ambientColourButton) ambientColourButton.GetComponent<Image>().color = currentClone.AmbientRGB;
+			if (null != directionalColourButton) directionalColourButton.GetComponent<Image>().color = currentClone.SunlightRGB;
 		}
 
 		public void OnColourTogglePressed(Toggle src)
@@ -249,10 +249,10 @@ namespace ClassicTilestorm
 				{
 					src.GetComponent<Image>().color = selectedColor;
 					if (src == ambientColourButton)
-						currentClone.AmbientLight = selectedColor;
+						currentClone.AmbientRGB = selectedColor;
 
 					if (src == directionalColourButton)
-						currentClone.Sunlight = selectedColor;
+						currentClone.SunlightRGB = selectedColor;
 
 					currentClone.UpdateLighting();
 

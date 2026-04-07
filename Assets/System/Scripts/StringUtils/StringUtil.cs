@@ -106,10 +106,13 @@ namespace MassiveHadronLtd
 		/// <returns>Hex color string starting with # (uppercase)</returns>
 		public static string ToHexString(this Color color, bool includeAlpha = true)
 		{
-			byte r = (byte)Mathf.RoundToInt(color.r * 255f);
-			byte g = (byte)Mathf.RoundToInt(color.g * 255f);
-			byte b = (byte)Mathf.RoundToInt(color.b * 255f);
-			byte a = (byte)Mathf.RoundToInt(color.a * 255f);
+			// Clamp HDR values before conversion
+			Color clamped = color.Clamp();
+
+			byte r = (byte)Mathf.RoundToInt(clamped.r * 255f);
+			byte g = (byte)Mathf.RoundToInt(clamped.g * 255f);
+			byte b = (byte)Mathf.RoundToInt(clamped.b * 255f);
+			byte a = (byte)Mathf.RoundToInt(clamped.a * 255f);
 
 			if (includeAlpha && a < 255)
 			{

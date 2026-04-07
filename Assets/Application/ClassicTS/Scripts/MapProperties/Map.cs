@@ -124,47 +124,22 @@ namespace ClassicTilestorm
 
 		public Action<ReflectionEffectCamera.EffectMode> OnEffectChanged;
 
-		[JsonIgnore] public bool AutoAmbient
+		[JsonIgnore] private Color ambientRGB;
+		[JsonIgnore] public Color AmbientRGB
 		{
-			get => null == ambient;
-			set
-			{
-				if (value)
-				{
-					ambient = null;
-					ambientColour = SkyboxUtility.ComputeAmbientColor(SkyboxMaterial, 2f);
-				}
-				else
-					ambient = ambientColour.ToHexString(includeAlpha: true);
-			}
-		}
-		[JsonIgnore] private Color ambientColour;
-		[JsonIgnore] public Color AmbientLight
-		{
-			get => null != ambient ? StringUtil.FromHexString(ambient, defaultColor: Color.white) : ambientColour;
+			get => null != ambient ? StringUtil.FromHexString(ambient, defaultColor: Color.white) : ambientRGB;
 			set => ambient = value.ToHexString(includeAlpha: true);
 		}
 
-		[JsonIgnore] private Color sunlightColour;
-		[JsonIgnore] public bool AutoSunlight
+		[JsonIgnore] private Color sunlightRBG;
+		[JsonIgnore] public Color SunlightRGB
 		{
-			get => null == sunlight;
-			set
-			{
-				if (value)
-				{
-					sunlight = null;
-					sunlightColour = SkyboxUtility.ComputeBrightColor(SkyboxMaterial, 0.85f);
-				}
-				else
-					sunlight = sunlightColour.ToHexString(includeAlpha: true);
-			}
-		}
-		[JsonIgnore] public Color Sunlight
-		{
-			get => null != sunlight ? StringUtil.FromHexString(sunlight, defaultColor: Color.white) : sunlightColour;
+			get => null != sunlight ? StringUtil.FromHexString(sunlight, defaultColor: Color.white) : sunlightRBG;
 			set => sunlight = value.ToHexString(includeAlpha: true);
 		}
+
+		[JsonIgnore] public bool AutoAmbient { set => ambient = value ? null : ambientRGB.ToHexString(includeAlpha: true); }
+		[JsonIgnore] public bool AutoSunlight { set => sunlight = value ? null : sunlightRBG.ToHexString(includeAlpha: true); }
 
 		[JsonIgnore] private DirectionalLightUtility directionalLight;
 
@@ -311,7 +286,7 @@ namespace ClassicTilestorm
 
 		[JsonIgnore] public UnityRenderSettings RenderSettings => new(
 			ambientMode: UnityEngine.Rendering.AmbientMode.Flat,
-			ambientLight: AmbientLight,
+			ambientLight: AmbientRGB,
 			ambientIntensity: 1f,
 			skybox: SkyboxMaterial,
 			ambientProbe: default,
@@ -1020,16 +995,16 @@ namespace ClassicTilestorm
 				tinted = CubemapUtility.GetTintedCubemap(SkyboxMaterial);
 
 			if (null == ambient)
-				ambientColour = CubemapUtility.ComputeAmbientColor(tinted, 2f);
+				ambientRGB = CubemapUtility.ComputeAmbientColor(tinted, 2f);
 
 			if (null == directionalLight)
 				directionalLight = DirectionalLightUtility.Instantiate(parent);
 			if (null == directionalLight) return;
 
 			if (null == sunlight)
-				sunlightColour = directionalLight.UpdateFromTintendCubemap(tinted);
+				sunlightRBG = directionalLight.UpdateFromTintendCubemap(tinted);
 			else
-				directionalLight.UpdateFromSettings(Sunlight);
+				directionalLight.UpdateFromSettings(SunlightRGB);
 		}
 
 		public void CopyFrom(Map other)
@@ -1039,12 +1014,13 @@ namespace ClassicTilestorm
 
 			//directional lighting
 			sunlight = other.sunlight;
+			sunlightRBG = other.sunlightRBG;
 			directionalLight.CopyFrom(other.directionalLight);
 
 			//render settings
 			var updateRenderSettings = ambient != other.ambient || skybox != other.skybox;
 			ambient = other.ambient;
-			ambientColour = other.ambientColour;
+			ambientRGB = other.ambientRGB;
 
 			skybox = other.skybox;
 			if (updateRenderSettings)
