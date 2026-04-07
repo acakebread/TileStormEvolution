@@ -135,15 +135,13 @@ namespace ClassicTilestorm
 					ambientColour = SkyboxUtility.ComputeAmbientColor(SkyboxMaterial, 2f);
 				}
 				else
-				{
 					ambient = ambientColour.ToHexString(includeAlpha: true);
-				}
 			}
 		}
 		[JsonIgnore] private Color ambientColour;
 		[JsonIgnore] public Color AmbientLight
 		{
-			get => AutoAmbient ? ambientColour : StringUtil.FromHexString(ambient, defaultColor: Color.white);
+			get => null != ambient ? StringUtil.FromHexString(ambient, defaultColor: Color.white) : ambientColour;
 			set => ambient = value.ToHexString(includeAlpha: true);
 		}
 
@@ -159,14 +157,12 @@ namespace ClassicTilestorm
 					sunlightColour = SkyboxUtility.ComputeBrightColor(SkyboxMaterial, 0.85f);
 				}
 				else
-				{
 					sunlight = sunlightColour.ToHexString(includeAlpha: true);
-				}
 			}
 		}
 		[JsonIgnore] public Color Sunlight
 		{
-			get => AutoSunlight ? sunlightColour : StringUtil.FromHexString(sunlight, defaultColor: Color.white);
+			get => null != sunlight ? StringUtil.FromHexString(sunlight, defaultColor: Color.white) : sunlightColour;
 			set => sunlight = value.ToHexString(includeAlpha: true);
 		}
 
@@ -1017,22 +1013,20 @@ namespace ClassicTilestorm
 		}
 
 		// lighting
-		private void OnSkyboxChanged(Material skymat = null) => UpdateLighting(skymat);
-
 		public void UpdateLighting(Material skymat = null)
 		{
 			Cubemap tinted = null;
-			if (AutoAmbient || AutoSunlight)
+			if (null == ambient || null == sunlight)
 				tinted = CubemapUtility.GetTintedCubemap(SkyboxMaterial);
 
-			if (AutoAmbient)
+			if (null == ambient)
 				ambientColour = CubemapUtility.ComputeAmbientColor(tinted, 2f);
 
 			if (null == directionalLight)
 				directionalLight = DirectionalLightUtility.Instantiate(parent);
 			if (null == directionalLight) return;
 
-			if (AutoSunlight)
+			if (null == sunlight)
 				sunlightColour = directionalLight.UpdateFromTintendCubemap(tinted);
 			else
 				directionalLight.UpdateFromSettings(Sunlight);
@@ -1050,9 +1044,8 @@ namespace ClassicTilestorm
 			//render settings
 			var updateRenderSettings = ambient != other.ambient || skybox != other.skybox;
 			ambient = other.ambient;
-			AmbientLight = other.AmbientLight;
+			ambientColour = other.ambientColour;
 
-			//if (skybox != other.skybox) SkyboxUtility.SetSkybox(other.skybox);//no need for this any more 
 			skybox = other.skybox;
 			if (updateRenderSettings)
 				OnRenderSettingsChanged?.Invoke(RenderSettings);// for reflection effect camera connected to this map

@@ -428,7 +428,7 @@ namespace ClassicTilestorm
 
 				if (name == "ambient")
 				{
-					if (true == map.AutoAmbient)
+					if (null == propValue)//'AutoAmbient'
 						continue;
 
 					writer.WritePropertyName("ambient");
@@ -445,7 +445,7 @@ namespace ClassicTilestorm
 
 				if (name == "sunlight")
 				{
-					if (true == map.AutoSunlight)
+					if (null == propValue)//'AutoSunlight'
 						continue;
 
 					writer.WritePropertyName("sunlight");

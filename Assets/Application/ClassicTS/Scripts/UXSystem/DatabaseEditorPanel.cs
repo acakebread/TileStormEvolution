@@ -201,36 +201,23 @@ namespace ClassicTilestorm
 
 		private void SyncColorTogglesToCurrentMap()
 		{
-			if (CurrentMap == null)
-				return;
-
-			if (null != ambientColourAutoToggle) ambientColourAutoToggle.SetIsOnWithoutNotify(currentClone.AutoAmbient);
-			if (null != directionalColourAutoToggle) directionalColourAutoToggle.SetIsOnWithoutNotify(currentClone.AutoSunlight);
+			if (currentClone == null) return;
+			ambientColourAutoToggle?.SetIsOnWithoutNotify(null == currentClone.ambient);
+			directionalColourAutoToggle?.SetIsOnWithoutNotify(null == currentClone.sunlight);
 		}
 
 		private void SyncColorButtonsToCurrentMap()
 		{
-			if (CurrentMap == null)
-				return;
-
-			if (null != ambientColourButton)
-			{
-				ambientColourButton.GetComponent<Image>().color = currentClone.AmbientLight;
-			}
-			if (null != directionalColourButton)
-			{
-				directionalColourButton.GetComponent<Image>().color = currentClone.Sunlight;
-			}
+			if (currentClone == null) return;
+			if (null != ambientColourButton) ambientColourButton.GetComponent<Image>().color = currentClone.AmbientLight;
+			if (null != directionalColourButton) directionalColourButton.GetComponent<Image>().color = currentClone.Sunlight;
 		}
 
 		public void OnColourTogglePressed(Toggle src)
 		{
-			if (src == ambientColourAutoToggle)
-				currentClone.AutoAmbient = src.isOn;
-
-			if (src == directionalColourAutoToggle)
-				currentClone.AutoSunlight = src.isOn;
-
+			if (currentClone == null) return;
+			if (src == ambientColourAutoToggle) currentClone.AutoAmbient = src.isOn;
+			if (src == directionalColourAutoToggle) currentClone.AutoSunlight = src.isOn;
 			currentClone.UpdateLighting();
 
 			SyncColorButtonsToCurrentMap();
