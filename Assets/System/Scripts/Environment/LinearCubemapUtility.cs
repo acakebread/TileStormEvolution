@@ -104,7 +104,7 @@ namespace MassiveHadronLtd
 			float scalar = (cosTheta > 0.0001f) ? 1f / Mathf.Sqrt(cosTheta) : 1000f;
 
 			// Positive pitch for sky at top
-			float pitchRadians = vy * Mathf.PI * 0.5f;
+			float pitchRadians = vy * Mathf.PI * -0.5f;
 
 			// Yaw
 			float yawRadians = vx * scalar * Mathf.PI;
@@ -123,7 +123,7 @@ namespace MassiveHadronLtd
 
 			// Recover vy from the Y component (vy = +1 at sky/top, vy = -1 at ground/bottom)
 			float pitchRadians = Mathf.Asin(dir.y);
-			float vy = pitchRadians / (Mathf.PI * -0.5f);
+			float vy = pitchRadians / (Mathf.PI * 0.5f);
 
 			float theta = vy * Mathf.PI * 0.5f;
 			float cosTheta = Mathf.Cos(theta);
@@ -144,22 +144,29 @@ namespace MassiveHadronLtd
 			return new Vector2(Mathf.Clamp01(u), Mathf.Clamp01(v));
 		}
 
+
+		/// <summary>
+		/// Finds the linear map uv of the brightest area (e.g. sun) in the cubemap using
+		/// the equirectangular projection as an intermediate step.
+		/// </summary>
+		public static Vector2 FindLightUV(Cubemap cubemap, int w = 512, int h = 256, bool scanAboveHorizonOnly = true)
+		{
+			var linearrect = Create(cubemap, w, h);
+			if (null == linearrect)
+				return Vector2.one * 0.5f;
+
+			return ImageProcessing.FindSunUV(linearrect, scanAboveHorizonOnly: scanAboveHorizonOnly);
+		}
+
 		/// <summary>
 		/// Finds the direction of the brightest area (e.g. sun) in the cubemap using
 		/// the equirectangular projection as an intermediate step.
 		/// </summary>
-		public static Vector3 FindLightDirection(Cubemap cubemap)
+		public static Vector3 FindLightDirection(Cubemap cubemap, int w = 512, int h = 256, bool scanAboveHorizonOnly = true)
 		{
 			//return Vector3.down;
 
-			const int w = 512;
-			const int h = 256;
-
-			var linearrect = Create(cubemap, w, h);
-			if (linearrect == null)
-				return Vector3.up;
-
-			var uv = ImageProcessing.FindSunUV(linearrect, scanAboveHorizonOnly: true);
+			var uv = FindLightUV(cubemap, w, h, scanAboveHorizonOnly);
 			return -UVToDirection(uv);
 
 			////test

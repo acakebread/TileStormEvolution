@@ -561,6 +561,7 @@ MonoBehaviour:
   - {fileID: 4695226594433876902, guid: 81d0ade3e8f8df14fbbd2500e09a8d95, type: 3}
   - {fileID: 4695226594433876902, guid: d164df16686cd7b47b4dd970ba3f74bf, type: 3}
   - {fileID: 4695226594433876902, guid: a7555e1569b55a04b9907c21fc39335b, type: 3}
+  - {fileID: 4695226594433876902, guid: a1652329d8d6a4a4d98344d09da2f5a0, type: 3}
 --- !u!1 &1146321623
 GameObject:
   m_ObjectHideFlags: 0
@@ -727,7 +728,6 @@ MonoBehaviour:
   reflectionStrength: 0.95
   frostThreshold: 0.8
   frostFadeRange: 0.1
-  postProcessingCamera: {fileID: 756155709}
 --- !u!1 &1555382761
 GameObject:
   m_ObjectHideFlags: 0

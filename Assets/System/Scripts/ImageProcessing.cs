@@ -160,7 +160,7 @@ namespace MassiveHadronLtd
 
 			return new Vector2(
 				finalX / (width - 1f),
-				1f - finalY / (height - 1f)
+				finalY / (height - 1f)
 			);
 		}
 

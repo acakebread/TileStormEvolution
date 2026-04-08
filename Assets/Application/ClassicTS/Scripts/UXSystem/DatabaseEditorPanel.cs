@@ -46,6 +46,10 @@ namespace ClassicTilestorm
 		[SerializeField] private Button directionalColourButton;
 		[SerializeField] private Toggle directionalColourAutoToggle;
 
+		[Header("Directional Light Position")]
+		[SerializeField] private Button directionalPositionConfigButton;
+		[SerializeField] private Toggle directionalPositionConfigAutoToggle;
+
 		[Header("Ground Plane")]
 		[SerializeField] private TMP_Dropdown effectDropdown;
 		[SerializeField] private string noneEffectOptionText = "— Default —";
@@ -56,7 +60,7 @@ namespace ClassicTilestorm
 
 		[Header("Preview Settings – Map View")]
 		[SerializeField] private float fieldOfView = 50f;
-		[SerializeField] private float sizeToDistanceFactor = 0.8f;// tune for map scale
+		[SerializeField] private float sizeToDistanceFactor = 0.8f;
 		[SerializeField] private float defaultTiltAngle = 20f;
 		[SerializeField] private float minTiltAngle = 0f;
 		[SerializeField] private float maxTiltAngle = 90f;
@@ -68,6 +72,10 @@ namespace ClassicTilestorm
 		[SerializeField] private float autoRotateSpeed = -12f;
 
 		#endregion
+
+		// ────────────────────────────────────────────────────────────────────────────────
+		//   Private Fields
+		// ────────────────────────────────────────────────────────────────────────────────
 
 		private readonly List<Toggle> spawnedMapToggles = new List<Toggle>();
 		private ToggleGroup toggleGroup;
@@ -81,8 +89,11 @@ namespace ClassicTilestorm
 		private Map currentClone;
 		private GameObject currentPreviewRoot;
 
-		// Gimbal orbit controller (replaces old auto-orbit)
 		private GimbalOrbitController orbitController;
+
+		// ────────────────────────────────────────────────────────────────────────────────
+		//   Unity Lifecycle
+		// ────────────────────────────────────────────────────────────────────────────────
 
 		protected override void Awake()
 		{
@@ -94,7 +105,7 @@ namespace ClassicTilestorm
 		{
 			base.OnEnable();
 
-			ScenePreviewUtil.Initialize(CurrentMap.RenderSettings, previewCameraPrefab);//todo sort out this circular nonsense
+			ScenePreviewUtil.Initialize(CurrentMap.RenderSettings, previewCameraPrefab);
 			ScenePreviewUtil.SetPreviewUI(previewImage);
 
 			InitializeOrbitController();
@@ -149,7 +160,231 @@ namespace ClassicTilestorm
 		}
 
 		// ────────────────────────────────────────────────────────────────────────────────
-		//   Orbit Controller Setup
+		//   Skybox Dropdown (All related code grouped)
+		// ────────────────────────────────────────────────────────────────────────────────
+
+		private void PopulateSkyboxDropdown() =>
+			PopulateDropdown(skyboxDropdown, Assets.ProjectAssets.GetSkycubeNames(), noneSkyboxOptionText);
+
+		private void SyncSkyboxDropdown() =>
+			SyncDropdown(skyboxDropdown, CurrentMap?.Skybox, noneSkyboxOptionText);
+
+		private void OnSkyboxDropdownValueChanged(int index)
+		{
+			if (currentClone == null) return;
+
+			var selected = index >= 0 && index < skyboxDropdown.options.Count ? skyboxDropdown.options[index].text : null;
+			var newSkybox = (selected == noneSkyboxOptionText) ? null : selected;
+
+			if (newSkybox != currentClone.Skybox)
+			{
+				currentClone.Skybox = newSkybox;
+				currentClone.UpdateLighting();
+				UpdateMapPreview();
+			}
+			SyncColorTogglesToCurrentMap();
+			SyncColorButtonsToCurrentMap();
+		}
+
+		// ────────────────────────────────────────────────────────────────────────────────
+		//   Character Dropdown
+		// ────────────────────────────────────────────────────────────────────────────────
+
+		private void PopulateCharacterDropdown()
+		{
+			var characterNames = new List<string>
+			{
+				"Eggbot Default", "Eggbot Industrial", "Eggbot Egypt",
+				"Eggbot Medieval", "Eggbot Jungle",
+			};
+			PopulateDropdown(characterDropdown, characterNames, noneCharacterOptionText);
+		}
+
+		private void SyncCharacterDropdown() =>
+			SyncDropdown(characterDropdown, CurrentMap?.character, noneCharacterOptionText);
+
+		private void OnCharacterDropdownValueChanged(int index)
+		{
+			if (CurrentMap == null) return;
+
+			var selected = index >= 0 && index < characterDropdown.options.Count ? characterDropdown.options[index].text : null;
+			var newCharacter = (selected == noneCharacterOptionText) ? null : selected;
+
+			if (newCharacter != CurrentMap.character)
+				CurrentMap.character = newCharacter;
+		}
+
+		// ────────────────────────────────────────────────────────────────────────────────
+		//   Music Dropdown
+		// ────────────────────────────────────────────────────────────────────────────────
+
+		private void PopulateMusicDropdown() =>
+			PopulateDropdown(musicDropdown, Assets.ProjectAssets.GetMusicNames(), noneMusicOptionText);
+
+		private void SyncMusicDropdown() =>
+			SyncDropdown(musicDropdown, CurrentMap?.music, noneMusicOptionText);
+
+		private void OnMusicDropdownValueChanged(int index)
+		{
+			if (CurrentMap == null) return;
+
+			var selected = index >= 0 && index < musicDropdown.options.Count ? musicDropdown.options[index].text : null;
+			var newMusic = (selected == noneMusicOptionText) ? null : selected;
+
+			if (newMusic != CurrentMap.music)
+				CurrentMap.music = newMusic;
+		}
+
+		// ────────────────────────────────────────────────────────────────────────────────
+		//   Effect (Ground Plane) Dropdown
+		// ────────────────────────────────────────────────────────────────────────────────
+
+		private void PopulateEffectDropdown()
+		{
+			if (effectDropdown == null) return;
+
+			var effectNames = Enum.GetValues(typeof(ReflectionEffectCamera.EffectMode))
+				.Cast<ReflectionEffectCamera.EffectMode>()
+				.Where(effect => effect != ReflectionEffectCamera.EffectMode.Null)
+				.Select(effect => ReflectionEffectCamera.EffectModeToString(effect))
+				.ToList();
+
+			PopulateDropdown(effectDropdown, effectNames, noneEffectOptionText);
+		}
+
+		private void SyncEffectDropdown()
+		{
+			if (CurrentMap == null)
+			{
+				effectDropdown?.SetValueWithoutNotify(0);
+				return;
+			}
+
+			SyncDropdown(effectDropdown, ReflectionEffectCamera.EffectModeToString(CurrentMap.Effect), noneEffectOptionText);
+		}
+
+		private void OnEffectDropdownValueChanged(int index)
+		{
+			if (currentClone == null) return;
+
+			var selected = index >= 0 && index < effectDropdown.options.Count ? effectDropdown.options[index].text : null;
+			var newEffect = (selected == noneEffectOptionText) ? null : selected;
+			currentClone.Effect = ReflectionEffectCamera.ParseEffectMode(newEffect);
+
+			UpdateMapPreview();
+		}
+
+		// ────────────────────────────────────────────────────────────────────────────────
+		//   Colour Pickers + Directional Position Config
+		// ────────────────────────────────────────────────────────────────────────────────
+
+		private void SyncColorTogglesToCurrentMap()
+		{
+			if (currentClone == null) return;
+			ambientColourAutoToggle?.SetIsOnWithoutNotify(null == currentClone.ambient);
+			directionalColourAutoToggle?.SetIsOnWithoutNotify(null == currentClone.sunlight);
+			directionalPositionConfigAutoToggle?.SetIsOnWithoutNotify(null == currentClone.skyvec);
+		}
+
+		private void SyncColorButtonsToCurrentMap()
+		{
+			if (currentClone == null) return;
+			if (null != ambientColourButton) ambientColourButton.GetComponent<Image>().color = currentClone.AmbientRGB;
+			if (null != directionalColourButton) directionalColourButton.GetComponent<Image>().color = currentClone.SunlightRGB;
+		}
+
+		public void OnColourTogglePressed(Toggle src)
+		{
+			if (currentClone == null) return;
+			if (src == ambientColourAutoToggle) currentClone.ambient = src.isOn ? null : currentClone.AmbientRGB.ToHexString(includeAlpha: true);
+			if (src == directionalColourAutoToggle) currentClone.sunlight = src.isOn ? null : currentClone.SunlightRGB.ToHexString(includeAlpha: true);
+			currentClone.UpdateLighting();
+
+			SyncColorButtonsToCurrentMap();
+			UpdateMapPreview();
+		}
+
+		public void OnColourButtonPressed(Button src)
+		{
+			if (src == ambientColourButton && null != ambientColourAutoToggle && ambientColourAutoToggle.isOn)
+				return;
+
+			if (src == directionalColourButton && null != directionalColourAutoToggle && directionalColourAutoToggle.isOn)
+				return;
+
+			UIController.ClosePanel<ColourSelectorPanel>();
+			var colourPanel = UIController.OpenPanel<ColourSelectorPanel>(closeOthers: false);
+
+			if (null != colourPanel)
+			{
+				colourPanel.SetInitialColor(src.GetComponent<Image>().color);
+
+				colourPanel.onValueChanged = (selectedColor) =>
+				{
+					src.GetComponent<Image>().color = selectedColor;
+					if (src == ambientColourButton) currentClone.AmbientRGB = selectedColor;
+					if (src == directionalColourButton) currentClone.SunlightRGB = selectedColor;
+					currentClone.UpdateLighting();
+
+					UpdateMapPreview();
+				};
+			}
+		}
+
+		// ────────────────────────────────────────────────────────────────────────────────
+		//   Directional Position Config (new)
+		// ────────────────────────────────────────────────────────────────────────────────
+
+		public void OnDirectionalPositionConfigTogglePressed(Toggle src)
+		{
+			if (null == currentClone) return;
+
+			//currentClone.skyvec = src.isOn ? null : new float[] { 0.5f, 0.5f };//debug test
+			if (src.isOn)
+				currentClone.skyvec = null;
+			else
+			{
+				var skyMat = SkyboxUtility.GetSkyboxMaterialForName(currentClone.skybox);
+				var skyuv = LinearCubemapUtility.FindLightUV(CubemapUtility.GetTintedCubemap(skyMat), scanAboveHorizonOnly: true);
+				currentClone.skyvec = new float[] { skyuv.x, skyuv.y };
+			}
+			currentClone.UpdateLighting();
+			UpdateMapPreview();
+		}
+
+		public void OnDirectionalPositionConfigButtonPressed(Button src)
+		{
+			if (currentClone == null) return;
+
+			// Close competing panels
+			UIController.ClosePanel<ColourSelectorPanel>();
+			UIController.ClosePanel<SkyboxEditorPanel>();
+
+			var skyboxPanel = UIController.OpenPanel<SkyboxEditorPanel>(closeOthers: false);
+
+			if (skyboxPanel != null)
+			{
+				Material skyMat = SkyboxUtility.GetSkyboxMaterialForName(currentClone.skybox);
+
+				skyboxPanel.SetInitialSkybox(skyMat, currentClone.skyvec);
+
+				// Handle user interaction
+				skyboxPanel.onValueChanged = (normalizedUV) =>
+				{
+					currentClone.skyvec = new float[] { normalizedUV.x, normalizedUV.y };
+
+					currentClone.UpdateLighting();
+					UpdateMapPreview();
+
+					// Turn off "auto" toggle when user manually sets position
+					if (directionalPositionConfigAutoToggle != null)
+						directionalPositionConfigAutoToggle.SetIsOnWithoutNotify(false);
+				};
+			}
+		}
+
+		// ────────────────────────────────────────────────────────────────────────────────
+		//   Orbit / Preview Camera
 		// ────────────────────────────────────────────────────────────────────────────────
 
 		private void InitializeOrbitController()
@@ -199,64 +434,8 @@ namespace ClassicTilestorm
 			cam.fieldOfView = fieldOfView;
 		}
 
-		private void SyncColorTogglesToCurrentMap()
-		{
-			if (currentClone == null) return;
-			ambientColourAutoToggle?.SetIsOnWithoutNotify(null == currentClone.ambient);
-			directionalColourAutoToggle?.SetIsOnWithoutNotify(null == currentClone.sunlight);
-		}
-
-		private void SyncColorButtonsToCurrentMap()
-		{
-			if (currentClone == null) return;
-			if (null != ambientColourButton) ambientColourButton.GetComponent<Image>().color = currentClone.AmbientRGB;
-			if (null != directionalColourButton) directionalColourButton.GetComponent<Image>().color = currentClone.SunlightRGB;
-		}
-
-		public void OnColourTogglePressed(Toggle src)
-		{
-			if (currentClone == null) return;
-			if (src == ambientColourAutoToggle) currentClone.ambient = src.isOn ? null : currentClone.AmbientRGB.ToHexString(includeAlpha: true);
-			if (src == directionalColourAutoToggle) currentClone.sunlight = src.isOn ? null : currentClone.SunlightRGB.ToHexString(includeAlpha: true);
-			currentClone.UpdateLighting();
-
-			SyncColorButtonsToCurrentMap();
-			UpdateMapPreview();
-		}
-
-		public void OnColourButtonPressed(Button src)
-		{
-			//do not open colour panel if override is off
-			if (src == ambientColourButton && null != ambientColourAutoToggle && ambientColourAutoToggle.isOn)
-				return;
-
-			if (src == directionalColourButton && null != directionalColourAutoToggle && directionalColourAutoToggle.isOn)
-				return;
-
-			// Open the panel and get reference to it in one line
-			UIController.ClosePanel<ColourSelectorPanel>();
-			var colourPanel = UIController.OpenPanel<ColourSelectorPanel>(closeOthers: false);
-
-			if (null != colourPanel)
-			{
-				// Prime the panel with the current color from the button
-				colourPanel.SetInitialColor(src.GetComponent<Image>().color);
-
-				// Set initial color
-				colourPanel.onValueChanged = (selectedColor) =>
-				{
-					src.GetComponent<Image>().color = selectedColor;
-					if (src == ambientColourButton) currentClone.AmbientRGB = selectedColor;
-					if (src == directionalColourButton) currentClone.SunlightRGB = selectedColor;
-					currentClone.UpdateLighting();
-
-					UpdateMapPreview();
-				};
-			}
-		}
-
 		// ────────────────────────────────────────────────────────────────────────────────
-		//   Map List & Selection (mostly unchanged)
+		//   Map List & Selection
 		// ────────────────────────────────────────────────────────────────────────────────
 
 		private void InitializeUIReferences()
@@ -289,6 +468,12 @@ namespace ClassicTilestorm
 
 			if (effectDropdown != null)
 				effectDropdown.onValueChanged.AddListener(OnEffectDropdownValueChanged);
+
+			if (directionalPositionConfigAutoToggle != null)
+				directionalPositionConfigAutoToggle.onValueChanged.AddListener(isOn => OnDirectionalPositionConfigTogglePressed(directionalPositionConfigAutoToggle));
+
+			if (directionalPositionConfigButton != null)
+				directionalPositionConfigButton.onClick.AddListener(() => OnDirectionalPositionConfigButtonPressed(directionalPositionConfigButton));
 		}
 
 		private void OnMapNameChanged(string input)
@@ -305,56 +490,6 @@ namespace ClassicTilestorm
 
 			bool result = ResourceManager.RenameMapName(CurrentMap, newName);
 			RefreshMapList();
-		}
-
-		private void OnSkyboxDropdownValueChanged(int index)
-		{
-			if (currentClone == null) return;
-
-			var selected = index >= 0 && index < skyboxDropdown.options.Count ? skyboxDropdown.options[index].text : null;
-			var newSkybox = (selected == noneSkyboxOptionText) ? null : selected;
-
-			if (newSkybox != currentClone.Skybox)
-			{
-				currentClone.Skybox = newSkybox;
-				currentClone.UpdateLighting();
-				UpdateMapPreview();
-			}
-			SyncColorTogglesToCurrentMap();
-			SyncColorButtonsToCurrentMap();
-		}
-
-		private void OnCharacterDropdownValueChanged(int index)
-		{
-			if (CurrentMap == null) return;
-
-			var selected = index >= 0 && index < characterDropdown.options.Count ? characterDropdown.options[index].text : null;
-			var newCharacter = (selected == noneCharacterOptionText) ? null : selected;
-
-			if (newCharacter != CurrentMap.character)
-				CurrentMap.character = newCharacter;
-		}
-
-		private void OnMusicDropdownValueChanged(int index)
-		{
-			if (CurrentMap == null) return;
-
-			var selected = index >= 0 && index < musicDropdown.options.Count ? musicDropdown.options[index].text : null;
-			var newMusic = (selected == noneMusicOptionText) ? null : selected;
-
-			if (newMusic != CurrentMap.music)
-				CurrentMap.music = newMusic;
-		}
-
-		private void OnEffectDropdownValueChanged(int index)
-		{
-			if (currentClone == null) return;
-
-			var selected = index >= 0 && index < effectDropdown.options.Count ? effectDropdown.options[index].text : null;
-			var newEffect = (selected == noneEffectOptionText) ? null : selected;
-			currentClone.Effect = ReflectionEffectCamera.ParseEffectMode(newEffect);
-
-			UpdateMapPreview();
 		}
 
 		private void RefreshMapList()
@@ -447,6 +582,10 @@ namespace ClassicTilestorm
 				txt.text = "Delete";
 		}
 
+		// ────────────────────────────────────────────────────────────────────────────────
+		//   Dropdown Helpers (used by all dropdowns)
+		// ────────────────────────────────────────────────────────────────────────────────
+
 		private void PopulateDropdown(TMP_Dropdown dropdown, IEnumerable<string> items, string noneOption)
 		{
 			if (dropdown == null) return;
@@ -469,57 +608,8 @@ namespace ClassicTilestorm
 			dropdown.SetValueWithoutNotify(index >= 0 ? index : 0);
 		}
 
-		private void PopulateSkyboxDropdown() =>
-			PopulateDropdown(skyboxDropdown, Assets.ProjectAssets.GetSkycubeNames(), noneSkyboxOptionText);
-
-		private void SyncSkyboxDropdown() =>
-			SyncDropdown(skyboxDropdown, CurrentMap?.Skybox, noneSkyboxOptionText);
-
-		private void PopulateCharacterDropdown()
-		{
-			var characterNames = new List<string>
-			{
-				"Eggbot Default", "Eggbot Industrial", "Eggbot Egypt",
-				"Eggbot Medieval", "Eggbot Jungle",
-			};
-			PopulateDropdown(characterDropdown, characterNames, noneCharacterOptionText);
-		}
-
-		private void PopulateMusicDropdown() =>
-			PopulateDropdown(musicDropdown, Assets.ProjectAssets.GetMusicNames(), noneMusicOptionText);
-
-		private void PopulateEffectDropdown()
-		{
-			if (effectDropdown == null) return;
-
-			var effectNames = Enum.GetValues(typeof(ReflectionEffectCamera.EffectMode))
-				.Cast<ReflectionEffectCamera.EffectMode>()
-				.Where(effect => effect != ReflectionEffectCamera.EffectMode.Null)  // skip "Null"
-				.Select(effect => ReflectionEffectCamera.EffectModeToString(effect))
-				.ToList();
-
-			PopulateDropdown(effectDropdown, effectNames, noneEffectOptionText);
-		}
-
-		private void SyncCharacterDropdown() =>
-			SyncDropdown(characterDropdown, CurrentMap?.character, noneCharacterOptionText);
-
-		private void SyncMusicDropdown() =>
-			SyncDropdown(musicDropdown, CurrentMap?.music, noneMusicOptionText);
-
-		private void SyncEffectDropdown()
-		{
-			if (CurrentMap == null)
-			{
-				effectDropdown?.SetValueWithoutNotify(0);
-				return;
-			}
-
-			SyncDropdown(effectDropdown, ReflectionEffectCamera.EffectModeToString(CurrentMap.Effect), noneEffectOptionText);
-		}
-
 		// ────────────────────────────────────────────────────────────────────────────────
-		//   Map CRUD
+		//   Map CRUD Operations
 		// ────────────────────────────────────────────────────────────────────────────────
 
 		private void InsertMap()
@@ -597,7 +687,7 @@ namespace ClassicTilestorm
 		}
 
 		// ────────────────────────────────────────────────────────────────────────────────
-		//   Preview Utilities
+		//   Preview Management
 		// ────────────────────────────────────────────────────────────────────────────────
 
 		private bool InitialiseMapPreview()
@@ -607,7 +697,7 @@ namespace ClassicTilestorm
 			if (null != currentClone)
 			{
 				currentClone.Destroy();
-				currentClone = null; 
+				currentClone = null;
 			}
 
 			var map = CurrentMap;
@@ -626,16 +716,13 @@ namespace ClassicTilestorm
 
 			previewImage.color = Color.white;
 
-			// Create dedicated root object – named, easy to spot in hierarchy
 			currentPreviewRoot = new GameObject($"Preview – {map.name ?? "Untitled"}");
-			currentPreviewRoot.transform.SetParent(ScenePreviewUtil.PreviewMapRoot ?? transform); // fallback if no util root
+			currentPreviewRoot.transform.SetParent(ScenePreviewUtil.PreviewMapRoot ?? transform);
 
-			// Optional: reset transform
 			currentPreviewRoot.transform.localPosition = Vector3.zero;
 			currentPreviewRoot.transform.localRotation = Quaternion.identity;
 
-			// Build under our owned root
-			currentClone = MapUtils.Clone(map, currentPreviewRoot.transform);//applies PreviewRenderLayers.previewMask
+			currentClone = MapUtils.Clone(map, currentPreviewRoot.transform);
 
 			if (null == currentClone)
 			{
@@ -644,7 +731,6 @@ namespace ClassicTilestorm
 				return false;
 			}
 
-			// bounds calculation + reframing (unchanged)
 			var bounds = new Bounds();
 			var hasRenderers = false;
 
@@ -675,20 +761,21 @@ namespace ClassicTilestorm
 			ScenePreviewUtil.UpdateRenderSettings(currentClone.RenderSettings);
 
 			UpdateMainView();
-		}
 
-		private void UpdateMainView()
-		{
-			if (CurrentMap.name == MainController.CurrentMap.name)
+			void UpdateMainView()
 			{
-				CurrentMap.CopyFrom(currentClone);
-			}
-			else
-			{
-				CurrentMap.sunlight = currentClone.sunlight;
-				CurrentMap.ambient = currentClone.ambient;
-				CurrentMap.skybox = currentClone.skybox;
-				CurrentMap.effect = currentClone.effect;
+				if (CurrentMap.name == MainController.CurrentMap.name)
+				{
+					CurrentMap.CopyFrom(currentClone);
+				}
+				else
+				{
+					CurrentMap.sunlight = currentClone.sunlight;
+					CurrentMap.ambient = currentClone.ambient;
+					CurrentMap.skybox = currentClone.skybox;
+					CurrentMap.skyvec = currentClone.skyvec;
+					CurrentMap.effect = currentClone.effect;
+				}
 			}
 		}
 	}

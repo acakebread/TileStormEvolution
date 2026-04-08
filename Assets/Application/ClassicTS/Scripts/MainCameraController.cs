@@ -144,7 +144,7 @@ namespace ClassicTilestorm
 			var aspect = Camera.main?.aspect ?? Screen.height / (float)Screen.width;
 			var t = 1f / Mathf.Tan(fov * Mathf.Deg2Rad);
 			var distance = Mathf.Max(iMap.Height * t * aspect, iMap.Width * t);
-			var srcPos = dstPos + new Vector3(0f, distance * 0.75f, -distance) * 0.75f;//arbitrary scale constant to offset the fact that the distance vector is applied in two axes
+			var srcPos = dstPos + new Vector3(0f, distance, -distance) * 0.75f;//arbitrary scale constant to offset the fact that the distance vector is applied in two axes
 			return (srcPos, dstPos);
 		}
 

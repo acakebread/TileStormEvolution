@@ -49,14 +49,35 @@ namespace MassiveHadronLtd
 
 		private void SetDefaultOrientation() => transform.rotation = Quaternion.Euler(75f, 60f, 0f);
 
-		public void UpdateFromSettings(Color value, float intensity = 1f)
+		public void UpdateFromSettings(Color value, float[] skyvec = null, float intensity = 1f)
 		{
 			directionalLight.color = value;
 			directionalLight.intensity = intensity;
-			SetDefaultOrientation();
-
+			if (null != skyvec && skyvec.Length >= 2)
+				transform.rotation = Quaternion.LookRotation(-LinearCubemapUtility.UVToDirection(new Vector2(skyvec[0], skyvec[1])));
+			else
+				SetDefaultOrientation();
 			ClearCache();
 		}
+
+		public void UpdateColour(Color value, float intensity = 1f)
+		{
+			directionalLight.color = value;
+			directionalLight.intensity = intensity;
+		}
+
+		public void UpdateDirection(Vector3 direction)
+		{
+			transform.rotation = Quaternion.LookRotation(direction);
+		}
+
+		//public void UpdateDirection(float[] skyvec = null)
+		//{
+		//	if (null != skyvec && skyvec.Length >= 2)
+		//		transform.rotation = Quaternion.LookRotation(-LinearCubemapUtility.UVToDirection(new Vector2(skyvec[0], skyvec[1])));
+		//	else
+		//		SetDefaultOrientation();
+		//}
 
 		/// <summary>
 		/// Updates the directional light using a tinted cubemap.

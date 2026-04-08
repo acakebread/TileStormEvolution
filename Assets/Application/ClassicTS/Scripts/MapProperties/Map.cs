@@ -80,11 +80,12 @@ namespace ClassicTilestorm
 		[JsonProperty(Order = 1)] public string name;
 		[JsonProperty(Order = 2)] public string character;
 		[JsonProperty(Order = 3)] public string music;
-		[JsonProperty(Order = 4)] public string ambient;
-		[JsonProperty(Order = 5)] public string sunlight;
-		[JsonProperty(Order = 6)] public string skybox;
-		[JsonProperty(Order = 7)] public string effect;
-		[JsonProperty(Order = 8)] public string button;
+		[JsonProperty(Order = 4)] public string effect;
+		[JsonProperty(Order = 5)] public string skybox;
+		[JsonProperty(Order = 6)] public string ambient;
+		[JsonProperty(Order = 7)] public string sunlight;
+		[JsonProperty(Order = 8)] public float[] skyvec;
+		[JsonProperty(Order = 9)] public string button;//probably not needed any more
 
 		// ─────────────────────────────────────────────
 		// Dimensions
@@ -102,6 +103,7 @@ namespace ClassicTilestorm
 		// Conditional serialization
 		public bool ShouldSerializeambient() => !string.IsNullOrEmpty(ambient);
 		public bool ShouldSerializeskybox() => !string.IsNullOrEmpty(skybox);
+		public bool ShouldSerializeskyvec() => null != skyvec;
 		public bool ShouldSerializeeffect() => !string.IsNullOrEmpty(effect);
 		public bool ShouldSerializesolve() => solve != null && solve.Length > 0;
 		public bool ShouldSerializewaypoints() => waypoints != null && waypoints.Length > 0;
@@ -137,6 +139,8 @@ namespace ClassicTilestorm
 			get => null != sunlight ? StringUtil.FromHexString(sunlight, defaultColor: Color.white) : sunlightRBG;
 			set => sunlight = value.ToHexString(includeAlpha: true);
 		}
+
+		//[JsonIgnore] public float[] SkyVec { get => skyvec; set => skyvec = value; }//not needed for now
 
 		[JsonIgnore] private DirectionalLightUtility directionalLight;
 
@@ -338,6 +342,7 @@ namespace ClassicTilestorm
 			ambient = ambient,
 			sunlight = sunlight,
 			skybox = skybox,
+			skyvec = skyvec,
 			effect = effect,
 			button = button,
 			width = width,
@@ -394,7 +399,7 @@ namespace ClassicTilestorm
 				}
 			}
 
-			if (null!= directionalLight)
+			if (null != directionalLight)
 			{
 				if (Application.isPlaying)
 					UnityEngine.Object.Destroy(directionalLight);
@@ -982,7 +987,7 @@ namespace ClassicTilestorm
 		public void UpdateLighting(Material skymat = null)
 		{
 			Cubemap tinted = null;
-			if (null == ambient || null == sunlight)
+			if (null == ambient || null == sunlight || null == skyvec)
 				tinted = CubemapUtility.GetTintedCubemap(SkyboxMaterial);
 
 			if (null == ambient)
@@ -992,10 +997,21 @@ namespace ClassicTilestorm
 				directionalLight = DirectionalLightUtility.Instantiate(parent);
 			if (null == directionalLight) return;
 
-			if (null == sunlight)
-				sunlightRBG = directionalLight.UpdateFromTintendCubemap(tinted);
-			else
-				directionalLight.UpdateFromSettings(SunlightRGB);
+			//if (null == sunlight)
+			//	sunlightRBG = directionalLight.UpdateFromTintendCubemap(tinted);
+			//else
+			//{
+			//	directionalLight.UpdateFromSettings(SunlightRGB, skyvec);
+			//}
+
+			if (null == sunlight || null == skyvec)
+				sunlightRBG = directionalLight.UpdateFromTintendCubemap(tinted);//doing some extra work here that can be saved in refactor
+
+			if (null != SunlightRGB)
+				directionalLight.UpdateColour(SunlightRGB);
+
+			if (null != skyvec)
+				directionalLight.UpdateDirection(-LinearCubemapUtility.UVToDirection(new Vector2(skyvec[0], skyvec[1])));
 		}
 
 		public void CopyFrom(Map other)
@@ -1014,6 +1030,7 @@ namespace ClassicTilestorm
 			ambientRGB = other.ambientRGB;
 
 			skybox = other.skybox;
+			skyvec = other.skyvec;
 			if (updateRenderSettings)
 				OnRenderSettingsChanged?.Invoke(RenderSettings);// for reflection effect camera connected to this map
 
