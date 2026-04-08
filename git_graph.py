@@ -17,11 +17,12 @@ class GitGraphApp:
         self.root.title("Git Contribution Graph")
         self.repo_path = None
         self.activity = {}
-        self.start_date = datetime.now().date() - timedelta(days=365)  # Default 365 days ago
-        self.end_date = datetime.now().date()  # October 21, 2025
+        self.start_date = datetime.now().date() - timedelta(days=365)
+        self.end_date = datetime.now().date()
         self.email = None
+
+        self.stats_label = None  # NEW
         
-        # Check if a path is provided via sys.argv and validate it
         if len(sys.argv) > 1:
             provided_path = sys.argv[1]
             try:
@@ -30,30 +31,30 @@ class GitGraphApp:
                 self.root.after(100, self.update_graph_with_focus)
             except git.InvalidGitRepositoryError:
                 messagebox.showerror("Error", f"Invalid Git repository at {provided_path}. Please select a valid repository.")
-                self.load_repo()  # Prompt for directory if provided path is invalid
+                self.load_repo()
         else:
-            self.load_repo()  # No path provided, prompt for directory
+            self.load_repo()
         
         self.setup_ui()
 
     def setup_ui(self):
-        # Main frame to handle resizing
         self.main_frame = ttk.Frame(self.root)
         self.main_frame.pack(fill=tk.BOTH, expand=True)
         
-        # Control frame
         self.control_frame = ttk.Frame(self.main_frame)
         self.control_frame.pack(fill=tk.X, pady=5)
         
-        # Settings button
         self.settings_btn = ttk.Button(self.control_frame, text="Settings", command=self.open_settings)
         self.settings_btn.pack(side=tk.LEFT, padx=5)
-        
-        # Canvas frame for plot
+
+        # ===== NEW STATS LABEL =====
+        self.stats_label = ttk.Label(self.main_frame, text="", anchor="w", justify="left")
+        self.stats_label.pack(fill=tk.X, padx=10, pady=5)
+        # ===========================
+
         self.canvas_frame = ttk.Frame(self.main_frame)
         self.canvas_frame.pack(fill=tk.BOTH, expand=True)
         
-        # Plot setup (initial empty)
         self.fig, (self.ax_bar, self.ax_heat) = plt.subplots(2, 1, figsize=(12, 6), 
                                                             gridspec_kw={'height_ratios': [1, 3]})
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.canvas_frame)
@@ -63,7 +64,6 @@ class GitGraphApp:
         self.canvas._tkcanvas.pack(fill=tk.BOTH, expand=True)
 
     def load_repo(self):
-        # Only prompt for directory if no valid repo_path is set
         if not self.repo_path:
             current_dir = os.getcwd()
             try:
@@ -74,7 +74,7 @@ class GitGraphApp:
         
         if self.repo_path:
             try:
-                git.Repo(self.repo_path)  # Validate the repo_path
+                git.Repo(self.repo_path)
                 self.root.after(100, self.update_graph_with_focus)
             except git.InvalidGitRepositoryError:
                 messagebox.showerror("Error", "No valid Git repository selected.")
@@ -85,7 +85,7 @@ class GitGraphApp:
 
     def update_graph_with_focus(self):
         self.update_graph()
-        self.root.focus_force()  # Ensure GUI takes focus
+        self.root.focus_force()
 
     def get_commit_activity(self, email=None, start_date_str=None, end_date_str=None, max_days=365):
         try:
@@ -115,7 +115,6 @@ class GitGraphApp:
             if not activity:
                 raise ValueError("No commits found in the repository (or matching the filter).")
             
-            # Adjust date range based on available data
             if start_date is None and oldest_date:
                 repo_age_days = (end_date - oldest_date).days
                 calc_start = oldest_date if repo_age_days < max_days else end_date - timedelta(days=max_days)
@@ -125,7 +124,6 @@ class GitGraphApp:
             calc_start = max(calc_start, oldest_date) if oldest_date else calc_start
             filtered_activity = {d: c for d, c in activity.items() if calc_start <= d <= end_date}
             
-            # Debug: Log commit count for the selected email
             if not getattr(sys, 'frozen', False) and email:
                 print(f"Commits for {email}: {commit_count}")
             
@@ -141,7 +139,7 @@ class GitGraphApp:
         try:
             repo = git.Repo(self.repo_path)
             emails = set()
-            for commit in repo.iter_commits(max_count=1000):  # Limit to 1000 commits for performance
+            for commit in repo.iter_commits(max_count=1000):
                 emails.add(commit.author.email)
             return sorted(list(emails))
         except git.InvalidGitRepositoryError:
@@ -151,8 +149,7 @@ class GitGraphApp:
 
     def update_graph(self):
         try:
-            # Reinitialize figure and axes to reset layout
-            plt.close(self.fig)  # Close the old figure
+            plt.close(self.fig)
             self.fig, (self.ax_bar, self.ax_heat) = plt.subplots(2, 1, figsize=(12, 6), 
                                                                gridspec_kw={'height_ratios': [1, 3]})
             self.canvas.figure = self.fig
@@ -179,8 +176,36 @@ class GitGraphApp:
             
             data = np.array(counts).reshape(num_weeks, 7).T
             weekly_totals = data.sum(axis=0)
-            
-            # Ensure x-axis matches data length
+
+            # ===== NEW STATS =====
+            total_commits = sum(self.activity.values())
+
+            today = self.end_date
+            current_day_commits = self.activity.get(today, 0)
+
+            weekday = today.weekday()
+            offset_days = (weekday + 1) % 7
+            week_start = today - timedelta(days=offset_days)
+
+            current_week_commits = sum(
+                self.activity.get(week_start + timedelta(days=i), 0)
+                for i in range(7)
+            )
+
+            highest_daily = max(self.activity.values()) if self.activity else 0
+            highest_weekly = max(weekly_totals) if len(weekly_totals) > 0 else 0
+
+            stats_text = (
+                f"Total Commits: {total_commits}    |    "
+                f"Current Week: {current_week_commits}    |    "
+                f"Today: {current_day_commits}\n"
+                f"Peak Week: {highest_weekly}    |    "
+                f"Peak Day: {highest_daily}"
+            )
+
+            self.stats_label.config(text=stats_text)
+            # =====================
+
             x_range = range(len(weekly_totals))
             
             colors = ['#ebedf0', '#9be9a8', '#40c463', '#30a14e', '#216e39']
@@ -219,7 +244,7 @@ class GitGraphApp:
             self.ax_bar.set_xticks(tick_positions)
             self.ax_bar.set_xticklabels(month_labels, rotation=45, fontsize=8)
             
-            self.fig.subplots_adjust(bottom=0.15, top=0.9)  # Control margins
+            self.fig.subplots_adjust(bottom=0.15, top=0.9)
             cbar = plt.colorbar(im, ax=self.ax_heat, orientation='horizontal', pad=0.1, ticks=midpoints)
             cbar.set_ticklabels(['No commits', '1-2', '3-6', '7-11', '12+'])
             
@@ -228,6 +253,7 @@ class GitGraphApp:
             
             self.canvas.draw()
             self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+
         except ValueError as e:
             messagebox.showerror("Error", f"Error updating graph: {str(e)}")
         except Exception as e:
@@ -236,19 +262,17 @@ class GitGraphApp:
     def open_settings(self):
         settings_window = tk.Toplevel(self.root)
         settings_window.title("Settings")
-        settings_window.geometry("350x250")  # Increased width for readability
+        settings_window.geometry("350x250")
         
-        # Pre-populate email dropdown
         emails = self.get_unique_emails()
         if not emails:
             messagebox.showwarning("No Emails", "No author emails found in the repository.")
             emails = [""]
         else:
-            emails.insert(0, "")  # Add blank for "All Authors"
+            emails.insert(0, "")
         
         ttk.Label(settings_window, text="Email (select or leave blank for all):").pack(pady=5)
         email_var = tk.StringVar(value=self.email or "")
-        # Set width based on longest email, minimum 30 chars
         max_length = max(len(email) for email in emails) if emails else 20
         email_dropdown = ttk.Combobox(settings_window, textvariable=email_var, values=emails, 
                                      state="readonly", width=max(max_length, 30))

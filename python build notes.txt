@@ -1,0 +1,31 @@
+Windows Key → type: cmd → press Enter (open command as administrator )
+
+cd C:\GIT\MassiveHadron\TileStorm2025
+
+
+
+pyinstaller --clean --onefile --windowed git_graph.py
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+last notes////// use above instructions
+
+
+
+(no console)
+
+ C:\Users\acakebread\AppData\Local\Programs\Python\Python314\Scripts\pyinstaller.exe --onefile --windowed git_graph.py
+
+
+# Add command-line argument handling (as instructed) if len(sys.argv) > 1: self.repo_path = sys.argv[1] self.root.after(100, self.update_graph_with_focus)
