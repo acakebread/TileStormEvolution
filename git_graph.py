@@ -185,7 +185,8 @@ class GitGraphApp:
             
             colors = ['#ebedf0', '#9be9a8', '#40c463', '#30a14e', '#216e39']
             cmap = ListedColormap(colors)
-            bounds = [0, 1, 3, 7, 12, np.max(data) + 1]
+            max_val = np.max(data)
+            bounds = [0, 1, 3, 7, 12, max(13, max_val + 1)]
             norm = BoundaryNorm(bounds, cmap.N)
             midpoints = [(bounds[i] + bounds[i+1]) / 2 for i in range(len(bounds)-1)]
             
