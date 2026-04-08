@@ -13,7 +13,8 @@
         _ReflectionStrength ("Reflection Strength", Range(0, 1)) = 0.25
         _Skybox ("Skybox", Cube) = "" {}
         _NormalScale ("Normal Scale", Range(0, 5)) = 2.0
-        _FresnelPower ("Fresnel Exponent - use 15–30 for stylized water (reflection mostly at very grazing angles)", Range(1, 40)) = 12 }
+        _FresnelPower ("Fresnel Exponent - use 15–30 for stylized water (reflection mostly at very grazing angles)", Range(1, 40)) = 12
+    }
 
     SubShader
     {
@@ -157,6 +158,13 @@
 
                 float cosTheta = saturate(dot(viewDirWS, reflectionNormal));
                 float fresnelTerm = pow(1.0 - cosTheta, _FresnelPower);
+                
+                // === SINGLE CHANGE: cap Fresnel so it never reaches full reflection at the absolute horizon ===
+                // This keeps the gradual "discard tint / increase reflection" behaviour you want as angles become more acute,
+                // but prevents the exact 1.0 that was causing the artefact at the limit.
+                // At the furthest extreme it defaults to ~95% reflection + 5% src pixel (your tint/texture).
+                fresnelTerm = min(fresnelTerm, 0.95);
+
                 float reflectionIntensity = fresnelTerm * _ReflectionStrength;
 
                 #if !defined(SHADER_API_GLES) && !defined(SHADER_API_GLES3) // Non-WebGL
@@ -187,6 +195,7 @@
         }
     }
 }
+
 
 // DEBUG TEST
 
