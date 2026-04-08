@@ -1011,7 +1011,7 @@ namespace ClassicTilestorm
 				directionalLight.UpdateColour(SunlightRGB);
 
 			if (null != skyvec)
-				directionalLight.UpdateDirection(-LinearCubemapUtility.UVToDirection(new Vector2(skyvec[0], skyvec[1])));
+				directionalLight.UpdateDirection(-EquirectangularCubemapUtility.UVToDirection(new Vector2(skyvec[0], skyvec[1])));
 		}
 
 		public void CopyFrom(Map other)

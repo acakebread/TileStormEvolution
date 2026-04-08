@@ -69,7 +69,7 @@ namespace MassiveHadronLtd
 			var v = uv.y;
 
 			var longitude = (u - 0.5f) * Mathf.PI * 2f;
-			var latitude = (v - 0.5f) * Mathf.PI * -1f;
+			var latitude = (v - 0.5f) * Mathf.PI * 1f;
 
 			var cosLat = Mathf.Cos(latitude);
 
@@ -96,25 +96,31 @@ namespace MassiveHadronLtd
 
 			// Map angles to [0,1] range
 			var u = (longitude / (Mathf.PI * 2f)) + 0.5f;
-			var v = (latitude / Mathf.PI * -1f) + 0.5f;
+			var v = (latitude / Mathf.PI * 1f) + 0.5f;
 
 			return new Vector2(u, v);
+		}
+
+		/// <summary>
+		/// Finds the uv of the brightest area (e.g. sun) in the cubemap using
+		/// the equirectangular projection as an intermediate step.
+		/// </summary>
+		public static Vector3 FindLightUV(Cubemap cubemap, int w = 512, int h = 256, bool scanAboveHorizonOnly = true)
+		{
+			var equirect = Create(cubemap, w, h);
+			if (equirect == null)
+				return Vector3.up;
+
+			return ImageProcessing.FindSunUV(equirect, scanAboveHorizonOnly: scanAboveHorizonOnly);
 		}
 
 		/// <summary>
 		/// Finds the direction of the brightest area (e.g. sun) in the cubemap using
 		/// the equirectangular projection as an intermediate step.
 		/// </summary>
-		public static Vector3 FindLightDirection(Cubemap cubemap)
+		public static Vector3 FindLightDirection(Cubemap cubemap, int w = 512, int h = 256, bool scanAboveHorizonOnly = true)
 		{
-			const int w = 512;
-			const int h = 256;
-
-			var equirect = Create(cubemap, w, h);
-			if (equirect == null)
-				return Vector3.up;
-
-			var uv = ImageProcessing.FindSunUV(equirect, scanAboveHorizonOnly: true);
+			var uv = FindLightUV(cubemap, w, h, scanAboveHorizonOnly);
 			return -UVToDirection(uv);
 
 			////test

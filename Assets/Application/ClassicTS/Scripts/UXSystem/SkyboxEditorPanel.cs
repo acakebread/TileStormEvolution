@@ -57,12 +57,12 @@ namespace ClassicTilestorm
 		{
 			if (skyboxImage == null) return;
 
-			Texture2D linearTexture = null;
 			Cubemap sourceCubemap = CubemapUtility.GetTintedCubemap(skyboxMaterial);
 
+			Texture2D skyboxTexture = null;
 			if (sourceCubemap != null)
 			{
-				linearTexture = LinearCubemapUtility.Create(sourceCubemap, width: 512, height: 512);
+				skyboxTexture = EquirectangularCubemapUtility.Create(sourceCubemap, width: 512, height: 512);
 			}
 
 			Vector2 initialUV;
@@ -71,16 +71,17 @@ namespace ClassicTilestorm
 			{
 				initialUV = new Vector2(currentSkyvec[0], currentSkyvec[1]);
 			}
-			else if (linearTexture != null)
+			else if (skyboxTexture != null)
 			{
-				initialUV = ImageProcessing.FindSunUV(linearTexture, scanAboveHorizonOnly: true);
+				initialUV = ImageProcessing.FindSunUV(skyboxTexture, scanAboveHorizonOnly: true);
+				//initialUV = new Vector2(0.5f, 0.5f);//debug test
 			}
 			else
 			{
 				initialUV = new Vector2(0.5f, 0.75f);
 			}
 
-			skyboxImage.texture = linearTexture;
+			skyboxImage.texture = skyboxTexture;
 
 			currentNormalizedUV = initialUV;
 			UpdateCursorPosition(initialUV);
@@ -110,7 +111,6 @@ namespace ClassicTilestorm
 			float normX = Mathf.Clamp01((localPos.x - rect.xMin) / rect.width);
 			float normY = Mathf.Clamp01((localPos.y - rect.yMin) / rect.height);
 
-			// IMPORTANT: Invert Y to match LinearCubemapUtility (sky = top of texture)
 			currentNormalizedUV = new Vector2(normX, normY);
 
 			UpdateCursorPosition(currentNormalizedUV);
@@ -118,7 +118,7 @@ namespace ClassicTilestorm
 		}
 
 		// ────────────────────────────────────────────────────────────────────────────────
-		//   Cursor (now correctly synced with Linear projection)
+		//   Cursor (now correctly synced with skybox projection)
 		// ────────────────────────────────────────────────────────────────────────────────
 
 		private void UpdateCursorPosition(Vector2 normalizedUV)
@@ -128,9 +128,9 @@ namespace ClassicTilestorm
 			RectTransform imageRT = skyboxImage.rectTransform;
 
 			// Convert normalized UV to local position inside RawImage
-			Vector2 localPos = new Vector2(
+			Vector2 localPos = new (
 				Mathf.Lerp(imageRT.rect.xMin, imageRT.rect.xMax, normalizedUV.x),
-				Mathf.Lerp(imageRT.rect.yMin, imageRT.rect.yMax, normalizedUV.y)   // y already inverted above
+				Mathf.Lerp(imageRT.rect.yMin, imageRT.rect.yMax, normalizedUV.y)
 			);
 
 			cursorImage.rectTransform.anchoredPosition = localPos;

@@ -345,8 +345,9 @@ namespace ClassicTilestorm
 			else
 			{
 				var skyMat = SkyboxUtility.GetSkyboxMaterialForName(currentClone.skybox);
-				var skyuv = LinearCubemapUtility.FindLightUV(CubemapUtility.GetTintedCubemap(skyMat), scanAboveHorizonOnly: true);
-				currentClone.skyvec = new float[] { skyuv.x, skyuv.y };
+				//var skyuv = LinearCubemapUtility.FindLightUV(CubemapUtility.GetTintedCubemap(skyMat), scanAboveHorizonOnly: true);
+				var skyuv = EquirectangularCubemapUtility.FindLightUV(CubemapUtility.GetTintedCubemap(skyMat), scanAboveHorizonOnly: true);
+				currentClone.skyvec = new float[] { skyuv.x, skyuv.y };//currentClone.skyvec = new float[] { 0.5f, 0.5f };//debug test
 			}
 			currentClone.UpdateLighting();
 			UpdateMapPreview();
