@@ -273,3 +273,256 @@ namespace MassiveHadronLtd
 		}
 	}
 }
+
+//possible improvement for precision issues
+
+//using UnityEngine;
+//using System.Collections.Generic;
+
+//namespace MassiveHadronLtd
+//{
+//	public static class FrustumPlaneIntersection
+//	{
+//		private const float WANG_TILE_DENSITY = 1f;
+
+//		// Much larger epsilon = stable at distance
+//		private const float EPS = 0.05f;
+
+//		public static bool GenerateFrustumPlaneIntersectionMesh(Camera camera, Vector3 planeNormal, float planeOffset, Mesh targetMesh, bool wang = false)
+//		{
+//			if (!camera || planeNormal == Vector3.zero)
+//			{
+//				targetMesh.Clear();
+//				return false;
+//			}
+
+//			planeNormal.Normalize();
+//			var plane = new Plane(planeNormal, planeNormal * planeOffset);
+
+//			float near = -camera.nearClipPlane;
+//			float far = -camera.farClipPlane;
+//			float aspect = camera.aspect;
+
+//			var nearCorners = new Vector3[4];
+//			var farCorners = new Vector3[4];
+
+//			if (camera.orthographic)
+//			{
+//				float h = camera.orthographicSize;
+//				float w = h * aspect;
+
+//				nearCorners[0] = new Vector3(-w, h, near);
+//				nearCorners[1] = new Vector3(w, h, near);
+//				nearCorners[2] = new Vector3(w, -h, near);
+//				nearCorners[3] = new Vector3(-w, -h, near);
+
+//				farCorners[0] = new Vector3(-w, h, far);
+//				farCorners[1] = new Vector3(w, h, far);
+//				farCorners[2] = new Vector3(w, -h, far);
+//				farCorners[3] = new Vector3(-w, -h, far);
+//			}
+//			else
+//			{
+//				float fovRad = camera.fieldOfView * Mathf.Deg2Rad;
+//				float halfTan = Mathf.Tan(fovRad * 0.5f);
+
+//				nearCorners[0] = new Vector3(-halfTan * aspect * near, halfTan * near, near);
+//				nearCorners[1] = new Vector3(halfTan * aspect * near, halfTan * near, near);
+//				nearCorners[2] = new Vector3(halfTan * aspect * near, -halfTan * near, near);
+//				nearCorners[3] = new Vector3(-halfTan * aspect * near, -halfTan * near, near);
+
+//				farCorners[0] = new Vector3(-halfTan * aspect * far, halfTan * far, far);
+//				farCorners[1] = new Vector3(halfTan * aspect * far, halfTan * far, far);
+//				farCorners[2] = new Vector3(halfTan * aspect * far, -halfTan * far, far);
+//				farCorners[3] = new Vector3(-halfTan * aspect * far, -halfTan * far, far);
+//			}
+
+//			var viewToWorld = camera.cameraToWorldMatrix;
+//			for (int i = 0; i < 4; i++)
+//			{
+//				nearCorners[i] = viewToWorld.MultiplyPoint(nearCorners[i]);
+//				farCorners[i] = viewToWorld.MultiplyPoint(farCorners[i]);
+//			}
+
+//			// Collect intersections
+//			var raw = new List<Vector3>();
+
+//			void Add(Vector3 a, Vector3 b)
+//			{
+//				if (TryIntersectSegmentWithPlane(plane, a, b, out var p))
+//				{
+//					// Clamp insane far points
+//					if (p.sqrMagnitude < 1e8f)
+//						raw.Add(p);
+//				}
+//			}
+
+//			for (int i = 0; i < 4; i++)
+//			{
+//				Add(nearCorners[i], farCorners[i]);
+//				Add(nearCorners[i], nearCorners[(i + 1) % 4]);
+//				Add(farCorners[i], farCorners[(i + 1) % 4]);
+//			}
+
+//			// Deduplicate (aggressive)
+//			var points = new List<Vector3>();
+//			foreach (var p in raw)
+//			{
+//				bool exists = false;
+//				foreach (var q in points)
+//				{
+//					if ((q - p).sqrMagnitude < EPS * EPS)
+//					{
+//						exists = true;
+//						break;
+//					}
+//				}
+//				if (!exists)
+//					points.Add(p);
+//			}
+
+//			if (points.Count < 3)
+//			{
+//				targetMesh.Clear();
+//				return false;
+//			}
+
+//			// Centroid
+//			Vector3 centroid = Vector3.zero;
+//			foreach (var p in points) centroid += p;
+//			centroid /= points.Count;
+
+//			// Plane basis
+//			Vector3 tangent = Vector3.Cross(
+//				Mathf.Abs(Vector3.Dot(planeNormal, Vector3.up)) < 0.99f ? Vector3.up : Vector3.right,
+//				planeNormal).normalized;
+
+//			Vector3 bitangent = Vector3.Cross(planeNormal, tangent);
+
+//			// Sort by angle
+//			points.Sort((a, b) =>
+//			{
+//				Vector3 da = a - centroid;
+//				Vector3 db = b - centroid;
+
+//				float angleA = Mathf.Atan2(Vector3.Dot(da, bitangent), Vector3.Dot(da, tangent));
+//				float angleB = Mathf.Atan2(Vector3.Dot(db, bitangent), Vector3.Dot(db, tangent));
+
+//				return angleA.CompareTo(angleB);
+//			});
+
+//			// 🔥 REMOVE COLINEAR POINTS (THIS IS THE FIX)
+//			var cleaned = new List<Vector3>();
+
+//			for (int i = 0; i < points.Count; i++)
+//			{
+//				Vector3 prev = points[(i - 1 + points.Count) % points.Count];
+//				Vector3 curr = points[i];
+//				Vector3 next = points[(i + 1) % points.Count];
+
+//				Vector3 a = (curr - prev).normalized;
+//				Vector3 b = (next - curr).normalized;
+
+//				// Drop nearly straight-line vertices
+//				if (Vector3.Dot(a, b) > 0.999f)
+//					continue;
+
+//				cleaned.Add(curr);
+//			}
+
+//			if (cleaned.Count < 3)
+//			{
+//				targetMesh.Clear();
+//				return false;
+//			}
+
+//			// Build mesh
+//			int count = cleaned.Count;
+//			var vertices = new Vector3[count];
+//			var uvs = new Vector2[count];
+
+//			for (int i = 0; i < count; i++)
+//			{
+//				vertices[i] = cleaned[i];
+//				uvs[i] = wang ? GetWangUV(vertices[i], planeNormal) : GetUVFromPosition(vertices[i], planeNormal);
+//			}
+
+//			// Ensure correct winding
+//			if (Vector3.Dot(ComputePolygonNormal(vertices), planeNormal) < 0f)
+//			{
+//				System.Array.Reverse(vertices);
+//				System.Array.Reverse(uvs);
+//			}
+
+//			// Triangle fan (safe now)
+//			var tris = new int[(count - 2) * 3];
+//			for (int i = 0, t = 0; i < count - 2; i++, t += 3)
+//			{
+//				tris[t] = 0;
+//				tris[t + 1] = i + 1;
+//				tris[t + 2] = i + 2;
+//			}
+
+//			targetMesh.Clear();
+//			targetMesh.vertices = vertices;
+//			targetMesh.uv = uvs;
+//			targetMesh.triangles = tris;
+//			targetMesh.RecalculateBounds();
+//			targetMesh.RecalculateNormals();
+
+//			return true;
+//		}
+
+//		private static bool TryIntersectSegmentWithPlane(Plane plane, Vector3 a, Vector3 b, out Vector3 point)
+//		{
+//			point = Vector3.zero;
+//			Vector3 ab = b - a;
+//			float denom = Vector3.Dot(plane.normal, ab);
+
+//			if (Mathf.Abs(denom) < 1e-6f)
+//				return false;
+
+//			float t = -(Vector3.Dot(plane.normal, a) + plane.distance) / denom;
+
+//			if (t >= 0f && t <= 1f)
+//			{
+//				point = a + ab * t;
+//				return true;
+//			}
+
+//			return false;
+//		}
+
+//		private static Vector3 ComputePolygonNormal(Vector3[] verts)
+//		{
+//			Vector3 n = Vector3.zero;
+//			for (int i = 0; i < verts.Length; i++)
+//			{
+//				Vector3 current = verts[i];
+//				Vector3 next = verts[(i + 1) % verts.Length];
+//				n.x += (current.y - next.y) * (current.z + next.z);
+//				n.y += (current.z - next.z) * (current.x + next.x);
+//				n.z += (current.x - next.x) * (current.y + next.y);
+//			}
+//			return n.normalized;
+//		}
+
+//		private static Vector2 GetUVFromPosition(Vector3 position, Vector3 planeNormal)
+//		{
+//			Vector3 abs = new Vector3(Mathf.Abs(planeNormal.x), Mathf.Abs(planeNormal.y), Mathf.Abs(planeNormal.z));
+
+//			if (abs.y > abs.x && abs.y > abs.z)
+//				return new Vector2(position.x, position.z);
+
+//			if (abs.x > abs.z)
+//				return new Vector2(position.y, position.z);
+
+//			return new Vector2(position.x, position.y);
+//		}
+
+//		private static Vector2 GetWangUV(Vector3 position, Vector3 planeNormal)
+//		{
+//			return GetUVFromPosition(position, planeNormal) * WANG_TILE_DENSITY;
+//		}
+//	}
+//}

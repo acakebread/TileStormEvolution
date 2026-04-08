@@ -199,9 +199,9 @@ namespace MassiveHadronLtd
 			InvalidateComputeCaches();
 
 			// Create and bake new tinted cubemap
-			var tintedCubemap = new Cubemap(resolution, TextureFormat.RGBA32, true)
+			var tintedCubemap = new Cubemap(resolution, TextureFormat.RGBA32, false)
 			{
-				filterMode = FilterMode.Bilinear,
+				filterMode = FilterMode.Trilinear,
 				wrapMode = TextureWrapMode.Clamp,
 				name = "TintedSkyReflection_" + (skyMat.name ?? "Unnamed")
 			};
