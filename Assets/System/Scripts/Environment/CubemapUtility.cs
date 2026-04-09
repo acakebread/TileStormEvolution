@@ -301,78 +301,14 @@ namespace MassiveHadronLtd
 		//	return tintedCubemap;
 		//}
 
-		///// <summary>
-		///// Returns a tinted version of the skybox as a Cubemap.
-		///// Only ONE tinted cubemap is kept in memory at any time (ideal for WebGL).
-		///// When the skybox material changes, the old cubemap is automatically destroyed.
-		///// </summary>
-		//public static Cubemap GetTintedCubemap(Material skyMat, int resolution = 256)
-		//{
-		//	if (skyMat == null) return null;
-
-		//	// Fast path: reuse if it's the same skybox material we already baked
-		//	if (skyMat == s_CurrentSkyMat && s_CurrentTintedCubemap != null)
-		//		return s_CurrentTintedCubemap;
-
-		//	// Destroy the previous tinted cubemap to free memory
-		//	if (s_CurrentTintedCubemap != null)
-		//	{
-		//		UnityEngine.Object.DestroyImmediate(s_CurrentTintedCubemap);
-		//		s_CurrentTintedCubemap = null;
-		//	}
-
-		//	// Invalidate compute caches because the underlying cubemap will change
-		//	InvalidateComputeCaches();
-
-		//	// Create and bake new tinted cubemap
-		//	var tintedCubemap = new Cubemap(resolution, TextureFormat.RGBA32, false)
-		//	{
-		//		filterMode = FilterMode.Trilinear,
-		//		wrapMode = TextureWrapMode.Clamp,
-		//		name = "TintedSkyReflection_" + (skyMat.name ?? "Unnamed")
-		//	};
-
-		//	var tempGo = new GameObject("SkyboxBaker") { hideFlags = HideFlags.HideAndDontSave };
-		//	var bakerCam = tempGo.AddComponent<Camera>();
-
-		//	bakerCam.clearFlags = CameraClearFlags.Skybox;
-		//	bakerCam.cullingMask = 0;
-		//	bakerCam.farClipPlane = 1000f;
-		//	bakerCam.allowHDR = true;
-		//	bakerCam.backgroundColor = Color.black;
-
-		//	var currentSky = RenderSettings.skybox;
-		//	RenderSettings.skybox = skyMat;
-		//	bakerCam.RenderToCubemap(tintedCubemap);
-		//	RenderSettings.skybox = currentSky;
-
-		//	UnityEngine.Object.DestroyImmediate(bakerCam);
-		//	UnityEngine.Object.DestroyImmediate(tempGo);
-
-		//	// Cache the new cubemap
-		//	s_CurrentTintedCubemap = tintedCubemap;
-		//	s_CurrentSkyMat = skyMat;
-
-		//	return tintedCubemap;
-		//}
-
-
 		/// <summary>
 		/// Returns a tinted version of the skybox as a Cubemap.
 		/// Only ONE tinted cubemap is kept in memory at any time (ideal for WebGL).
 		/// When the skybox material changes, the old cubemap is automatically destroyed.
-		/// 
-		/// Note: This version requires the skybox material to expose a "_Tex" or "_MainTex" Cubemap property
-		/// (standard for most Skybox/Cubemap shaders). It applies a simple multiplicative tint.
 		/// </summary>
-		public static Cubemap GetTintedCubemap(Material skyMat, Color tint = default, int resolution = 256)
+		public static Cubemap GetTintedCubemap(Material skyMat, int resolution = 256)
 		{
-			if (skyMat == null)
-				return null;
-
-			// Use white as default tint if none provided (neutral = no change)
-			if (tint == default)
-				tint = Color.white;
+			if (skyMat == null) return null;
 
 			// Fast path: reuse if it's the same skybox material we already baked
 			if (skyMat == s_CurrentSkyMat && s_CurrentTintedCubemap != null)
@@ -388,27 +324,30 @@ namespace MassiveHadronLtd
 			// Invalidate compute caches because the underlying cubemap will change
 			InvalidateComputeCaches();
 
-			// Extract the source cubemap from the skybox material
-			Cubemap sourceCubemap = null;
-
-			// Common property names for skybox cubemap textures
-			if (skyMat.HasProperty("_Tex"))
-				sourceCubemap = skyMat.GetTexture("_Tex") as Cubemap;
-			else if (skyMat.HasProperty("_MainTex"))
-				sourceCubemap = skyMat.GetTexture("_MainTex") as Cubemap;
-
-			if (sourceCubemap == null)
+			// Create and bake new tinted cubemap
+			var tintedCubemap = new Cubemap(resolution, TextureFormat.RGBA32, false)
 			{
-				Debug.LogWarning($"GetTintedCubemap: Could not find a Cubemap texture in material '{skyMat.name}'. " +
-								 "Make sure the material uses a Skybox/Cubemap shader or similar.");
-				return null;
-			}
+				filterMode = FilterMode.Trilinear,
+				wrapMode = TextureWrapMode.Clamp,
+				name = "TintedSkyReflection_" + (skyMat.name ?? "Unnamed")
+			};
 
-			// Create tinted version using the provided helper
-			Cubemap tintedCubemap = TintCubemap(sourceCubemap, tint);
+			var tempGo = new GameObject("SkyboxBaker") { hideFlags = HideFlags.HideAndDontSave };
+			var bakerCam = tempGo.AddComponent<Camera>();
 
-			// Optional: give it a descriptive name for debugging
-			tintedCubemap.name = $"TintedSkyReflection_{skyMat.name ?? "Unnamed"}_Tint{tint}";
+			bakerCam.clearFlags = CameraClearFlags.Skybox;
+			bakerCam.cullingMask = 0;
+			bakerCam.farClipPlane = 1000f;
+			bakerCam.allowHDR = true;
+			bakerCam.backgroundColor = Color.black;
+
+			var currentSky = RenderSettings.skybox;
+			RenderSettings.skybox = skyMat;
+			bakerCam.RenderToCubemap(tintedCubemap);
+			RenderSettings.skybox = currentSky;
+
+			UnityEngine.Object.DestroyImmediate(bakerCam);
+			UnityEngine.Object.DestroyImmediate(tempGo);
 
 			// Cache the new cubemap
 			s_CurrentTintedCubemap = tintedCubemap;
@@ -417,25 +356,117 @@ namespace MassiveHadronLtd
 			return tintedCubemap;
 		}
 
-		public static Cubemap TintCubemap(Cubemap source, Color tint)
+		public static Cubemap GetTintedCubemapInstance(Material skyMat, int resolution = 256)
 		{
-			if (source == null) return null;
-			int size = source.width;
-			Cubemap result = new Cubemap(size, source.format, false);
+			if (skyMat == null) return null;
 
-			for (int i = 0; i < 6; i++)
+			// Create and bake new tinted cubemap
+			var tintedCubemap = new Cubemap(resolution, TextureFormat.RGBA32, false)
 			{
-				Color[] facePixels = source.GetPixels((CubemapFace)i);
-				for (int p = 0; p < facePixels.Length; p++)
-					facePixels[p] *= tint; // apply tint
+				filterMode = FilterMode.Trilinear,
+				wrapMode = TextureWrapMode.Clamp,
+				name = "TintedSkyReflection_" + (skyMat.name ?? "Unnamed")
+			};
 
-				result.SetPixels(facePixels, (CubemapFace)i);
-			}
+			var tempGo = new GameObject("SkyboxBaker") { hideFlags = HideFlags.HideAndDontSave };
+			var bakerCam = tempGo.AddComponent<Camera>();
 
-			result.Apply();
-			return result;
+			bakerCam.clearFlags = CameraClearFlags.Skybox;
+			bakerCam.cullingMask = 0;
+			bakerCam.farClipPlane = 1000f;
+			bakerCam.allowHDR = true;
+			bakerCam.backgroundColor = Color.black;
+
+			var currentSky = RenderSettings.skybox;
+			RenderSettings.skybox = skyMat;
+			bakerCam.RenderToCubemap(tintedCubemap);
+			RenderSettings.skybox = currentSky;
+
+			UnityEngine.Object.DestroyImmediate(bakerCam);
+			UnityEngine.Object.DestroyImmediate(tempGo);
+
+			return tintedCubemap;
 		}
 
+
+		///// <summary>
+		///// Returns a tinted version of the skybox as a Cubemap.
+		///// Only ONE tinted cubemap is kept in memory at any time (ideal for WebGL).
+		///// When the skybox material changes, the old cubemap is automatically destroyed.
+		///// 
+		///// Note: This version requires the skybox material to expose a "_Tex" or "_MainTex" Cubemap property
+		///// (standard for most Skybox/Cubemap shaders). It applies a simple multiplicative tint.
+		///// </summary>
+		//public static Cubemap GetTintedCubemap(Material skyMat, Color tint = default, int resolution = 256)
+		//{
+		//	if (skyMat == null)
+		//		return null;
+
+		//	// Use white as default tint if none provided (neutral = no change)
+		//	if (tint == default)
+		//		tint = Color.white;
+
+		//	// Fast path: reuse if it's the same skybox material we already baked
+		//	if (skyMat == s_CurrentSkyMat && s_CurrentTintedCubemap != null)
+		//		return s_CurrentTintedCubemap;
+
+		//	// Destroy the previous tinted cubemap to free memory
+		//	if (s_CurrentTintedCubemap != null)
+		//	{
+		//		UnityEngine.Object.DestroyImmediate(s_CurrentTintedCubemap);
+		//		s_CurrentTintedCubemap = null;
+		//	}
+
+		//	// Invalidate compute caches because the underlying cubemap will change
+		//	InvalidateComputeCaches();
+
+		//	// Extract the source cubemap from the skybox material
+		//	Cubemap sourceCubemap = null;
+
+		//	// Common property names for skybox cubemap textures
+		//	if (skyMat.HasProperty("_Tex"))
+		//		sourceCubemap = skyMat.GetTexture("_Tex") as Cubemap;
+		//	else if (skyMat.HasProperty("_MainTex"))
+		//		sourceCubemap = skyMat.GetTexture("_MainTex") as Cubemap;
+
+		//	if (sourceCubemap == null)
+		//	{
+		//		Debug.LogWarning($"GetTintedCubemap: Could not find a Cubemap texture in material '{skyMat.name}'. " +
+		//						 "Make sure the material uses a Skybox/Cubemap shader or similar.");
+		//		return null;
+		//	}
+
+		//	// Create tinted version using the provided helper
+		//	Cubemap tintedCubemap = TintCubemap(sourceCubemap, tint);
+
+		//	// Optional: give it a descriptive name for debugging
+		//	tintedCubemap.name = $"TintedSkyReflection_{skyMat.name ?? "Unnamed"}_Tint{tint}";
+
+		//	// Cache the new cubemap
+		//	s_CurrentTintedCubemap = tintedCubemap;
+		//	s_CurrentSkyMat = skyMat;
+
+		//	return tintedCubemap;
+		//}
+
+		//public static Cubemap TintCubemap(Cubemap source, Color tint)
+		//{
+		//	if (source == null) return null;
+		//	int size = source.width;
+		//	Cubemap result = new Cubemap(size, source.format, false);
+
+		//	for (int i = 0; i < 6; i++)
+		//	{
+		//		Color[] facePixels = source.GetPixels((CubemapFace)i);
+		//		for (int p = 0; p < facePixels.Length; p++)
+		//			facePixels[p] *= tint; // apply tint
+
+		//		result.SetPixels(facePixels, (CubemapFace)i);
+		//	}
+
+		//	result.Apply();
+		//	return result;
+		//}
 
 		//public static System.Collections.IEnumerator GetTintedCubemapAsync(Material skyMat, Action<Cubemap> onReady, int resolution = 128)
 		//{

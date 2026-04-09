@@ -346,6 +346,9 @@ namespace MassiveHadronLtd
 					effectMaterial.SetFloat("_RippleOffset", rippleOffset);
 					effectMaterial.SetFloat("_ReflectionStrength", reflectionStrength);
 					if (tintedSkyboxTexture != null) effectMaterial.SetTexture("_Skybox", tintedSkyboxTexture);
+					//effectMaterial.SetTexture("_Skybox", CubemapUtility.GetSkyboxAsCubemap());
+
+					
 					break;
 				case EffectMode.OceanEffect:
 					effectMaterial.SetTexture("_MainTex", effectRT);
@@ -444,7 +447,7 @@ namespace MassiveHadronLtd
 				var overrideComp = childCam.gameObject.GetOrAddComponent<CameraRenderSettingsOverride>();
 				overrideComp.OverrideSettings = renderSettings;
 			}
-			tintedSkyboxTexture = CubemapUtility.GetTintedCubemap(renderSettings.skybox).Clone();
+			tintedSkyboxTexture = CubemapUtility.GetTintedCubemapInstance(renderSettings.skybox);//.Clone();
 			UpdateEffect(effectMode);
 		}
 
