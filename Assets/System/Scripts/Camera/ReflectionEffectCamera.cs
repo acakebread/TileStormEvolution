@@ -105,7 +105,7 @@ namespace MassiveHadronLtd
 
 			effectMesh = new Mesh();
 
-			tintedSkyboxTexture = CubemapUtility.GetSkyboxAsCubemap().Clone();
+			tintedSkyboxTexture = CubemapUtility.GetSkyboxAsCubemap();//.Clone();
 
 			// Force initial build
 			EffectMode startMode = effectMode;
