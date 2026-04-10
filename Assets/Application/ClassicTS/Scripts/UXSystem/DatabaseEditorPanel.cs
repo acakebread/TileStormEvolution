@@ -117,12 +117,16 @@ namespace ClassicTilestorm
 			PopulateEffectDropdown();
 			RefreshMapList();
 
-			if (InitialiseMapPreview())
-			{
-				UpdateMapPreview();
-				return;
-			}
-			Debug.LogError("failed to create preview");
+			//if (InitialiseMapPreview())
+			//{
+			//	UpdateMapPreview();
+			//	return;
+			//}
+
+			UpdateMapPreview();
+
+			if (null == currentClone)
+				Debug.LogError("failed to create preview");
 		}
 
 		protected override void OnDisable()
