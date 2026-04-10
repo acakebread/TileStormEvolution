@@ -6,9 +6,8 @@ using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
-using MassiveHadronLtd;           // your namespace
+using MassiveHadronLtd;
 using ClassicTilestorm.Assets;
-using ClassicTilestorm;    // where ProjectAssets lives
 
 public class AssetManifestGenerator : IPreprocessBuildWithReport
 {
@@ -16,28 +15,32 @@ public class AssetManifestGenerator : IPreprocessBuildWithReport
 
 	public void OnPreprocessBuild(BuildReport report)
 	{
-		GenerateAllManifests();
+		if (report.summary.platform == BuildTarget.WebGL)
+			GenerateAllManifests();
 	}
 
 	[MenuItem("Tools/Generate Asset Manifests %&M")]
 	public static void GenerateAllManifests()
 	{
-		const string manifestRoot = "Assets/Resources/AssetManifests";
-		if (!Directory.Exists(manifestRoot))
-			Directory.CreateDirectory(manifestRoot);
+		// Ensure the manifest folder exists inside Resources
+		const string manifestFolder = "Assets/Resources/AssetManifests";
+		if (!Directory.Exists(manifestFolder))
+			Directory.CreateDirectory(manifestFolder);
 
-		// These match the exact root arrays you already have in ProjectAssets
-		WriteManifest("Models", GetNames<GameObject>(new[] { AssetPath.GeometryPath?.Trim('/') ?? "", "Levels", "Levels/Med" }));
-		WriteManifest("Prefabs", GetNames<GameObject>(new[] { AssetPath.PrefabPath?.Trim('/') ?? "" }));
-		WriteManifest("Textures", GetNames<Texture>(new[] { AssetPath.TexturePath?.Trim('/') ?? "" }));
-		WriteManifest("Texture2Ds", GetNames<Texture2D>(new[] { AssetPath.TexturePath?.Trim('/') ?? "" }));
-		WriteManifest("Materials", GetNames<Material>(new[] { AssetPath.MaterialPath?.Trim('/') ?? "" }));
-		WriteManifest("Skycubes", GetNames<Material>(new[] { AssetPath.SkycubesPath?.Trim('/') ?? "" }));
-		WriteManifest("Music", GetNames<AudioClip>(new[] { AssetPath.MusicPath?.Trim('/') ?? "" }));
-		WriteManifest("Sounds", GetNames<AudioClip>(new[] { AssetPath.SoundPath?.Trim('/') ?? "" }));
+		// Call Initialize so the roots are registered (including any dev remapping paths)
+		AssetConfiguration.Initialize();
+
+		WriteManifest("Models", CollectNames<GameObject>(AssetRegistry<GameObject>.GetRegisteredModelRoots()));
+		WriteManifest("Prefabs", CollectNames<GameObject>(AssetRegistry<GameObject>.GetRegisteredPrefabRoots()));
+		WriteManifest("Textures", CollectNames<Texture>(AssetRegistry<Texture>.GetRegisteredTextureRoots()));
+		WriteManifest("Texture2Ds", CollectNames<Texture2D>(AssetRegistry<Texture2D>.GetRegisteredTexture2DRoots()));
+		WriteManifest("Materials", CollectNames<Material>(AssetRegistry<Material>.GetRegisteredMaterialRoots()));
+		WriteManifest("Skycubes", CollectNames<Material>(AssetRegistry<Material>.GetRegisteredSkyboxRoots()));
+		WriteManifest("Sounds", CollectNames<AudioClip>(AssetRegistry<AudioClip>.GetRegisteredSoundRoots()));
+		WriteManifest("Music", CollectNames<AudioClip>(AssetRegistry<AudioClip>.GetRegisteredMusicRoots()));
 
 		AssetDatabase.Refresh();
-		Debug.Log("<color=cyan>Asset Manifests generated and ready for WebGL!</color>");
+		Debug.Log("<color=cyan>Asset Manifests generated successfully for WebGL!</color>");
 	}
 
 	private static void WriteManifest(string manifestName, IEnumerable<string> names)
@@ -46,10 +49,11 @@ public class AssetManifestGenerator : IPreprocessBuildWithReport
 		File.WriteAllLines(path, names.OrderBy(n => n, System.StringComparer.OrdinalIgnoreCase));
 	}
 
-	// Re-uses the exact same logic you already have in ResourceUtils (no duplication of scanning code)
-	private static IEnumerable<string> GetNames<T>(string[] roots) where T : UnityEngine.Object
+	// Helper to collect names using the same fast scanner we use at runtime
+	private static IEnumerable<string> CollectNames<T>(IEnumerable<string> roots) where T : UnityEngine.Object
 	{
-		return ResourceUtils.GetAssetNamesFromResources<T>(roots, ""); // manifestName ignored in Editor
+		// Pass empty string as manifestName – ignored in Editor
+		return ResourceUtils.GetAssetNamesFromResources<T>(roots.ToArray(), "");
 	}
 }
 #endif

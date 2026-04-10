@@ -40,8 +40,10 @@ namespace ClassicTilestorm
 		private bool panelWasShownByValidHover;
 
 #if UNITY_WEBGL && !UNITY_EDITOR
-		private const int ICON_SIZE = 48;
-		private const int MAXIMUM_RENDER_TEXTURE_SIZE = 2048;
+		//private const int ICON_SIZE = 48;
+		//private const int MAXIMUM_RENDER_TEXTURE_SIZE = 2048;
+		private const int ICON_SIZE = 96;
+		private const int MAXIMUM_RENDER_TEXTURE_SIZE = 4096;
 #else
 		private const int ICON_SIZE = 192;
 		private const int MAXIMUM_RENDER_TEXTURE_SIZE = 8192;

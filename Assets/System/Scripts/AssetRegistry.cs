@@ -142,5 +142,15 @@ namespace MassiveHadronLtd
 			}
 			return null;
 		}
+
+		// Add these public getters (one per category)
+		public static IEnumerable<string> GetRegisteredModelRoots() => ModelRoots;
+		public static IEnumerable<string> GetRegisteredPrefabRoots() => PrefabRoots;
+		public static IEnumerable<string> GetRegisteredTextureRoots() => TextureRoots;
+		public static IEnumerable<string> GetRegisteredTexture2DRoots() => Texture2DRoots;
+		public static IEnumerable<string> GetRegisteredMaterialRoots() => MaterialRoots;
+		public static IEnumerable<string> GetRegisteredSkyboxRoots() => SkyboxRoots;
+		public static IEnumerable<string> GetRegisteredSoundRoots() => SoundRoots;
+		public static IEnumerable<string> GetRegisteredMusicRoots() => MusicRoots;
 	}
 }

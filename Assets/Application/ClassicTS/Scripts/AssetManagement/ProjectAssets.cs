@@ -3,7 +3,6 @@ using UnityEngine;
 using MassiveHadronLtd;
 using System.Collections.Generic;
 using System.Linq;
-using System.IO;
 
 namespace ClassicTilestorm.Assets
 {
@@ -255,42 +254,46 @@ namespace ClassicTilestorm.Assets
 				AssetPath.SoundPath?.Trim('/') ?? ""
 			}), forceRefresh, "Sound");
 
-		// ── Core loading helper ─────────────────────────────────────────────
-		private static IEnumerable<string> GetAssetNamesFromRoots<T>(string[] roots)
-			where T : UnityEngine.Object
-		{
-			// One-line change – the rest of ProjectAssets stays 100% identical
-			return ResourceUtils.GetAssetNamesFromResources<T>(roots, GetManifestName<T>(roots));
-		}
-
-		private static string GetManifestName<T>(string[] roots) where T : UnityEngine.Object
-		{
-			// Maps the exact call sites you already have in ProjectAssets
-			if (typeof(T) == typeof(GameObject))
-			{
-				if (roots.Contains("Levels") || roots.Contains("Levels/Med")) return "Models";
-				return "Prefabs";
-			}
-			if (typeof(T) == typeof(Texture)) return "Textures";
-			if (typeof(T) == typeof(Texture2D)) return "Texture2Ds";
-			if (typeof(T) == typeof(Material))
-			{
-				// Skycubes uses its own root
-				return roots.Any(r => r.Contains("Skycubes") || r.Contains("SkyCubes")) ? "Skycubes" : "Materials";
-			}
-			if (typeof(T) == typeof(AudioClip))
-			{
-				return roots.Any(r => r.Contains("Music")) ? "Music" : "Sounds";
-			}
-			return "Unknown";
-		}
-
 		/// <summary>
 		/// Force refresh all name caches (call after significant asset changes)
 		/// </summary>
 		public static void RefreshAllNameCaches()
 		{
 			NameCaches.Clear();   // still works perfectly
+		}
+
+		// ── Core loading helper ─────────────────────────────────────────────
+		private static IEnumerable<string> GetAssetNamesFromRoots<T>(string[] roots)
+			where T : UnityEngine.Object
+		{
+			// Use the manifest name that matches what the generator wrote
+			string manifestName = GetManifestNameForType<T>(roots);
+			return ResourceUtils.GetAssetNamesFromResources<T>(roots, manifestName);
+		}
+
+		private static string GetManifestNameForType<T>(string[] roots) where T : UnityEngine.Object
+		{
+			if (typeof(T) == typeof(GameObject))
+			{
+				// "Levels" and "Levels/Med" are temporary dev paths → treat as Models
+				return "Models";
+			}
+			if (typeof(T) == typeof(Texture)) return "Textures";
+			if (typeof(T) == typeof(Texture2D)) return "Texture2Ds";
+			if (typeof(T) == typeof(Material))
+			{
+				// Distinguish Skyboxes vs normal Materials
+				return roots != null && roots.Any(r =>
+					r != null && (r.Contains("Skycubes") || r.Contains("SkyCubes")))
+					? "Skycubes" : "Materials";
+			}
+			if (typeof(T) == typeof(AudioClip))
+			{
+				return roots != null && roots.Any(r =>
+					r != null && (r.Contains("Music") || r.Contains("music")))
+					? "Music" : "Sounds";
+			}
+			return "Unknown";
 		}
 	}
 }
