@@ -3,6 +3,7 @@ using UnityEngine;
 using MassiveHadronLtd;
 using System.Collections.Generic;
 using System.Linq;
+using System.IO;
 
 namespace ClassicTilestorm.Assets
 {
@@ -251,23 +252,37 @@ namespace ClassicTilestorm.Assets
 		public static IReadOnlyList<string> GetSoundNames(bool forceRefresh = false)
 			=> GetNames<AudioClip>(() => GetAssetNamesFromRoots<AudioClip>(new[]
 			{
-				AssetPath.SoundPath?.Trim('/') ?? ""   // or whatever your sound root is
+				AssetPath.SoundPath?.Trim('/') ?? ""
 			}), forceRefresh, "Sound");
 
-		// ── Core loading helper ───────────────────────────────────────────── (unchanged)
-
+		// ── Core loading helper ─────────────────────────────────────────────
 		private static IEnumerable<string> GetAssetNamesFromRoots<T>(string[] roots)
 			where T : UnityEngine.Object
 		{
-			foreach (var root in roots.Where(r => !string.IsNullOrEmpty(r)))
+			// One-line change – the rest of ProjectAssets stays 100% identical
+			return ResourceUtils.GetAssetNamesFromResources<T>(roots, GetManifestName<T>(roots));
+		}
+
+		private static string GetManifestName<T>(string[] roots) where T : UnityEngine.Object
+		{
+			// Maps the exact call sites you already have in ProjectAssets
+			if (typeof(T) == typeof(GameObject))
 			{
-				var assets = Resources.LoadAll<T>(root);
-				foreach (var asset in assets)
-				{
-					if (!string.IsNullOrEmpty(asset.name))
-						yield return asset.name;
-				}
+				if (roots.Contains("Levels") || roots.Contains("Levels/Med")) return "Models";
+				return "Prefabs";
 			}
+			if (typeof(T) == typeof(Texture)) return "Textures";
+			if (typeof(T) == typeof(Texture2D)) return "Texture2Ds";
+			if (typeof(T) == typeof(Material))
+			{
+				// Skycubes uses its own root
+				return roots.Any(r => r.Contains("Skycubes") || r.Contains("SkyCubes")) ? "Skycubes" : "Materials";
+			}
+			if (typeof(T) == typeof(AudioClip))
+			{
+				return roots.Any(r => r.Contains("Music")) ? "Music" : "Sounds";
+			}
+			return "Unknown";
 		}
 
 		/// <summary>
