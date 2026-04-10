@@ -213,5 +213,26 @@ namespace MassiveHadronLtd
 						  .Select(n => n.Trim())
 						  .Where(n => !string.IsNullOrEmpty(n));
 		}
+
+		/// <summary>
+		/// Editor-only helper used by AssetManifestGenerator.
+		/// Uses the same fast filesystem logic but accepts Type instead of generic T.
+		/// </summary>
+		public static IEnumerable<string> GetAssetNamesFromResourcesForEditor(Type assetType, string[] roots)
+		{
+			if (assetType == typeof(GameObject))
+				return GetAssetNamesFromResources<GameObject>(roots, "");
+			if (assetType == typeof(Texture))
+				return GetAssetNamesFromResources<Texture>(roots, "");
+			if (assetType == typeof(Texture2D))
+				return GetAssetNamesFromResources<Texture2D>(roots, "");
+			if (assetType == typeof(Material))
+				return GetAssetNamesFromResources<Material>(roots, "");
+			if (assetType == typeof(AudioClip))
+				return GetAssetNamesFromResources<AudioClip>(roots, "");
+
+			Debug.LogWarning($"Unsupported asset type for manifest: {assetType}");
+			return Enumerable.Empty<string>();
+		}
 	}
 }

@@ -208,8 +208,6 @@ namespace ClassicTilestorm.Assets
 			=> GetNames<GameObject>(() => GetAssetNamesFromRoots<GameObject>(new[]
 			{
 				AssetPath.GeometryPath?.Trim('/') ?? "",
-				"Levels",
-				"Levels/Med"
 			}), forceRefresh);
 
 		public static IReadOnlyList<string> GetPrefabNames(bool forceRefresh = false)
@@ -257,43 +255,13 @@ namespace ClassicTilestorm.Assets
 		/// <summary>
 		/// Force refresh all name caches (call after significant asset changes)
 		/// </summary>
-		public static void RefreshAllNameCaches()
-		{
-			NameCaches.Clear();   // still works perfectly
-		}
+		public static void RefreshAllNameCaches() => NameCaches.Clear();
 
 		// ── Core loading helper ─────────────────────────────────────────────
-		private static IEnumerable<string> GetAssetNamesFromRoots<T>(string[] roots)
-			where T : UnityEngine.Object
+		private static IEnumerable<string> GetAssetNamesFromRoots<T>(string[] roots) where T : UnityEngine.Object
 		{
-			// Use the manifest name that matches what the generator wrote
-			string manifestName = GetManifestNameForType<T>(roots);
+			string manifestName = AssetManifestConfig.GetManifestName<T>(roots);
 			return ResourceUtils.GetAssetNamesFromResources<T>(roots, manifestName);
-		}
-
-		private static string GetManifestNameForType<T>(string[] roots) where T : UnityEngine.Object
-		{
-			if (typeof(T) == typeof(GameObject))
-			{
-				// "Levels" and "Levels/Med" are temporary dev paths → treat as Models
-				return "Models";
-			}
-			if (typeof(T) == typeof(Texture)) return "Textures";
-			if (typeof(T) == typeof(Texture2D)) return "Texture2Ds";
-			if (typeof(T) == typeof(Material))
-			{
-				// Distinguish Skyboxes vs normal Materials
-				return roots != null && roots.Any(r =>
-					r != null && (r.Contains("Skycubes") || r.Contains("SkyCubes")))
-					? "Skycubes" : "Materials";
-			}
-			if (typeof(T) == typeof(AudioClip))
-			{
-				return roots != null && roots.Any(r =>
-					r != null && (r.Contains("Music") || r.Contains("music")))
-					? "Music" : "Sounds";
-			}
-			return "Unknown";
 		}
 	}
 }
