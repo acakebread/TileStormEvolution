@@ -38974,10 +38974,6 @@
             "skybox": "sky-3a",
             "ambient": "#A78F80",
             "sunlight": "#EAEDEF",
-            "skyvec": [
-                0.312882185,
-                0.5816922
-            ],
             "width": 9,
             "height": 9,
             "table": [
