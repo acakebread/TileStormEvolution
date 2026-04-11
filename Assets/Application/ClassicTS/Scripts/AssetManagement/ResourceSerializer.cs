@@ -103,8 +103,6 @@ namespace ClassicTilestorm
 					return null;
 				}
 
-				//DatabaseDataConverter.LegacyDataConverter(data);//remove when databases are converted
-
 				return data;
 			}
 			catch (Exception ex)
