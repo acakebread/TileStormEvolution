@@ -92,7 +92,7 @@ namespace ClassicTilestorm
 		[JsonProperty(Order = 11)] public int height;
 		[JsonProperty(Order = 12)] public int[] tiles;     // seed indices
 		[JsonProperty(Order = 13)] public int[] solve;     // delta - hope to remove need for this and resolve procedurally
-		//TableJsonOrderPosition = 20; in MapConverterBase
+		public const int TableJsonOrder = 20;
 
 		// ─────────────────────────────────────────────
 		// Properties

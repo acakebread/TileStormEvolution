@@ -13,8 +13,6 @@ namespace ClassicTilestorm
 	{
 		protected readonly bool IsAtomic;
 
-		private const int TableJsonOrderPosition = 20;
-
 		protected MapSerializer(bool isAtomic)
 		{
 			IsAtomic = isAtomic;
@@ -32,6 +30,14 @@ namespace ClassicTilestorm
 				.ThenBy(p => p.PropertyName);
 		}
 
+		// Read TableJsonOrder from the Map class instead of using a local constant
+		private static int GetTableJsonOrder()
+		{
+			var field = typeof(Map).GetField(nameof(Map.TableJsonOrder),
+				System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+			return field != null ? (int)field.GetValue(null) : 20;
+		}
+
 		private static int[] DecodeTilesSafely(int[] raw)
 		{
 			if (raw == null || raw.Length == 0) return Array.Empty<int>();
@@ -41,17 +47,12 @@ namespace ClassicTilestorm
 			if (IsValidTileIndices(candidate))
 				return candidate;
 
-			// Debug/info point: smart decode produced invalid indices → trying forced
-			// Debug.Log($"Tiles: smart decode gave length {candidate.Length} with invalid indices → attempting forced RLE");
-
 			var forced = raw.ForcedRleDecode();
 
 			if (IsValidTileIndices(forced))
 				return forced;
 
-			// Both failed — this is likely a corrupt file
-			// Debug.LogWarning($"Tiles decode failed: smart len={candidate.Length}, forced len={forced.Length}, raw len={raw.Length}");
-			return Array.Empty<int>();  // or throw FormatException if you prefer hard failure
+			return Array.Empty<int>();
 		}
 
 		private static bool IsValidTileIndices(int[] arr)
@@ -60,16 +61,13 @@ namespace ClassicTilestorm
 
 			int len = arr.Length;
 
-			// Allow empty map (0×0)
 			if (len == 0) return true;
 
-			// For length 1: only check >= 0 (your rule says it will be 0 anyway)
 			if (len == 1)
 			{
 				return arr[0] >= 0;
 			}
 
-			// Normal case
 			for (int i = 0; i < len; i++)
 			{
 				int v = arr[i];
@@ -95,37 +93,27 @@ namespace ClassicTilestorm
 					continue;
 				}
 
-				// ─────────────────────────────────────────────────────────────
-				// Step 1: Separate machine-readable part from optional #comment/name
-				// ─────────────────────────────────────────────────────────────
 				string machinePart;
 				int hashPos = entry.IndexOf('#');
 
 				if (hashPos >= 0)
 				{
-					// New format: everything after # is ignored (name / comment)
 					machinePart = entry.Substring(0, hashPos).TrimEnd();
 				}
 				else
 				{
-					// No # separator found → use whole string (old files or no name)
 					machinePart = entry;
 
-					// Optional fallback support for very old bracketed format
-					// (you can remove this block once all files are migrated)
 					if (machinePart.StartsWith("[") && machinePart.Contains("]"))
 					{
 						int close = machinePart.IndexOf(']', 1);
 						if (close > 1)
 						{
-							machinePart = machinePart.Substring(1, close - 1).Trim(); // strip [ and ]
+							machinePart = machinePart.Substring(1, close - 1).Trim();
 						}
 					}
 				}
 
-				// ─────────────────────────────────────────────────────────────
-				// Step 2: Parse the machine-readable content
-				// ─────────────────────────────────────────────────────────────
 				if (string.IsNullOrWhiteSpace(machinePart))
 				{
 					variants[i] = new Variant(0);
@@ -143,7 +131,6 @@ namespace ClassicTilestorm
 					continue;
 				}
 
-				// First part must be the hash
 				string hashStr = parts[0];
 				HashId hash = 0;
 				try
@@ -152,12 +139,11 @@ namespace ClassicTilestorm
 				}
 				catch
 				{
-					hash = 0; // invalid hash → treat as empty variant
+					hash = 0;
 				}
 
 				var variant = new Variant(hash);
 
-				// Parse known parameters (angle, delta) – ignore unknown keys
 				for (int p = 1; p < parts.Length; p++)
 				{
 					var kv = parts[p].Split(new[] { ':' }, 2);
@@ -178,7 +164,6 @@ namespace ClassicTilestorm
 					{
 						string deltaVal = val.Trim().ToLowerInvariant();
 
-						// ── Case 1: full comma-separated (arbitrary XYZ) ────────────────
 						if (deltaVal.Contains(','))
 						{
 							var nums = deltaVal.Split(',')
@@ -193,25 +178,20 @@ namespace ClassicTilestorm
 							{
 								variant.delta = new Vector3(dx, dy, dz);
 							}
-							// invalid → ignore
 						}
-						// ── Case 2: +suffix style (with or without leading number) ──────
 						else if (deltaVal.StartsWith("+") || deltaVal.Contains("+"))
 						{
-							string numPart = "0"; // default to y=0 when no number given
+							string numPart = "0";
 							string suffix = "";
 
 							int plusIndex = deltaVal.IndexOf('+');
 							if (plusIndex > 0)
 							{
-								// has number before +
 								numPart = deltaVal.Substring(0, plusIndex).Trim();
 								suffix = deltaVal.Substring(plusIndex + 1).Trim().ToLowerInvariant();
 							}
 							else if (plusIndex == 0)
 							{
-								// starts with + → y=0 implied
-								numPart = "0";
 								suffix = deltaVal.Substring(1).Trim().ToLowerInvariant();
 							}
 
@@ -221,7 +201,6 @@ namespace ClassicTilestorm
 								bool hasX = suffix.Contains("x");
 								bool hasZ = suffix.Contains("z");
 
-								// normalize synonyms
 								if (suffix == "zx" || suffix == "xz" || suffix.Contains("xz") || suffix.Contains("zx"))
 								{
 									hasX = true;
@@ -234,15 +213,12 @@ namespace ClassicTilestorm
 								variant.delta = new Vector3(xVal, yVal, zVal);
 							}
 						}
-						// ── Case 3: plain number → only Y ───────────────────────────────
 						else if (float.TryParse(deltaVal, System.Globalization.NumberStyles.Any,
 												System.Globalization.CultureInfo.InvariantCulture, out float yOnly))
 						{
 							variant.delta = new Vector3(0f, yOnly, 0f);
 						}
-						// else invalid → ignore silently
 					}
-					// Unknown keys are silently ignored → future-proof
 				}
 
 				variants[i] = variant;
@@ -261,11 +237,8 @@ namespace ClassicTilestorm
 
 			serializer.Populate(jo.CreateReader(), map);
 
-			// Decode tiles & solve using the smart decoder (handles both plain and RLE)
 			if (jo["tiles"]?.Type == JTokenType.Array)
 			{
-				//var data = jo["tiles"].ToObject<int[]>(serializer);
-				//((Map)map).tiles = data?.SmartRleDecode() ?? Array.Empty<int>();
 				map.tiles = DecodeTilesSafely(jo["tiles"]?.ToObject<int[]>(serializer));
 			}
 
@@ -279,9 +252,6 @@ namespace ClassicTilestorm
 			{
 				((Map.IVariantAccess)map).Variants = ParseTableToVariants(tableArray);
 			}
-
-			//map.AutoAmbient = null == jo["ambient"];
-			//map.AutoSunlight = null == jo["skyrgb"];
 
 			return map;
 		}
@@ -309,7 +279,7 @@ namespace ClassicTilestorm
 				if (Math.Abs(v.angle) > 0.001f)
 					parts.Add($"angle:{v.angle:F1}");
 
-				if (v.delta.sqrMagnitude > 0.000001f) // non-zero delta
+				if (v.delta.sqrMagnitude > 0.000001f)
 				{
 					const float HALF = 0.5f;
 					const float EPS = 0.001f;
@@ -322,7 +292,6 @@ namespace ClassicTilestorm
 
 					string deltaStr;
 
-					// ── Special compact forms when y ≈ 0 ────────────────────────────
 					if (isZeroY)
 					{
 						if (isHalfX && isHalfZ)
@@ -332,9 +301,8 @@ namespace ClassicTilestorm
 						else if (isHalfZ)
 							deltaStr = "+z";
 						else
-							deltaStr = $"{v.delta.x:F3},0.000,{v.delta.z:F3}"; // rare fallback
+							deltaStr = $"{v.delta.x:F3},0.000,{v.delta.z:F3}";
 					}
-					// ── Classic + suffix forms when y != 0 ───────────────────────────
 					else if (isZeroX && isZeroZ)
 					{
 						deltaStr = $"{v.delta.y:F3}";
@@ -351,7 +319,6 @@ namespace ClassicTilestorm
 					{
 						deltaStr = $"{v.delta.y:F3}+z";
 					}
-					// ── Full arbitrary XYZ ──────────────────────────────────────────
 					else
 					{
 						deltaStr = $"{v.delta.x:F3},{v.delta.y:F3},{v.delta.z:F3}";
@@ -360,7 +327,7 @@ namespace ClassicTilestorm
 					parts.Add($"delta:{deltaStr}");
 				}
 
-				string content = string.Join("|", parts);   // renamed from inner for clarity
+				string content = string.Join("|", parts);
 
 				string finalValue;
 
@@ -375,7 +342,7 @@ namespace ClassicTilestorm
 				}
 				else
 				{
-					finalValue = content;                   // no name in database mode
+					finalValue = content;
 				}
 
 				writer.WriteValue(finalValue);
@@ -390,15 +357,17 @@ namespace ClassicTilestorm
 
 			writer.WriteStartObject();
 
-			var allProps = OrderedProperties(serializer).ToList(); // materialize once
+			int tableOrder = GetTableJsonOrder();   // <-- now comes from Map class
+
+			var allProps = OrderedProperties(serializer).ToList();
 
 			bool tableWritten = false;
 
-			// 1. Write everything before the table (Order < 20)
+			// 1. Write everything before the table
 			foreach (var prop in allProps)
 			{
-				if (prop.Order.GetValueOrDefault(int.MaxValue) >= TableJsonOrderPosition)
-					break;   // stop when we reach the table slot
+				if (prop.Order.GetValueOrDefault(int.MaxValue) >= tableOrder)
+					break;
 
 				string name = prop.PropertyName;
 
@@ -413,7 +382,6 @@ namespace ClassicTilestorm
 				if (propValue == null && serializer.NullValueHandling == NullValueHandling.Ignore)
 					continue;
 
-				// Special handling for tiles / solve / ambient / skyrgb (your existing code)
 				if (name == "tiles" && map.tiles != null && map.tiles.Length > 0)
 				{
 					writer.WritePropertyName("tiles");
@@ -448,23 +416,23 @@ namespace ClassicTilestorm
 				serializer.Serialize(writer, propValue);
 			}
 
-			// 2. Write the table exactly once, at the desired position
+			// 2. Write the table
 			if (!tableWritten)
 			{
 				WriteTableArray(writer, map, serializer);
 				tableWritten = true;
 			}
 
-			// 3. Write everything after the table (Order >= 20)
+			// 3. Write everything after the table
 			bool pastTableSlot = false;
 			foreach (var prop in allProps)
 			{
 				if (!pastTableSlot)
 				{
-					if (prop.Order.GetValueOrDefault(int.MaxValue) >= TableJsonOrderPosition)
+					if (prop.Order.GetValueOrDefault(int.MaxValue) >= tableOrder)
 						pastTableSlot = true;
 					else
-						continue; // already written in first loop
+						continue;
 				}
 
 				string name = prop.PropertyName;
