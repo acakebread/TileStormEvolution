@@ -117,14 +117,7 @@ namespace ClassicTilestorm
 			PopulateEffectDropdown();
 			RefreshMapList();
 
-			//if (InitialiseMapPreview())
-			//{
-			//	UpdateMapPreview();
-			//	return;
-			//}
-
 			UpdateMapPreview();
-
 			if (null == currentClone)
 				Debug.LogError("failed to create preview");
 		}
@@ -343,17 +336,12 @@ namespace ClassicTilestorm
 		{
 			if (null == currentClone) return;
 
-			//currentClone.skyvec = src.isOn ? null : new float[] { 0.5f, 0.5f };//debug test
 			if (src.isOn)
 				currentClone.skyvec = null;
 			else
 			{
 				var skyMat = SkyboxUtility.GetSkyboxMaterialForName(currentClone.skybox);
-				//var skyuv = LinearCubemapUtility.FindLightUV(CubemapUtility.GetTintedCubemap(skyMat), scanAboveHorizonOnly: true);
-				//var skyuv = EquirectangularCubemapUtility.FindLightUV(CubemapUtility.GetTintedCubemap(skyMat), scanAboveHorizonOnly: true);
-				//currentClone.skyvec = new float[] { skyuv.x, skyuv.y };//currentClone.skyvec = new float[] { 0.5f, 0.5f };//debug test
-				var skyvec = LinearCubemapUtility.FindLightDirection(CubemapUtility.GetTintedCubemap(skyMat), scanAboveHorizonOnly: true);
-				currentClone.skyvec = new float[] { skyvec.x, skyvec.y, skyvec.z };
+				currentClone.SkyVec = LinearCubemapUtility.FindLightDirection(CubemapUtility.GetTintedCubemap(skyMat), scanAboveHorizonOnly: true);
 			}
 			currentClone.UpdateLighting();
 			UpdateMapPreview();
@@ -365,42 +353,33 @@ namespace ClassicTilestorm
 
 			// Close competing panels
 			UIController.ClosePanel<ColourSelectorPanel>();
-			UIController.ClosePanel<SkyboxEditorPanel>();
+			UIController.ClosePanel<TextureCoordEditorPanel>();
 
-			var skyboxPanel = UIController.OpenPanel<SkyboxEditorPanel>(closeOthers: false);
-
-			if (skyboxPanel != null)
+			var skyboxPanel = UIController.OpenPanel<TextureCoordEditorPanel>(closeOthers: false);
+			if (null != skyboxPanel)
 			{
-				Material skyMat = SkyboxUtility.GetSkyboxMaterialForName(currentClone.skybox);
+				var skyMat = SkyboxUtility.GetSkyboxMaterialForName(currentClone.skybox);
+				var sourceCubemap = CubemapUtility.GetTintedCubemap(skyMat);
+				var skyboxTexture = null != sourceCubemap ? EquirectangularCubemapUtility.Create(sourceCubemap, width: 512, height: 512) : null;
 
-				skyboxPanel.SetInitialSkybox(skyMat, currentClone.skyvec);
+				var tex_coord = new Vector2(0.5f, 0.75f);//default
+				if (null != currentClone.skyvec)
+					tex_coord = EquirectangularCubemapUtility.DirectionToUV(-currentClone.SkyVec);
+				else
+					tex_coord = null != skyboxTexture ? ImageProcessing.FindSunUV(skyboxTexture, scanAboveHorizonOnly: true) : new Vector2(0.5f, 0.75f);//default
 
-				//// Handle user interaction
-				//skyboxPanel.onValueChanged = (normalizedUV) =>
-				//{
-				//	currentClone.skyvec = new float[] { normalizedUV.x, normalizedUV.y };
-
-				//	currentClone.UpdateLighting();
-				//	UpdateMapPreview();
-
-				//	// Turn off "auto" toggle when user manually sets position
-				//	if (directionalPositionConfigAutoToggle != null)
-				//		directionalPositionConfigAutoToggle.SetIsOnWithoutNotify(false);
-				//};
-
-				// Handle user interaction
-				skyboxPanel.onValueChanged = (normalizedUV) =>
+				skyboxPanel.SetInitialSkybox(skyboxTexture, tex_coord, onUpdate : normalizedUV =>
 				{
-					var direction = -EquirectangularCubemapUtility.UVToDirection(normalizedUV);
-					currentClone.skyvec = new float[] { direction.x, direction.y, direction.z };
-
+					currentClone.SkyVec = -EquirectangularCubemapUtility.UVToDirection(normalizedUV);
 					currentClone.UpdateLighting();
 					UpdateMapPreview();
 
 					// Turn off "auto" toggle when user manually sets position
 					if (directionalPositionConfigAutoToggle != null)
 						directionalPositionConfigAutoToggle.SetIsOnWithoutNotify(false);
-				};
+				},
+				onClose : () => { if (null != skyboxTexture) Destroy(skyboxTexture); }
+				);
 			}
 		}
 
@@ -791,11 +770,11 @@ namespace ClassicTilestorm
 				}
 				else
 				{
-					CurrentMap.skyrgb = currentClone.skyrgb;
-					CurrentMap.ambient = currentClone.ambient;
-					CurrentMap.skybox = currentClone.skybox;
-					CurrentMap.skyvec = currentClone.skyvec;
 					CurrentMap.effect = currentClone.effect;
+					CurrentMap.skybox = currentClone.skybox;
+					CurrentMap.skyrgb = currentClone.skyrgb;
+					CurrentMap.skyvec = currentClone.skyvec;
+					CurrentMap.ambient = currentClone.ambient;
 				}
 			}
 		}

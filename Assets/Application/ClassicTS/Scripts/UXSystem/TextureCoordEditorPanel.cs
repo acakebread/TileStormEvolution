@@ -6,12 +6,13 @@ using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
-	public class SkyboxEditorPanel : UIPanel
+	public class TextureCoordEditorPanel : UIPanel
 	{
 		[SerializeField] private RawImage skyboxImage;
-		[SerializeField] private RawImage cursorImage;     // Small crosshair/dot, child of skyboxImage
+		[SerializeField] private RawImage cursorImage;
 
-		public Action<Vector2> onValueChanged;
+		private Action<Vector2> onValueChanged;
+		private Action onClosed;
 
 		private UIDragHandler dragHandler;
 		private Vector2 currentNormalizedUV = new Vector2(0.5f, 0.75f);
@@ -49,48 +50,24 @@ namespace ClassicTilestorm
 			UpdateCursorPosition(currentNormalizedUV);   // keeps cursor correct after resize
 		}
 
-		// ────────────────────────────────────────────────────────────────────────────────
-		//   Set initial skybox + skyvec
-		// ────────────────────────────────────────────────────────────────────────────────
+		protected override void OnDestroy()
+		{
+			base.OnDestroy();
+			onClosed?.Invoke();
+		}
 
-		public void SetInitialSkybox(Material skyboxMaterial, float[] currentSkyvec = null)
+		//// ────────────────────────────────────────────────────────────────────────────────
+		////   Set initial texture and uv
+		//// ────────────────────────────────────────────────────────────────────────────────
+
+		public void SetInitialSkybox(Texture2D texture, Vector2 initialUV, Action<Vector2> onUpdate = null, Action onClose = null)
 		{
 			if (skyboxImage == null) return;
-
-			Cubemap sourceCubemap = CubemapUtility.GetTintedCubemap(skyboxMaterial);
-
-			Texture2D skyboxTexture = null;
-			if (sourceCubemap != null)
-			{
-				skyboxTexture = EquirectangularCubemapUtility.Create(sourceCubemap, width: 512, height: 512);
-			}
-
-			Vector2 initialUV;
-
-			if (currentSkyvec != null && currentSkyvec.Length >= 3)
-			{
-				//initialUV = new Vector2(currentSkyvec[0], currentSkyvec[1]);
-				initialUV = EquirectangularCubemapUtility.DirectionToUV(-new Vector3(currentSkyvec[0], currentSkyvec[1], currentSkyvec[2]));
-			}
-			//if (currentSkyvec != null && currentSkyvec.Length >= 2)
-			//{
-			//	initialUV = new Vector2(currentSkyvec[0], currentSkyvec[1]);
-			//}
-			else if (skyboxTexture != null)
-			{
-				initialUV = ImageProcessing.FindSunUV(skyboxTexture, scanAboveHorizonOnly: true);
-				//initialUV = new Vector2(0.5f, 0.5f);//debug test
-			}
-			else
-			{
-				initialUV = new Vector2(0.5f, 0.75f);
-			}
-
-			skyboxImage.texture = skyboxTexture;
-
+			skyboxImage.texture = texture;
 			currentNormalizedUV = initialUV;
 			UpdateCursorPosition(initialUV);
-
+			onValueChanged = onUpdate;
+			onClosed = onClose;
 			onValueChanged?.Invoke(initialUV);
 		}
 
