@@ -82,32 +82,39 @@ namespace ClassicTilestorm
 		[JsonProperty(Order = 3)] public string music;
 		[JsonProperty(Order = 4)] public string effect;
 		[JsonProperty(Order = 5)] public string skybox;
-		[JsonProperty(Order = 6)] public string ambient;
-		[JsonProperty(Order = 7)] public string sunlight;
-		[JsonProperty(Order = 8)] public float[] skyvec;
-		[JsonProperty(Order = 9)] public string button;//probably not needed any more
+		[JsonProperty(Order = 6)] public string button;//probably not needed any more
 
 		// ─────────────────────────────────────────────
-		// Dimensions
+		// Dimensions and Tile Data
 		// ─────────────────────────────────────────────
 		private const int MAP_MAX_SIZE = 64;
 		[JsonProperty(Order = 10)] public int width;
 		[JsonProperty(Order = 11)] public int height;
+		[JsonProperty(Order = 12)] public int[] tiles;     // seed indices
+		[JsonProperty(Order = 13)] public int[] solve;     // delta - hope to remove need for this and resolve procedurally
+		//TableJsonOrderPosition = 20; in MapConverterBase
 
-		[JsonProperty(Order = 21)] public int[] tiles;     // seed indices
-		[JsonProperty(Order = 22)] public int[] solve;     // delta
-		[JsonProperty(Order = 23)] public int[] waypoints;
+		// ─────────────────────────────────────────────
+		// Properties
+		// ─────────────────────────────────────────────
+		[JsonProperty(Order = 30)] public int[] waypoints;
+		[JsonProperty(Order = 31)] public MapAttachment[] attachments;
 
-		[JsonProperty(Order = 30)] public MapAttachment[] attachments;
+		// ─────────────────────────────────────────────
+		// Light
+		// ─────────────────────────────────────────────
+		[JsonProperty(Order = 40)] public string ambient;
+		[JsonProperty(Order = 41)] public string skyrgb;
+		[JsonProperty(Order = 42)] public float[] skyvec;
 
 		// Conditional serialization
-		public bool ShouldSerializeambient() => !string.IsNullOrEmpty(ambient);
-		public bool ShouldSerializeskybox() => !string.IsNullOrEmpty(skybox);
-		public bool ShouldSerializeskyvec() => null != skyvec;
 		public bool ShouldSerializeeffect() => !string.IsNullOrEmpty(effect);
 		public bool ShouldSerializesolve() => solve != null && solve.Length > 0;
 		public bool ShouldSerializewaypoints() => waypoints != null && waypoints.Length > 0;
 		public bool ShouldSerializeattachments() => attachments != null && attachments.Length > 0;
+		public bool ShouldSerializeambient() => !string.IsNullOrEmpty(ambient);
+		public bool ShouldSerializeskybox() => !string.IsNullOrEmpty(skybox);
+		public bool ShouldSerializeskyvec() => null != skyvec;
 
 		public Action<Map, bool, Vector3> OnMapEdited { get; set; }
 		[JsonIgnore] public Transform parent { get; set; }//had to make public for now for preview creation in maputil
@@ -133,14 +140,18 @@ namespace ClassicTilestorm
 			set => ambient = value.ToHexString(includeAlpha: true);
 		}
 
-		[JsonIgnore] private Color sunlightRBG;
-		[JsonIgnore] public Color SunlightRGB
+		[JsonIgnore] private Color skyRBG;
+		[JsonIgnore] public Color SkyRGB
 		{
-			get => null != sunlight ? StringUtil.FromHexString(sunlight, defaultColor: Color.white) : sunlightRBG;
-			set => sunlight = value.ToHexString(includeAlpha: true);
+			get => null != skyrgb ? StringUtil.FromHexString(skyrgb, defaultColor: Color.white) : skyRBG;
+			set => skyrgb = value.ToHexString(includeAlpha: true);
 		}
 
-		//[JsonIgnore] public float[] SkyVec { get => skyvec; set => skyvec = value; }//not needed for now
+		[JsonIgnore] public Vector3 SkyVec 
+		{
+			get => null != skyvec ? new(skyvec[0], skyvec[1], skyvec[2]) : Vector3.zero; 
+			set => skyvec = new float[] { value.x, value.y, value.z };
+		}
 
 		[JsonIgnore] private DirectionalLightUtility directionalLight;
 
@@ -340,7 +351,7 @@ namespace ClassicTilestorm
 			character = character,
 			music = music,
 			ambient = ambient,
-			sunlight = sunlight,
+			skyrgb = skyrgb,
 			skybox = skybox,
 			skyvec = skyvec,
 			effect = effect,
@@ -987,7 +998,7 @@ namespace ClassicTilestorm
 		public void UpdateLighting(Material skymat = null)
 		{
 			Cubemap tinted = null;
-			if (null == ambient || null == sunlight || null == skyvec)
+			if (null == ambient || null == skyrgb || null == skyvec)
 				tinted = CubemapUtility.GetTintedCubemap(SkyboxMaterial);
 
 			if (null == ambient)
@@ -1004,14 +1015,17 @@ namespace ClassicTilestorm
 			//	directionalLight.UpdateFromSettings(SunlightRGB, skyvec);
 			//}
 
-			if (null == sunlight || null == skyvec)
-				sunlightRBG = directionalLight.UpdateFromTintendCubemap(tinted);//doing some extra work here that can be saved in refactor
+			if (null == skyrgb || null == skyvec)
+				skyRBG = directionalLight.UpdateFromTintendCubemap(tinted);//doing some extra work here that can be saved in refactor
 
-			if (null != SunlightRGB)
-				directionalLight.UpdateColour(SunlightRGB);
+			if (null != SkyRGB)
+				directionalLight.UpdateColour(SkyRGB);
+
+			//if (null != skyvec)
+			//	directionalLight.UpdateDirection(-EquirectangularCubemapUtility.UVToDirection(new Vector2(skyvec[0], skyvec[1])));
 
 			if (null != skyvec)
-				directionalLight.UpdateDirection(-EquirectangularCubemapUtility.UVToDirection(new Vector2(skyvec[0], skyvec[1])));
+				directionalLight.UpdateDirection(new Vector3(skyvec[0], skyvec[1], skyvec[2]));
 		}
 
 		public void CopyFrom(Map other)
@@ -1020,8 +1034,8 @@ namespace ClassicTilestorm
 				return;
 
 			//directional lighting
-			sunlight = other.sunlight;
-			sunlightRBG = other.sunlightRBG;
+			skyrgb = other.skyrgb;
+			skyRBG = other.skyRBG;
 			directionalLight.CopyFrom(other.directionalLight);
 
 			//render settings

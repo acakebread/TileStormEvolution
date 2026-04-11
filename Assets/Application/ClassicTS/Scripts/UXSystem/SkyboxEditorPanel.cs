@@ -67,10 +67,15 @@ namespace ClassicTilestorm
 
 			Vector2 initialUV;
 
-			if (currentSkyvec != null && currentSkyvec.Length >= 2)
+			if (currentSkyvec != null && currentSkyvec.Length >= 3)
 			{
-				initialUV = new Vector2(currentSkyvec[0], currentSkyvec[1]);
+				//initialUV = new Vector2(currentSkyvec[0], currentSkyvec[1]);
+				initialUV = EquirectangularCubemapUtility.DirectionToUV(-new Vector3(currentSkyvec[0], currentSkyvec[1], currentSkyvec[2]));
 			}
+			//if (currentSkyvec != null && currentSkyvec.Length >= 2)
+			//{
+			//	initialUV = new Vector2(currentSkyvec[0], currentSkyvec[1]);
+			//}
 			else if (skyboxTexture != null)
 			{
 				initialUV = ImageProcessing.FindSunUV(skyboxTexture, scanAboveHorizonOnly: true);

@@ -9,15 +9,13 @@ using UnityEngine;
 
 namespace ClassicTilestorm
 {
-	public abstract class MapConverterBase : JsonConverter
+	public abstract class MapSerializer : JsonConverter
 	{
 		protected readonly bool IsAtomic;
 
 		private const int TableJsonOrderPosition = 20;
-		private const int TilesJsonOrderPosition = 21;
-		private const int SolveJsonOrderPosition = 22;
 
-		protected MapConverterBase(bool isAtomic)
+		protected MapSerializer(bool isAtomic)
 		{
 			IsAtomic = isAtomic;
 		}
@@ -283,7 +281,7 @@ namespace ClassicTilestorm
 			}
 
 			//map.AutoAmbient = null == jo["ambient"];
-			//map.AutoSunlight = null == jo["sunlight"];
+			//map.AutoSunlight = null == jo["skyrgb"];
 
 			return map;
 		}
@@ -392,11 +390,17 @@ namespace ClassicTilestorm
 
 			writer.WriteStartObject();
 
+			var allProps = OrderedProperties(serializer).ToList(); // materialize once
+
 			bool tableWritten = false;
 
-			foreach (var prop in OrderedProperties(serializer))
+			// 1. Write everything before the table (Order < 20)
+			foreach (var prop in allProps)
 			{
-				var name = prop.PropertyName;
+				if (prop.Order.GetValueOrDefault(int.MaxValue) >= TableJsonOrderPosition)
+					break;   // stop when we reach the table slot
+
+				string name = prop.PropertyName;
 
 				if (name == "hashes" || name == "variants")
 					continue;
@@ -409,7 +413,7 @@ namespace ClassicTilestorm
 				if (propValue == null && serializer.NullValueHandling == NullValueHandling.Ignore)
 					continue;
 
-				// ── Intercept tiles and solve ──────────────────────────────────────
+				// Special handling for tiles / solve / ambient / skyrgb (your existing code)
 				if (name == "tiles" && map.tiles != null && map.tiles.Length > 0)
 				{
 					writer.WritePropertyName("tiles");
@@ -429,54 +433,55 @@ namespace ClassicTilestorm
 				if (name == "ambient")
 				{
 					writer.WritePropertyName("ambient");
-
-					// Use the Color property instead of the string field
-					Color color = map.AmbientRGB;
-
-					// Decide if you want alpha always or only when < 1
-					string hex = color.ToHexString(includeAlpha: true);   // or false
-
-					writer.WriteValue(hex);
+					writer.WriteValue(map.AmbientRGB.ToHexString(includeAlpha: true));
 					continue;
 				}
 
-				if (name == "sunlight")
+				if (name == "skyrgb")
 				{
-					writer.WritePropertyName("sunlight");
-
-					// Use the Color property instead of the string field
-					Color color = map.SunlightRGB;
-
-					// Decide if you want alpha always or only when < 1
-					string hex = color.ToHexString(includeAlpha: true);   // or false
-
-					writer.WriteValue(hex);
+					writer.WritePropertyName("skyrgb");
+					writer.WriteValue(map.SkyRGB.ToHexString(includeAlpha: true));
 					continue;
 				}
 
 				writer.WritePropertyName(name);
 				serializer.Serialize(writer, propValue);
-
-				// Existing table insertion logic
-				if (!tableWritten && prop.Order.GetValueOrDefault(int.MaxValue) < TableJsonOrderPosition)
-				{
-					var remaining = OrderedProperties(serializer)
-						.SkipWhile(p => p.PropertyName != name)
-						.Skip(1);
-
-					var nextProp = remaining.FirstOrDefault();
-
-					if (nextProp == null || nextProp.Order.GetValueOrDefault(int.MaxValue) >= TableJsonOrderPosition)
-					{
-						WriteTableArray(writer, map, serializer);
-						tableWritten = true;
-					}
-				}
 			}
 
+			// 2. Write the table exactly once, at the desired position
 			if (!tableWritten)
 			{
 				WriteTableArray(writer, map, serializer);
+				tableWritten = true;
+			}
+
+			// 3. Write everything after the table (Order >= 20)
+			bool pastTableSlot = false;
+			foreach (var prop in allProps)
+			{
+				if (!pastTableSlot)
+				{
+					if (prop.Order.GetValueOrDefault(int.MaxValue) >= TableJsonOrderPosition)
+						pastTableSlot = true;
+					else
+						continue; // already written in first loop
+				}
+
+				string name = prop.PropertyName;
+
+				if (name == "hashes" || name == "variants")
+					continue;
+
+				if (!IsAtomic && IsSuppressedInDatabaseFormat(name))
+					continue;
+
+				var propValue = prop.ValueProvider?.GetValue(map);
+
+				if (propValue == null && serializer.NullValueHandling == NullValueHandling.Ignore)
+					continue;
+
+				writer.WritePropertyName(name);
+				serializer.Serialize(writer, propValue);
 			}
 
 			if (IsAtomic)
@@ -536,12 +541,12 @@ namespace ClassicTilestorm
 		}
 	}
 
-	public class AtomicMapConverter : MapConverterBase
+	public class AtomicMapConverter : MapSerializer
 	{
 		public AtomicMapConverter() : base(true) { }
 	}
 
-	public class DatabaseMapConverter : MapConverterBase
+	public class DatabaseMapConverter : MapSerializer
 	{
 		public DatabaseMapConverter() : base(false) { }
 	}

@@ -286,7 +286,7 @@ namespace ClassicTilestorm
 		{
 			if (currentClone == null) return;
 			ambientColourAutoToggle?.SetIsOnWithoutNotify(null == currentClone.ambient);
-			directionalColourAutoToggle?.SetIsOnWithoutNotify(null == currentClone.sunlight);
+			directionalColourAutoToggle?.SetIsOnWithoutNotify(null == currentClone.skyrgb);
 			directionalPositionConfigAutoToggle?.SetIsOnWithoutNotify(null == currentClone.skyvec);
 		}
 
@@ -294,14 +294,14 @@ namespace ClassicTilestorm
 		{
 			if (currentClone == null) return;
 			if (null != ambientColourButton) ambientColourButton.GetComponent<Image>().color = currentClone.AmbientRGB;
-			if (null != directionalColourButton) directionalColourButton.GetComponent<Image>().color = currentClone.SunlightRGB;
+			if (null != directionalColourButton) directionalColourButton.GetComponent<Image>().color = currentClone.SkyRGB;
 		}
 
 		public void OnColourTogglePressed(Toggle src)
 		{
 			if (currentClone == null) return;
 			if (src == ambientColourAutoToggle) currentClone.ambient = src.isOn ? null : currentClone.AmbientRGB.ToHexString(includeAlpha: true);
-			if (src == directionalColourAutoToggle) currentClone.sunlight = src.isOn ? null : currentClone.SunlightRGB.ToHexString(includeAlpha: true);
+			if (src == directionalColourAutoToggle) currentClone.skyrgb = src.isOn ? null : currentClone.SkyRGB.ToHexString(includeAlpha: true);
 			currentClone.UpdateLighting();
 
 			SyncColorButtonsToCurrentMap();
@@ -327,7 +327,7 @@ namespace ClassicTilestorm
 				{
 					src.GetComponent<Image>().color = selectedColor;
 					if (src == ambientColourButton) currentClone.AmbientRGB = selectedColor;
-					if (src == directionalColourButton) currentClone.SunlightRGB = selectedColor;
+					if (src == directionalColourButton) currentClone.SkyRGB = selectedColor;
 					currentClone.UpdateLighting();
 
 					UpdateMapPreview();
@@ -350,8 +350,10 @@ namespace ClassicTilestorm
 			{
 				var skyMat = SkyboxUtility.GetSkyboxMaterialForName(currentClone.skybox);
 				//var skyuv = LinearCubemapUtility.FindLightUV(CubemapUtility.GetTintedCubemap(skyMat), scanAboveHorizonOnly: true);
-				var skyuv = EquirectangularCubemapUtility.FindLightUV(CubemapUtility.GetTintedCubemap(skyMat), scanAboveHorizonOnly: true);
-				currentClone.skyvec = new float[] { skyuv.x, skyuv.y };//currentClone.skyvec = new float[] { 0.5f, 0.5f };//debug test
+				//var skyuv = EquirectangularCubemapUtility.FindLightUV(CubemapUtility.GetTintedCubemap(skyMat), scanAboveHorizonOnly: true);
+				//currentClone.skyvec = new float[] { skyuv.x, skyuv.y };//currentClone.skyvec = new float[] { 0.5f, 0.5f };//debug test
+				var skyvec = LinearCubemapUtility.FindLightDirection(CubemapUtility.GetTintedCubemap(skyMat), scanAboveHorizonOnly: true);
+				currentClone.skyvec = new float[] { skyvec.x, skyvec.y, skyvec.z };
 			}
 			currentClone.UpdateLighting();
 			UpdateMapPreview();
@@ -373,10 +375,24 @@ namespace ClassicTilestorm
 
 				skyboxPanel.SetInitialSkybox(skyMat, currentClone.skyvec);
 
+				//// Handle user interaction
+				//skyboxPanel.onValueChanged = (normalizedUV) =>
+				//{
+				//	currentClone.skyvec = new float[] { normalizedUV.x, normalizedUV.y };
+
+				//	currentClone.UpdateLighting();
+				//	UpdateMapPreview();
+
+				//	// Turn off "auto" toggle when user manually sets position
+				//	if (directionalPositionConfigAutoToggle != null)
+				//		directionalPositionConfigAutoToggle.SetIsOnWithoutNotify(false);
+				//};
+
 				// Handle user interaction
 				skyboxPanel.onValueChanged = (normalizedUV) =>
 				{
-					currentClone.skyvec = new float[] { normalizedUV.x, normalizedUV.y };
+					var direction = -EquirectangularCubemapUtility.UVToDirection(normalizedUV);
+					currentClone.skyvec = new float[] { direction.x, direction.y, direction.z };
 
 					currentClone.UpdateLighting();
 					UpdateMapPreview();
@@ -775,7 +791,7 @@ namespace ClassicTilestorm
 				}
 				else
 				{
-					CurrentMap.sunlight = currentClone.sunlight;
+					CurrentMap.skyrgb = currentClone.skyrgb;
 					CurrentMap.ambient = currentClone.ambient;
 					CurrentMap.skybox = currentClone.skybox;
 					CurrentMap.skyvec = currentClone.skyvec;
