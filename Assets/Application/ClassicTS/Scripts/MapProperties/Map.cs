@@ -124,7 +124,7 @@ namespace ClassicTilestorm
 		[JsonIgnore] public int Count => Width * Height;
 		[JsonIgnore] public int[] State { get => state = state?.Length == width * height ? state : Enumerable.Range(0, width * height).ToArray(); }//set => state = value; 
 		[JsonIgnore] public string Music { get => music; set => music = value; }
-		[JsonIgnore] public string Skybox { get => skybox; set => skybox = value; }
+		[JsonIgnore] public string Skybox { get => skybox; set { if (skybox != value) { tinted = null; skybox = value; } } }
 		[JsonIgnore] public ReflectionEffectCamera.EffectMode Effect
 		{
 			get => ReflectionEffectCamera.ParseEffectMode(string.IsNullOrEmpty(effect) ? "Water" : effect);
@@ -418,6 +418,7 @@ namespace ClassicTilestorm
 					UnityEngine.Object.DestroyImmediate(directionalLight);
 				directionalLight = null;
 			}
+			tinted = null;
 
 			state = null;
 
@@ -995,11 +996,21 @@ namespace ClassicTilestorm
 		}
 
 		// lighting
+		private Cubemap _tinted = null;
+		private Cubemap tinted
+		{
+			get => _tinted = null == _tinted ? CubemapUtility.GetTintedCubemap(SkyboxMaterial) : _tinted;
+			set
+			{
+				if (_tinted != value) UnityEngine.Object.Destroy(_tinted);
+				_tinted = value;
+			}
+		}
+
 		public void UpdateLighting(Material skymat = null)
 		{
-			Cubemap tinted = null;
-			if (null == ambient || null == skyrgb || null == skyvec)
-				tinted = CubemapUtility.GetTintedCubemap(SkyboxMaterial);
+			//if (null == ambient || null == skyrgb || null == skyvec)
+			//	tinted = CubemapUtility.GetTintedCubemap(SkyboxMaterial);
 
 			if (null == ambient)
 				ambientRGB = CubemapUtility.ComputeAmbientColor(tinted, 2f);
@@ -1008,21 +1019,11 @@ namespace ClassicTilestorm
 				directionalLight = DirectionalLightUtility.Instantiate(parent);
 			if (null == directionalLight) return;
 
-			//if (null == sunlight)
-			//	sunlightRBG = directionalLight.UpdateFromTintendCubemap(tinted);
-			//else
-			//{
-			//	directionalLight.UpdateFromSettings(SunlightRGB, skyvec);
-			//}
-
 			if (null == skyrgb || null == skyvec)
 				skyRBG = directionalLight.UpdateFromTintendCubemap(tinted);//doing some extra work here that can be saved in refactor
 
 			if (null != SkyRGB)
 				directionalLight.UpdateColour(SkyRGB);
-
-			//if (null != skyvec)
-			//	directionalLight.UpdateDirection(-EquirectangularCubemapUtility.UVToDirection(new Vector2(skyvec[0], skyvec[1])));
 
 			if (null != skyvec)
 				directionalLight.UpdateDirection(new Vector3(skyvec[0], skyvec[1], skyvec[2]));
