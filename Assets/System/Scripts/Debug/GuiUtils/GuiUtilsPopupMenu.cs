@@ -175,7 +175,7 @@ namespace MassiveHadronLtd
 					else // outside
 					{
 						// Your original outside logic – prefer MouseUp for UX
-						if (e.type == EventType.MouseUp)
+						if (e.type == EventType.MouseDown)
 							return currentState = PopupResult.ClosedByClickOutside;
 					}
 				}

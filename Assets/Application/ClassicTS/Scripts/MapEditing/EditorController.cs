@@ -402,11 +402,12 @@ namespace ClassicTilestorm
 
 		private bool CancelAttachmentMode()
 		{
-			if (HasSelection)
+			var ClickedOnActive = HasSelection && selection[0] is MapAttachment ma && ma.tile == iMap.VectorToIndex(currentWorld);
+			if (HasSelection && !ClickedOnActive)
 			{
 				ClearSelection();
 				EditorMarkerUtil.ClearMapMarkers();
-				//return false;
+				return false;
 			}
 			SelectAttachments(GetAttachmentsAsSelectables(index: iMap.VectorToIndex(beginWorld = currentWorld)));
 			if (HasSelection)
