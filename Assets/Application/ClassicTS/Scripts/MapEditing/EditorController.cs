@@ -164,9 +164,7 @@ namespace ClassicTilestorm
 		{
 			if (!_camera) return;
 
-			var mouseOverGUI = (EventSystem.current && EventSystem.current.IsPointerOverGameObject())
-				|| GUIUtility.hotControl != 0 || PlaceholderUI.IsMouseOverGui() || EditorAttachmentUI.sidePanel.IsMouseOver;// || ViewPreviewUtil.IsMouseOverPreview();
-
+			var mouseOverGUI = (EventSystem.current && EventSystem.current.IsPointerOverGameObject()) || GUIUtility.hotControl != 0 || PlaceholderUI.IsMouseOverGui() || EditorAttachmentUI.sidePanel.IsMouseOver;
 			ViewPreviewUtil.Update();
 			EditorCameraMovement.UpdateCamera(ViewPreviewUtil.IsInFocus ? ViewPreviewUtil.PreviewCamera : _camera, currentWorld, inFocus: !mouseOverGUI);
 			if (!ViewPreviewUtil.IsInFocus && mouseOverGUI) return;
@@ -408,7 +406,7 @@ namespace ClassicTilestorm
 			{
 				ClearSelection();
 				EditorMarkerUtil.ClearMapMarkers();
-				return false;
+				//return false;
 			}
 			SelectAttachments(GetAttachmentsAsSelectables(index: iMap.VectorToIndex(beginWorld = currentWorld)));
 			if (HasSelection)

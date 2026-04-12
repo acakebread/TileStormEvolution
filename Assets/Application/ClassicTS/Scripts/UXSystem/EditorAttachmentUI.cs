@@ -246,6 +246,7 @@ namespace ClassicTilestorm
 			return false;
 		}
 
+		private static bool wasOpen = false;
 		internal static void UpdateGUI(IMapEdit iMap, ISelectable[] selection, int tileIndex, Action<ISelectable[]> onSelect)
 		{
 			var currentSelection = selection?.OfType<MapAttachment>().ToArray();
@@ -271,13 +272,19 @@ namespace ClassicTilestorm
 			}
 
 			// Popups ── wrap/unwrap the array
-			bool stillOpen =
+			var stillOpen =
 				DrawAddPopup(iMap, tileIndex, created => onSelect(new ISelectable[] { created as ISelectable })) ||
 				DrawDeletePopup(iMap, tileIndex, atts => onSelect(atts?.Cast<ISelectable>().ToArray())) ||
 				DrawSelectPopup(iMap, tileIndex, atts => onSelect(atts?.Cast<ISelectable>().ToArray()));
 
-			if (!stillOpen && pendingAction != PendingAction.None)
+			//GUIUtility.hotControl = wasOpen && 0 == GUIUtility.hotControl ? GUIUtility.GetControlID(FocusType.Passive) : 0;//workaround for mouse clickthrough
+
+			//if (!stillOpen && pendingAction != PendingAction.None)
+			//	ClearPending();
+
+			if (!wasOpen && !stillOpen && pendingAction != PendingAction.None)
 				ClearPending();
+			wasOpen = stillOpen;
 		}
 	}
 }

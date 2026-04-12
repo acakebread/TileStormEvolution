@@ -50,6 +50,7 @@ namespace MassiveHadronLtd
 
 		public enum PopupResult
 		{
+			Closed,
 			StillOpen,
 			ClosedByAction,     // a button with action was clicked
 			ClosedByCancel,     // explicit Cancel button clicked (optional)
@@ -58,23 +59,18 @@ namespace MassiveHadronLtd
 
 		public static class PopupMenu
 		{
-			// ────────────────────────────────────────────────
-			// Internal state for one-frame delay (transparent to callers)
-			private static bool wasClosedLastFrame = false;
-			private static PopupResult lastCloseType = PopupResult.StillOpen;
-
+			private static PopupResult currentState = PopupResult.Closed;
 			public static PopupResult Show(Vector2 screenPos, string title, List<PopupItem> items)
 			{
-				MarkGuiActive();
-
-				// ────────────────────────────────────────────────
-				// If we closed on the previous frame → echo the close reason once, then clear
-				if (wasClosedLastFrame)
+				if (currentState == PopupResult.ClosedByAction ||
+					currentState == PopupResult.ClosedByCancel ||
+					currentState == PopupResult.ClosedByClickOutside)
 				{
-					wasClosedLastFrame = false;
 					GUIUtility.hotControl = 0;
-					return lastCloseType;   // returns ClosedByAction / ClosedByCancel / ClosedByClickOutside
+					return currentState = PopupResult.Closed;
 				}
+
+				MarkGuiActive();
 
 				screenPos.y = Screen.height - screenPos.y; // invert screen coords for GUI
 
@@ -139,11 +135,7 @@ namespace MassiveHadronLtd
 						{
 							GUI.color = oldColor;
 							item.action?.Invoke();
-
-							// Remember we just closed — return the real close type NEXT frame
-							wasClosedLastFrame = true;
-							lastCloseType = PopupResult.ClosedByAction;
-							return PopupResult.StillOpen;   // this frame still says open
+							return currentState = PopupResult.ClosedByAction;
 						}
 					}
 					else
@@ -163,28 +155,8 @@ namespace MassiveHadronLtd
 					yOffset += ITEM_HEIGHT;
 				}
 
-				//// Click outside → same delayed-close logic
-				//if (Event.current.type == EventType.MouseUp && !rect.Contains(Event.current.mousePosition))
-				//{
-				//	wasClosedLastFrame = true;
-				//	lastCloseType = PopupResult.ClosedByClickOutside;
-				//	return PopupResult.StillOpen;   // this frame still reports open
-				//}
-
-				//return PopupResult.StillOpen;
-
-				// ... all your drawing code here (GUI.Box background, title, loop over items with GUI.Button / GUI.Label) ...
-
-				// ────────────────────────────────────────────────
-				// Final input handling — at the BOTTOM, after everything is drawn
-				// ────────────────────────────────────────────────
-				// ────────────────────────────────────────────────
-				// Background click consume + outside close detection
-				// Must be AFTER all content is drawn so buttons can claim hotControl first
-				// ────────────────────────────────────────────────
-
 				var e = Event.current;
-				bool mouseInside = rect.Contains(e.mousePosition);
+				var mouseInside = rect.Contains(e.mousePosition);
 
 				// Only act on relevant mouse events
 				if (e.isMouse && (e.type == EventType.MouseDown || e.type == EventType.MouseUp || e.type == EventType.MouseDrag))
@@ -197,27 +169,18 @@ namespace MassiveHadronLtd
 							// Claim it ourselves to block pass-through
 							int dummyControlID = GUIUtility.GetControlID(FocusType.Passive); // unique but passive
 							GUIUtility.hotControl = dummyControlID;
-							e.Use();  // mark as handled → external code shouldn't see it
-
-							// Optional: if you want to release on MouseUp (cleaner), but usually not needed
-							// Unity will auto-clear hotControl on global MouseUp if no one holds it
+							e.Use();
 						}
-						// else: some button is hot → do nothing, let it handle (action already fired)
 					}
 					else // outside
 					{
 						// Your original outside logic – prefer MouseUp for UX
 						if (e.type == EventType.MouseUp)
-						{
-							wasClosedLastFrame = true;
-							lastCloseType = PopupResult.ClosedByClickOutside;
-							return PopupResult.StillOpen;
-						}
+							return currentState = PopupResult.ClosedByClickOutside;
 					}
 				}
 
-				// No close this frame
-				return PopupResult.StillOpen;
+				return currentState = PopupResult.StillOpen;
 			}
 		}
 	}
