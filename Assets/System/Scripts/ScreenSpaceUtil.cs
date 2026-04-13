@@ -29,6 +29,8 @@ namespace MassiveHadronLtd
 			public readonly bool IsValid => Texture != null;
 		}
 
+		public static void ForceRebuild() => _lastCoord = new Vector2(-999f, -999f);//function to force refresh (Nobble)
+
 		// ────────────────────────────────────────────────────────────────
 		// Original OnGUI – completely unchanged, now calls shared update
 		// ────────────────────────────────────────────────────────────────

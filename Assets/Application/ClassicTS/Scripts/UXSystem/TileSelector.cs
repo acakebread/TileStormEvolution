@@ -125,12 +125,24 @@ namespace ClassicTilestorm
 
 		private IEnumerator Start() { yield return null; RebuildAtlas(); }//needed to prevent black icons//private void Start() => RebuildAtlas();
 
+		private Coroutine _atlasBuildCoroutine;
 		public void RebuildAtlas()
 		{
+			// Clean up old atlas first
+			if (_atlas != null)
+			{
+				if (_atlasBuildCoroutine != null)
+					StopCoroutine(_atlasBuildCoroutine);
+
+				_atlas.Dispose();
+				_atlas = null;
+			}
+
 			filteredDefs = ResourceManager.Definitions
 				.Where(d => !d.IsDefaultEquivalent())
 				.ToList();
 
+			// This now returns instantly
 			_atlas = new IconAtlas(
 				ICON_SIZE,
 				COLUMNS,
@@ -140,13 +152,41 @@ namespace ClassicTilestorm
 				yaw: 215f,
 				pitch: 30f);
 
-			if (_atlas == null)
-				Debug.LogWarning("Failed to generate icon atlas — palette empty.");
+			if (_atlas != null)
+			{
+				// Start progressive rendering (tune the number if needed)
+				_atlasBuildCoroutine = StartCoroutine(BuildAtlasWithUIUpdates());
+			}
 
 			SelectedHashId = ResourceManager.DefaultHash;
-
 			RecalculateLayout();
 			panelY = panelTargetY = -panelHeight;
+		}
+
+
+		// New coroutine that wraps the atlas build and forces UI refresh each frame
+		private IEnumerator BuildAtlasWithUIUpdates()
+		{
+			if (_atlas == null) yield break;
+
+			var buildCoroutine = _atlas.BuildIconsCoroutine(iconsPerFrame: 1);
+
+			while (buildCoroutine.MoveNext())
+			{
+				// Let the atlas do its work for this batch
+				yield return buildCoroutine.Current;
+
+				// Force the UI to refresh immediately so new icons appear smoothly
+				ScreenSpaceUtil.ForceRebuild();
+
+				// Optional: also force canvas update if your RawImage layout is finicky
+				// Canvas.ForceUpdateCanvases();
+				// or LayoutRebuilder.ForceRebuildLayoutImmediate(panelTarget.rectTransform);
+			}
+
+			// Final cleanup / one last refresh
+			ScreenSpaceUtil.ForceRebuild();
+			Debug.Log("Atlas build + UI updates completed.");
 		}
 
 		private void Update()
