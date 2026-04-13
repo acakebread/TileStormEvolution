@@ -27,12 +27,14 @@ public class AssetManifestGenerator : IPreprocessBuildWithReport
 		if (!Directory.Exists(manifestFolder))
 			Directory.CreateDirectory(manifestFolder);
 
-		AssetConfiguration.Initialize();   // register all roots (including dev ones)
+		// Use the safe editor initializer instead of calling directly
+		AssetConfiguration.Initialize();
+		//AssetConfigurationEditorInitializer.EnsureInitialized();
 
 		foreach (var (manifestName, assetType, getRoots) in AssetManifestConfig.GetAllManifestDefinitions())
 		{
 			var roots = getRoots().ToArray();
-			var names = ResourceUtils.GetAssetNamesFromResourcesForEditor(assetType, roots); // see note below
+			var names = ResourceUtils.GetAssetNamesFromResourcesForEditor(assetType, roots);
 			WriteManifest(manifestName, names);
 		}
 
