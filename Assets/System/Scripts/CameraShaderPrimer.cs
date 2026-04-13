@@ -14,14 +14,14 @@ public class CameraShaderPrimer : MonoBehaviour
 		PrimeShader();
 	}
 
-	void OnValidate()
-	{
-		// Optional: re-prime in editor if shader changes
-		if (!s_hasPrimed && Application.isEditor)
-		{
-			PrimeShader();
-		}
-	}
+	//void OnValidate()
+	//{
+	//	// Optional: re-prime in editor if shader changes
+	//	if (!s_hasPrimed && Application.isEditor)
+	//	{
+	//		PrimeShader();
+	//	}
+	//}
 
 	private void PrimeShader()
 	{
