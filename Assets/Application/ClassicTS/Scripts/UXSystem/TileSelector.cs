@@ -123,7 +123,7 @@ namespace ClassicTilestorm
 			ReadyCallbackRegistry.Raise(this);
 		}
 
-		private IEnumerator Start() { yield return null; RebuildAtlas(); }//needed to prevent black icons//private void Start() => RebuildAtlas();
+		private void Start() => RebuildAtlas(); //private IEnumerator Start() { yield return null; RebuildAtlas(); }//needed to prevent black icons//private void Start() => RebuildAtlas();
 
 		private Coroutine _atlasBuildCoroutine;
 		public void RebuildAtlas()
