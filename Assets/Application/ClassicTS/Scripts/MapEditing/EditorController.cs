@@ -162,6 +162,27 @@ namespace ClassicTilestorm
 
 		private void Update()
 		{
+			//// RAW INPUT — completely bypassing your system
+			//float dx = Input.GetAxisRaw("Mouse X");
+			//float dy = Input.GetAxisRaw("Mouse Y");
+
+			//dbg_dx = dx;
+			//dbg_dy = dy;
+
+			//float mag = Mathf.Sqrt(dx * dx + dy * dy);
+
+			//// track peak
+			//if (mag > dbg_peak)
+			//	dbg_peak = mag;
+
+			//// rolling average
+			//dbg_accum += mag;
+			//dbg_samples++;
+
+			//// history buffer
+			//dbg_history[dbg_index] = mag;
+			//dbg_index = (dbg_index + 1) % DBG_HISTORY;
+
 			if (!_camera) return;
 
 			var mouseOverGUI = (EventSystem.current && EventSystem.current.IsPointerOverGameObject()) || GUIUtility.hotControl != 0 || PlaceholderUI.IsMouseOverGui() || EditorAttachmentUI.sidePanel.IsMouseOver;
@@ -289,8 +310,54 @@ namespace ClassicTilestorm
 			}
 		}
 
+		//private float dbg_dx, dbg_dy;
+		//private float dbg_peak;
+		//private float dbg_accum;
+		//private int dbg_samples;
+
+		//private const int DBG_HISTORY = 120;
+		//private readonly float[] dbg_history = new float[DBG_HISTORY];
+		//private int dbg_index = 0;
+
 		private void OnGUI()
 		{
+			//// background
+			//GUI.Box(new Rect(10, 10, 320, 220), "Mouse Debug");
+
+			//// current values
+			//GUI.Label(new Rect(20, 40, 300, 20), $"dx: {dbg_dx:F4}");
+			//GUI.Label(new Rect(20, 60, 300, 20), $"dy: {dbg_dy:F4}");
+
+			//float mag = Mathf.Sqrt(dbg_dx * dbg_dx + dbg_dy * dbg_dy);
+			//GUI.Label(new Rect(20, 80, 300, 20), $"mag: {mag:F4}");
+
+			//float avg = dbg_samples > 0 ? dbg_accum / dbg_samples : 0f;
+			//GUI.Label(new Rect(20, 100, 300, 20), $"avg: {avg:F4}");
+
+			//GUI.Label(new Rect(20, 120, 300, 20), $"peak: {dbg_peak:F4}");
+
+			//// graph
+			//float graphX = 20;
+			//float graphY = 150;
+			//float graphW = 280;
+			//float graphH = 60;
+
+			//GUI.Box(new Rect(graphX, graphY, graphW, graphH), "");
+
+			//for (int i = 0; i < DBG_HISTORY; i++)
+			//{
+			//	int idx = (dbg_index + i) % DBG_HISTORY;
+			//	float v = dbg_history[idx];
+
+			//	float x = graphX + (i / (float)DBG_HISTORY) * graphW;
+			//	float h = Mathf.Clamp(v * 10f, 0, graphH); // scale factor here
+
+			//	GUI.DrawTexture(
+			//		new Rect(x, graphY + graphH - h, 2, h),
+			//		Texture2D.whiteTexture
+			//	);
+			//}
+
 			ViewPreviewUtil.OnGUI();
 			EditorAttachmentUI.UpdateGUI(iMap, selection, iMap.VectorToIndex(beginWorld), selectable => SelectAttachments(selectable));
 		}

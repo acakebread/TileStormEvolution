@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using InputSystem = UnityEngine.InputSystem;   // Add this line
 
 namespace MassiveHadronLtd
 {
@@ -6,7 +7,11 @@ namespace MassiveHadronLtd
 	{
 		public static bool IsMouseInsideWindow()
 		{
-			var pos = Input.mousePosition;
+			// Fixed: Use New Input System instead of legacy Input.mousePosition
+			Vector3 pos = InputSystem.Mouse.current != null
+				? (Vector3)InputSystem.Mouse.current.position.ReadValue()
+				: Vector3.zero;
+
 			return pos.x >= 0 && pos.y >= 0 && pos.x < Screen.width && pos.y < Screen.height;
 		}
 
@@ -67,15 +72,9 @@ namespace MassiveHadronLtd
 		/// <summary>
 		/// Core helper: flips the Y origin of a Rect between bottom-up (screen) and top-down (GUI).
 		/// </summary>
-		/// <param name="rect">The input rectangle</param>
-		/// <param name="screenHeight">Current screen height (usually Screen.height)</param>
-		/// <param name="toGUI">True = convert screen → GUI (flip down), False = GUI → screen (flip up)</param>
 		private static Rect FlipRectY(Rect rect, float screenHeight, bool toGUI)
 		{
-			// For screen → GUI: new y = screenHeight - (old y + height)
-			// For GUI → screen: new y = screenHeight - (old y + height)  — same math, symmetric
 			float newY = screenHeight - rect.yMax;
-
 			return new Rect(
 				rect.x,
 				newY,
@@ -94,14 +93,12 @@ namespace MassiveHadronLtd
 		/// </summary>
 		public static Rect ToScreenRect(this Rect guiRect) => FlipRectY(guiRect, Screen.height, toGUI: false);
 
-		// Overloads with explicit height (safer / more flexible)
+		// Overloads with explicit height
 		public static Rect ToGUIRect(this Rect screenRect, float screenHeight) => FlipRectY(screenRect, screenHeight, toGUI: true);
-
 		public static Rect ToScreenRect(this Rect guiRect, float screenHeight) => FlipRectY(guiRect, screenHeight, toGUI: false);
 
 		/// <summary>
 		/// Returns the normalized UV coordinate (0..1) of a screen point relative to the Rect.
-		/// Matches Unity's bottom-left screen origin and texture UV convention (Y=0 bottom, Y=1 top).
 		/// </summary>
 		public static Vector2 NormalisedPoint(this Rect rect, Vector2 screenPoint)
 		{
@@ -110,13 +107,11 @@ namespace MassiveHadronLtd
 
 			float uvX = (screenPoint.x - rect.xMin) / rect.width;
 			float uvY = (screenPoint.y - rect.yMin) / rect.height;
-
 			return new Vector2(uvX, uvY);
 		}
 
 		/// <summary>
-		/// Clamped version — forces result into [0..1] range.
-		/// Useful when you want to ignore mouse positions outside the rect.
+		/// Clamped version
 		/// </summary>
 		public static Vector2 NormalisedPointClamped(this Rect rect, Vector2 screenPoint)
 		{
@@ -125,19 +120,18 @@ namespace MassiveHadronLtd
 
 			float uvX = (screenPoint.x - rect.xMin) / rect.width;
 			float uvY = (screenPoint.y - rect.yMin) / rect.height;
-
 			return new Vector2(
 				Mathf.Clamp01(uvX),
 				Mathf.Clamp01(uvY)
 			);
 		}
 
-		public static Vector2 NormalisedPoint(this Rect rect, Vector3 mousePoint) => rect.NormalisedPoint(new Vector2(mousePoint.x, mousePoint.y));
+		public static Vector2 NormalisedPoint(this Rect rect, Vector3 mousePoint)
+			=> rect.NormalisedPoint(new Vector2(mousePoint.x, mousePoint.y));
 
-		// Static constructor: creates the manager automatically on first access
+		// Static constructor: creates the manager automatically
 		static GuiUtils()
 		{
-			// Create hidden GameObject that lives forever and runs Update()
 			var go = new GameObject("_GuiUtils_Internal");
 			go.hideFlags = HideFlags.HideAndDontSave;
 			Object.DontDestroyOnLoad(go);
