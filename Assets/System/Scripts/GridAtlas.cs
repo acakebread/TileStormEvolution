@@ -76,7 +76,7 @@ namespace MassiveHadronLtd
 
 			using var renderer = CreateRenderer(cellSize, background ?? new Color(0, 0, 0, 0));
 
-			for (int i = 0; i < itemList.Count; i++)
+			for (var i = 0; i < itemList.Count; i++)
 			{
 				Texture2D icon = null;
 				try
@@ -88,10 +88,10 @@ namespace MassiveHadronLtd
 					Debug.LogWarning($"Icon {i} failed: {ex.Message}");
 				}
 
-				int col = i % columns;
-				int rowFromTop = i / columns;
-				int y = (Rows - 1 - rowFromTop) * cellSize;
-				int x = col * cellSize;
+				var col = i % columns;
+				var rowFromTop = i / columns;
+				var y = (Rows - 1 - rowFromTop) * cellSize;
+				var x = col * cellSize;
 
 				if (icon != null)
 				{
@@ -101,7 +101,6 @@ namespace MassiveHadronLtd
 				else
 				{
 					Debug.LogError("no icon to copy");
-					//SetFallbackPixels(x, y, cellSize);
 				}
 
 				_entries.Add(new AtlasEntry { RectNormalized = new((float)x / w, (float)y / h, (float)cellSize / w, (float)cellSize / h) });

@@ -105,7 +105,7 @@ namespace MassiveHadronLtd
 
 			effectMesh = new Mesh();
 
-			tintedSkyboxTexture = CubemapUtility.GetSkyboxAsCubemap();//.Clone();
+			//tintedSkyboxTexture = CubemapUtility.GetTintedCubemapInstance(RenderSettings.skybox);// CubemapUtility.GetSkyboxAsCubemap();//.Clone();
 
 			// Force initial build
 			EffectMode startMode = effectMode;
@@ -132,7 +132,9 @@ namespace MassiveHadronLtd
 
 		private void CheckAndApplyDefaultEffectAfterDelay()
 		{
-			EffectMode modeToApply = effectMode != EffectMode.Null ? effectMode : EffectMode.Debug;
+			tintedSkyboxTexture = CubemapUtility.GetTintedCubemapInstance(RenderSettings.skybox);
+
+			var modeToApply = effectMode != EffectMode.Null ? effectMode : EffectMode.Debug;
 			if (effectMode == EffectMode.Null)
 				Debug.Log($"Auto-applied default effect {modeToApply} after one-frame delay (was Null)", this);
 
@@ -346,9 +348,6 @@ namespace MassiveHadronLtd
 					effectMaterial.SetFloat("_RippleOffset", rippleOffset);
 					effectMaterial.SetFloat("_ReflectionStrength", reflectionStrength);
 					if (tintedSkyboxTexture != null) effectMaterial.SetTexture("_Skybox", tintedSkyboxTexture);
-					//effectMaterial.SetTexture("_Skybox", CubemapUtility.GetSkyboxAsCubemap());
-
-					
 					break;
 				case EffectMode.OceanEffect:
 					effectMaterial.SetTexture("_MainTex", effectRT);
@@ -447,6 +446,7 @@ namespace MassiveHadronLtd
 				var overrideComp = childCam.gameObject.GetOrAddComponent<CameraRenderSettingsOverride>();
 				overrideComp.OverrideSettings = renderSettings;
 			}
+			if (tintedSkyboxTexture) DestroyImmediate(tintedSkyboxTexture);
 			tintedSkyboxTexture = CubemapUtility.GetTintedCubemapInstance(renderSettings.skybox);//.Clone();
 			UpdateEffect(effectMode);
 		}

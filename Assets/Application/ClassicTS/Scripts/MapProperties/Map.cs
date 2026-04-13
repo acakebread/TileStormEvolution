@@ -1002,8 +1002,11 @@ namespace ClassicTilestorm
 			get => _tinted = null == _tinted ? CubemapUtility.GetTintedCubemap(SkyboxMaterial) : _tinted;
 			set
 			{
-				if (_tinted != value) UnityEngine.Object.Destroy(_tinted);
-				_tinted = value;
+				if (_tinted != value)
+				{
+					UnityEngine.Object.Destroy(_tinted);
+					_tinted = value;
+				}
 			}
 		}
 

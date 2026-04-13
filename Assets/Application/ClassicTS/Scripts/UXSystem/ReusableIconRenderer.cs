@@ -103,31 +103,25 @@ namespace ClassicTilestorm
 
 			return tex;
 
-			static Texture2D RenderMissingIcon(int width, int height, Color32 color)
-			{
-				var result = new Texture2D(width, height, TextureFormat.RGBA32, false);
-				var pixels = new Color32[result.width * result.height];
-				var margin = result.width / 4;
-				var thick = result.width / 16;
-
-				for (var py = 0; py < result.height; py++)
-					for (var px = 0; px < result.width; px++)
-					{
-						var inH = px >= margin && px < result.width - margin;
-						var inV = py >= margin && py < result.height - margin;
-						if (!inH || !inV) continue;
-
-						if ((px < margin + thick) || (px >= result.width - margin - thick && px < result.width - margin) ||
-							(py < margin + thick) || (py >= result.height - margin - thick && py < result.height - margin))
-							pixels[py * result.width + px] = color;
-					}
-
-				result.SetPixels32(pixels);
-				return result;
-			}
-
 			CommandRenderModelData CreateAdjustedGround(CommandRenderModelData modelData) =>
 			new(_groundModel.meshInstances[0].mesh, _groundModel.meshInstances[0].materials, Matrix4x4.Translate(Vector3.up * (modelData.bounds.min.y - 0.02f)), 0);
+
+			static Texture2D RenderMissingIcon(int width, int height, Color32 color)
+			{
+				var tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
+				var p = new Color32[width * height];
+				int m = width / 4, t = Mathf.Max(1, width / 16);
+
+				void H(int y) { for (int x = m; x < width - m; x++) for (int i = 0; i < t; i++) p[(y + i) * width + x] = color; }
+				void V(int x) { for (int y = m + t; y < height - m - t; y++) for (int i = 0; i < t; i++) p[y * width + x + i] = color; }
+
+				H(m); H(height - m - t);   // top & bottom
+				V(m); V(width - m - t);    // left & right
+
+				tex.SetPixels32(p);
+				tex.Apply();
+				return tex;
+			}
 		}
 
 		public void Dispose()
