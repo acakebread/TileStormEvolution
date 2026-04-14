@@ -3,60 +3,21 @@ using UnityEngine;
 using System.Linq;
 using System.Collections.Generic;
 using InputSystem = UnityEngine.InputSystem;
+using UnityEngine.InputSystem;
 
 namespace MassiveHadronLtd
 {
 	public static class InputX
 	{
-		// ────────────────────────────────────────────────
-		// Safe Keyboard methods (no more KeyControl or Menu errors)
-		// ────────────────────────────────────────────────
-		public static bool GetKeyDown(KeyCode key) => GetKeyControl(key)?.wasPressedThisFrame ?? false;
-		public static bool GetKey(KeyCode key) => GetKeyControl(key)?.isPressed ?? false;
-		public static bool GetKeyUp(KeyCode key) => GetKeyControl(key)?.wasReleasedThisFrame ?? false;
+		// New clean API
+		public static bool GetKeyDown(Key key) => key != Key.None && Keyboard.current != null && Keyboard.current[key].wasPressedThisFrame;
+		public static bool GetKey(Key key) => key != Key.None && Keyboard.current != null && Keyboard.current[key].isPressed;
+		public static bool GetKeyUp(Key key) => key != Key.None && Keyboard.current != null && Keyboard.current[key].wasReleasedThisFrame;
 
-		private static InputSystem.Controls.KeyControl GetKeyControl(KeyCode keyCode)
-		{
-			if (InputSystem.Keyboard.current == null) return null;
-
-			// Mouse buttons are not keyboard keys
-			if (keyCode == KeyCode.Mouse0 || keyCode == KeyCode.Mouse1 || keyCode == KeyCode.Mouse2)
-				return null;
-
-			switch (keyCode)
-			{
-				case KeyCode.LeftArrow: return InputSystem.Keyboard.current.leftArrowKey;
-				case KeyCode.RightArrow: return InputSystem.Keyboard.current.rightArrowKey;
-				case KeyCode.UpArrow: return InputSystem.Keyboard.current.upArrowKey;
-				case KeyCode.DownArrow: return InputSystem.Keyboard.current.downArrowKey;
-
-				case KeyCode.LeftShift: return InputSystem.Keyboard.current.leftShiftKey;
-				case KeyCode.RightShift: return InputSystem.Keyboard.current.rightShiftKey;
-				case KeyCode.LeftControl: return InputSystem.Keyboard.current.leftCtrlKey;
-				case KeyCode.RightControl: return InputSystem.Keyboard.current.rightCtrlKey;
-				case KeyCode.LeftAlt: return InputSystem.Keyboard.current.leftAltKey;
-				case KeyCode.RightAlt: return InputSystem.Keyboard.current.rightAltKey;
-
-				case KeyCode.Space: return InputSystem.Keyboard.current.spaceKey;
-				case KeyCode.Return: return InputSystem.Keyboard.current.enterKey;
-				case KeyCode.Escape: return InputSystem.Keyboard.current.escapeKey;
-				case KeyCode.Tab: return InputSystem.Keyboard.current.tabKey;
-				case KeyCode.Backspace: return InputSystem.Keyboard.current.backspaceKey;
-				case KeyCode.Delete: return InputSystem.Keyboard.current.deleteKey;
-				case KeyCode.KeypadEnter: return InputSystem.Keyboard.current.numpadEnterKey;
-
-				case KeyCode.W: return InputSystem.Keyboard.current.wKey;
-				case KeyCode.S: return InputSystem.Keyboard.current.sKey;
-				case KeyCode.A: return InputSystem.Keyboard.current.aKey;
-				case KeyCode.D: return InputSystem.Keyboard.current.dKey;
-				case KeyCode.Q: return InputSystem.Keyboard.current.qKey;
-				case KeyCode.E: return InputSystem.Keyboard.current.eKey;
-
-				// Add more if your game uses them (F-keys, Home, PageUp/Down, etc.)
-				default:
-					return null;   // safe fallback - treated as not pressed
-			}
-		}
+		// Legacy API (keeps every old script working)
+		public static bool GetKeyDown(KeyCode key) => GetKeyDown(key.ToKey());
+		public static bool GetKey(KeyCode key) => GetKey(key.ToKey());
+		public static bool GetKeyUp(KeyCode key) => GetKeyUp(key.ToKey());
 
 		// ────────────────────────────────────────────────
 		// Central touch / mouse source
