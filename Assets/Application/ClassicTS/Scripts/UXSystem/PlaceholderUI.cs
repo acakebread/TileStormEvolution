@@ -126,8 +126,10 @@ namespace ClassicTilestorm
 			float panelHeight = buttonHeight + (2 * panelGap);
 			float panelY = y - panelGap;
 
-			GUI.Box(new Rect(0, panelY, Screen.width, panelHeight), "",
-				new GUIStyle(GUI.skin.box) { normal = { background = panelTexture } });
+			//GUI.Box(new Rect(0, panelY, Screen.width, panelHeight), "",
+			//	new GUIStyle(GUI.skin.box) { normal = { background = panelTexture } });
+
+			GUI.DrawTexture(new Rect(0, panelY, Screen.width, panelHeight), panelTexture);
 
 			// Invisible options button
 			GuiUtils.ColoredButton(new Rect(currentX, y, labelWidth + mapNameWidth, buttonHeight), "",

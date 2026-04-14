@@ -63,9 +63,9 @@ namespace MassiveHadronLtd
 
 			UpdateAllHighlights();
 
-			if (Input.GetMouseButtonDown(0))
+			if (InputX.GetMouseButtonDown(0))
 			{
-				Ray ray = inputCamera.ScreenPointToRay(Input.mousePosition);
+				Ray ray = inputCamera.ScreenPointToRay(InputX.mousePosition);
 
 				if (TryStartYawDrag(ray, out GameObject clickedArrow))
 				{

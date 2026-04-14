@@ -1,5 +1,4 @@
-﻿#define MOBILE
-
+﻿//#define MOBILE
 using UnityEngine;
 using MassiveHadronLtd;
 
@@ -7,17 +6,18 @@ namespace ClassicTilestorm
 {
 	public static class EditorCameraMovement
 	{
-		private const float LookSpeedH = 4f;
-		private const float LookSpeedV = 4f;
+		private const float LookSpeedH = 0.25f;
+		private const float LookSpeedV = 0.25f;
 		private const float MoveSpeed = 8f;
+
 		private static float MoveSpeedModifier = 1f;
 		private static float ModifiedZoomSpeed => MoveSpeed * MoveSpeedModifier;
-		private static float ScrollSpeed = 1f;
+		private static float ScrollSpeed = 0.25f;
 
 		private static bool isPanning = false;
 		private static Vector3 worldStart;
-
 		private static bool focus = false;
+		private static bool didGainFocus = true;
 
 		public static void StartPanning(Vector3 value)
 		{
@@ -28,9 +28,10 @@ namespace ClassicTilestorm
 
 		public static void UpdateCamera(Camera camera, Vector3 worldCurrent, bool inFocus = true)
 		{
-			if (null == camera) return;
+			if (camera == null) return;
+
 			var camTransform = camera.transform;
-			
+
 			if (InputX.GetMouseButtonDown(1))
 				focus = inFocus;
 
@@ -48,57 +49,65 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			if (isPanning)
+			// Panning
+			if (isPanning && worldCurrent != Vector3.negativeInfinity)
 			{
-				if (worldCurrent != Vector3.negativeInfinity)
-					camTransform.position += worldStart - worldCurrent;
+				camTransform.position += worldStart - worldCurrent;
 			}
 
-			var pointerX = 0f;
-			var pointerY = 0f;
+			float pointerX = 0f;
+			float pointerY = 0f;
 
-#if MOBILE//!UNITY_EDITOR && (UNITY_IOS || UNITY_ANDROID)
-			if (InputX.touchCount == 2)
-			{
-				if ((InputX.touches[0].phase == TouchPhase.Stationary || InputX.touches[0].phase == TouchPhase.Moved) &&
-					(InputX.touches[1].phase == TouchPhase.Stationary || InputX.touches[1].phase == TouchPhase.Moved))
-				{
-					pointerX = (InputX.touches[0].deltaPosition.x + InputX.touches[1].deltaPosition.x) * 0.5f;
-					pointerY = (InputX.touches[0].deltaPosition.y + InputX.touches[1].deltaPosition.y) * 0.5f;
-				}
-			}
+#if MOBILE
+            if (InputX.touchCount == 2)
+            {
+                var t0 = InputX.touches[0];
+                var t1 = InputX.touches[1];
+
+                if ((t0.phase == UnityEngine.TouchPhase.Stationary || t0.phase == UnityEngine.TouchPhase.Moved) &&
+                    (t1.phase == UnityEngine.TouchPhase.Stationary || t1.phase == UnityEngine.TouchPhase.Moved))
+                {
+                    pointerX = (t0.deltaPosition.x + t1.deltaPosition.x) * 0.5f;
+                    pointerY = (t0.deltaPosition.y + t1.deltaPosition.y) * 0.5f;
+                }
+            }
 #else
+			// Desktop - Right mouse button look
 			if (InputX.GetMouseButton(1))
 			{
-				pointerX = InputX.GetAxis("Mouse X");
-				pointerY = InputX.GetAxis("Mouse Y");
+				Vector2 delta = InputX.GetMouseDelta();
+				pointerX = delta.x;
+				pointerY = delta.y;
 			}
 #endif
 
+			// Apply your compensation scalar
 			pointerX *= InputX.TOUCH_LOOK_COMPENSATION_SCALAR;
 			pointerY *= InputX.TOUCH_LOOK_COMPENSATION_SCALAR;
 
-			float scaledLook = 64f / Mathf.Sqrt(Screen.width * Screen.width + Screen.height * Screen.height);
-
+			// Your scaledLook (kept exactly as you wanted)
+			float scaledLook = 1f; // 64f / Mathf.Sqrt(Screen.width * Screen.width + Screen.height * Screen.height);
 			pointerX *= scaledLook;
 			pointerY *= scaledLook;
 
+			// Rotation
 			var eulers = camTransform.eulerAngles;
-			eulers.y += LookSpeedH * pointerX;
-			eulers.x -= LookSpeedV * pointerY;
+			eulers.y += LookSpeedH * pointerX;//eulers.y += LookSpeedH * pointerX * Time.deltaTime * 60f;
+			eulers.x -= LookSpeedV * pointerY;//eulers.x -= LookSpeedV * pointerY * Time.deltaTime * 60f;
 			eulers.x = Mathf.Clamp(Mathf.DeltaAngle(0f, eulers.x), -90f, 90f);
 			camTransform.eulerAngles = eulers;
 
+			// Tab toggle slow movement
 			if (InputX.GetKeyDown(KeyCode.Tab))
 				MoveSpeedModifier = 0.1f / MoveSpeedModifier;
 
 			// WASDQE movement
 			Vector3 translation = GetInputTranslationDirection() * ModifiedZoomSpeed * Time.deltaTime;
 
-			// Mouse wheel zoom (only if not over GUI)
+			// Mouse wheel zoom
 			if (GuiUtils.IsMouseInsideWindow())
 			{
-				var scroll = InputX.GetAxis("Mouse ScrollWheel") * ScrollSpeed * InputX.TOUCH_SCROLL_COMPENSATION_SCALAR;
+				float scroll = InputX.GetAxisRaw("Mouse ScrollWheel") * ScrollSpeed * InputX.TOUCH_SCROLL_COMPENSATION_SCALAR;
 				if (scroll != 0f)
 					translation += Vector3.forward * scroll * ModifiedZoomSpeed;
 			}
@@ -119,7 +128,9 @@ namespace ClassicTilestorm
 			return dir;
 		}
 
-		private static bool didGainFocus = true;
-		public static void OnApplicationFocus(bool hasFocus) => didGainFocus |= hasFocus;// this doesn't seem to work anyway so disabled in EditorController for now
+		public static void OnApplicationFocus(bool hasFocus)
+		{
+			didGainFocus |= hasFocus;
+		}
 	}
 }
