@@ -1,4 +1,5 @@
-﻿//#define MOBILE
+﻿//#define MOBILE   // Comment this out for pure desktop/WebGL builds (no legacy input)
+
 using UnityEngine;
 using System.Linq;
 using System.Collections.Generic;
@@ -9,10 +10,7 @@ namespace MassiveHadronLtd
 {
 	public static class InputX
 	{
-		// ===================================================================
-		// WEBGL MOUSE DELTA NORMALIZATION
-		// ===================================================================
-		private const float WEBGL_MOUSE_SCALE = 0.50f;   // ← Tune this value (usually 0.40f - 0.60f)
+		private const float WEBGL_MOUSE_SCALE = 0.50f;
 
 		private static float ApplyMouseScale(float value)
 		{
@@ -33,20 +31,17 @@ namespace MassiveHadronLtd
 		}
 
 		// ===================================================================
-		// New clean API
+		// Key API (New Input System)
 		// ===================================================================
 		public static bool GetKeyDown(Key key) => key != Key.None && Keyboard.current != null && Keyboard.current[key].wasPressedThisFrame;
 		public static bool GetKey(Key key) => key != Key.None && Keyboard.current != null && Keyboard.current[key].isPressed;
 		public static bool GetKeyUp(Key key) => key != Key.None && Keyboard.current != null && Keyboard.current[key].wasReleasedThisFrame;
 
-		// Legacy API
 		public static bool GetKeyDown(KeyCode key) => GetKeyDown(key.ToKey());
 		public static bool GetKey(KeyCode key) => GetKey(key.ToKey());
 		public static bool GetKeyUp(KeyCode key) => GetKeyUp(key.ToKey());
 
-		// ────────────────────────────────────────────────
 		// Central touch / mouse source
-		// ────────────────────────────────────────────────
 		public static Touch[] touches => Application.isMobilePlatform || Application.isConsolePlatform
 			? Input.touches
 			: MultiTouchEmulator.touches;
@@ -80,13 +75,13 @@ namespace MassiveHadronLtd
 
 		public static float GetAxis(string axisName)
 		{
-			var result = getAxis(axisName);
+			var result = getAxisUnscaled(axisName);
 			if (Mathf.Abs(result) > 0.01f && axisName == "Mouse ScrollWheel")
 				staticClick = false;
-			return result;
+			return ApplyMouseScale(result);
 		}
 
-		public static float GetAxisRaw(string axisName) => GetAxis(axisName);
+		//public static float GetAxisRaw(string axisName) => GetAxis(axisName);
 
 		public static bool mouseInsideWindow => new Rect(0, 0, Screen.width, Screen.height).Contains(mousePosition);
 
@@ -94,8 +89,8 @@ namespace MassiveHadronLtd
 		private static Vector3 mouseDownPos;
 		private const float CLICK_THRESHOLD = 3f;
 
-		// ─── Long hold support ──────────────────────────────────────────────────
-		private static readonly Dictionary<int, HoldState> holdStates = new Dictionary<int, HoldState>();
+		// Hold support
+		private static readonly Dictionary<int, HoldState> holdStates = new();
 
 		private class HoldState
 		{
@@ -110,57 +105,62 @@ namespace MassiveHadronLtd
 			var active = new HashSet<int>();
 
 #if MOBILE
-            foreach (var touch in Input.touches)
-            {
-                int btn = -1;
-                if (touch.fingerId == 0) btn = 0;
-                else if (touch.fingerId == 1) btn = 1;
-                if (btn < 0) continue;
-                active.Add(btn);
-                if (!holdStates.TryGetValue(btn, out var st))
-                {
-                    st = new HoldState();
-                    holdStates[btn] = st;
-                }
-                if (touch.phase == UnityEngine.TouchPhase.Began)
-                {
-                    st.isHeld = false;
-                    st.startTime = Time.time;
-                }
-                else if (touch.phase == UnityEngine.TouchPhase.Moved || touch.phase == UnityEngine.TouchPhase.Stationary)
-                {
-                    if (!st.isHeld && Time.time - st.startTime >= HOLD_THRESHOLD)
-                        st.isHeld = true;
-                }
-                else if (touch.phase == UnityEngine.TouchPhase.Ended || touch.phase == UnityEngine.TouchPhase.Canceled)
-                {
-                    holdStates.Remove(btn);
-                }
-            }
-#else
-			for (int b = 0; b < 3; b++)
+			// Your original mobile hold logic (using Input.touches)
+			foreach (var touch in Input.touches)
 			{
-				if (getMouseButton(b))
+				int btn = -1;
+				if (touch.fingerId == 0) btn = 0;
+				else if (touch.fingerId == 1) btn = 1;
+				if (btn < 0) continue;
+
+				active.Add(btn);
+				if (!holdStates.TryGetValue(btn, out var st))
 				{
-					active.Add(b);
-					if (!holdStates.TryGetValue(b, out var st))
-					{
-						st = new HoldState();
-						holdStates[b] = st;
-					}
-					if (getMouseButtonDown(b))
-					{
-						st.isHeld = false;
-						st.startTime = Time.time;
-					}
-					else if (!st.isHeld && Time.time - st.startTime >= HOLD_THRESHOLD)
-					{
+					st = new HoldState();
+					holdStates[btn] = st;
+				}
+
+				if (touch.phase == UnityEngine.TouchPhase.Began)
+				{
+					st.isHeld = false;
+					st.startTime = Time.time;
+				}
+				else if (touch.phase == UnityEngine.TouchPhase.Moved || touch.phase == UnityEngine.TouchPhase.Stationary)
+				{
+					if (!st.isHeld && Time.time - st.startTime >= HOLD_THRESHOLD)
 						st.isHeld = true;
-					}
+				}
+				else if (touch.phase == UnityEngine.TouchPhase.Ended || touch.phase == UnityEngine.TouchPhase.Canceled)
+				{
+					holdStates.Remove(btn);
 				}
 			}
+#else
+    // Desktop path - use GetMouseButtonDown / GetMouseButton
+    for (int b = 0; b < 3; b++)
+    {
+        if (getMouseButton(b))
+        {
+            active.Add(b);
+            if (!holdStates.TryGetValue(b, out var st))
+            {
+                st = new HoldState();
+                holdStates[b] = st;
+            }
+            if (getMouseButtonDown(b))
+            {
+                st.isHeld = false;
+                st.startTime = Time.time;
+            }
+            else if (!st.isHeld && Time.time - st.startTime >= HOLD_THRESHOLD)
+            {
+                st.isHeld = true;
+            }
+        }
+    }
 #endif
 
+			// Cleanup inactive holds
 			foreach (var kv in holdStates.ToList())
 			{
 				if (!active.Contains(kv.Key))
@@ -190,7 +190,7 @@ namespace MassiveHadronLtd
             get
             {
                 var ts = touches;
-                if (ts.Length == 0) return Vector3.zero;
+				if (ts.Length == 0) return Mouse.current?.position.ReadValue() ?? Vector3.zero; //if (ts.Length == 0) return Vector3.zero;
                 if (ts.Length == 1) return ts[0].position;
                 Vector2 sum = Vector2.zero;
                 foreach (var t in ts) sum += t.position;
@@ -241,8 +241,10 @@ namespace MassiveHadronLtd
             var t0 = ts.FirstOrDefault(t => t.fingerId == 0);
             var t1 = ts.FirstOrDefault(t => t.fingerId == 1);
             if (t0.Equals(default(Touch)) || t1.Equals(default(Touch))) return false;
+
             bool bothActive = (t0.phase == UnityEngine.TouchPhase.Began || t0.phase == UnityEngine.TouchPhase.Moved) &&
                               (t1.phase == UnityEngine.TouchPhase.Began || t1.phase == UnityEngine.TouchPhase.Moved);
+
             if (bothActive)
             {
                 Vector2 sumDelta = t0.deltaPosition + t1.deltaPosition;
@@ -252,6 +254,7 @@ namespace MassiveHadronLtd
                     return false;
                 return true;
             }
+
             bool bothEndedSamePos = t0.phase == UnityEngine.TouchPhase.Ended &&
                                     t1.phase == UnityEngine.TouchPhase.Ended &&
                                     Vector2.Distance(t0.position, t1.position) < 0.01f &&
@@ -259,7 +262,7 @@ namespace MassiveHadronLtd
             return bothEndedSamePos;
         }
 
-        private static float getAxis(string axisName)
+        private static float getAxisUnscaled(string axisName)
         {
             if (axisName != "Mouse ScrollWheel")
             {
@@ -267,29 +270,45 @@ namespace MassiveHadronLtd
                 if (axisName == "Mouse X") return mouseDelta.x;
                 if (axisName == "Mouse Y") return mouseDelta.y;
             }
+
             var ts = touches;
             if (ts.Length != 2) return 0f;
             var t0 = ts.FirstOrDefault(t => t.fingerId == 0);
             var t1 = ts.FirstOrDefault(t => t.fingerId == 1);
             if (!t0.IsValid() || !t1.IsValid()) return 0f;
+
             Vector2 prev0 = t0.position;
             Vector2 prev1 = t1.position;
             Vector2 curr0 = t0.position + t0.deltaPosition;
             Vector2 curr1 = t1.position + t1.deltaPosition;
+
             float distPrev = Vector2.Distance(prev0, prev1);
             float distCurr = Vector2.Distance(curr0, curr1);
             float deltaDist = distCurr - distPrev;
+
             float scrollSensitivity = 1f / Mathf.Sqrt(Screen.width * Screen.width + Screen.height * Screen.height);
             return deltaDist * scrollSensitivity;
         }
 
         private static bool IsValid(this Touch t) => t.phase != UnityEngine.TouchPhase.Canceled && t.phase != UnityEngine.TouchPhase.Ended;
 
+        public static Vector2 GetMouseDelta()
+        {
+            var ts = touches;
+            if (ts.Length == 0) return Vector2.zero;
+            if (ts.Length == 1) return ts[0].deltaPosition;
+
+            Vector2 sum = Vector2.zero;
+            foreach (var t in ts)
+                sum += t.deltaPosition;
+            return ApplyMouseScale(sum / ts.Length);
+        }
+
         public const float TOUCH_LOOK_COMPENSATION_SCALAR = 1f;
-        public const float TOUCH_SCROLL_COMPENSATION_SCALAR = 2f;
+        public const float TOUCH_SCROLL_COMPENSATION_SCALAR = 1f;
 
 #else
-		// Desktop - New Input System with WebGL compensation
+		// Desktop / WebGL - Pure New Input System (no legacy code)
 		private static Vector3 getMousePosition => Mouse.current?.position.ReadValue() ?? Vector3.zero;
 
 		private static bool getMouseButtonDown(int button)
@@ -328,18 +347,18 @@ namespace MassiveHadronLtd
 			};
 		}
 
-		private static float getAxis(string axisName)
+		private static float getAxisUnscaled(string axisName)
 		{
 			if (Mouse.current == null) return 0f;
 
 			if (axisName == "Mouse X")
-				return ApplyMouseScale(GetMouseDelta().x);
+				return Mouse.current.delta.ReadValue().x;
 
 			if (axisName == "Mouse Y")
-				return ApplyMouseScale(GetMouseDelta().y);
+				return Mouse.current.delta.ReadValue().y;
 
 			if (axisName == "Mouse ScrollWheel")
-				return InputSystem.Mouse.current.scroll.ReadValue().y * WEBGL_MOUSE_SCALE;  // Scroll also scaled
+				return Mouse.current.scroll.ReadValue().y;
 
 			return 0f;
 		}
@@ -355,7 +374,6 @@ namespace MassiveHadronLtd
 #endif
 	}
 
-	// Controller (unchanged)
 	internal class InputXController : MonoBehaviour
 	{
 		private static InputXController instance;
@@ -373,7 +391,7 @@ namespace MassiveHadronLtd
 		private void LateUpdate()
 		{
 			InputX.UpdateHoldStates();
-			MultiTouchEmulator.CommitCurrentToMap();
+			//MultiTouchEmulator.CommitCurrentToMap();
 		}
 	}
 }

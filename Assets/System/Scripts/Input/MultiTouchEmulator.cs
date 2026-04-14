@@ -1,14 +1,14 @@
-﻿// Copyright 2019 massivehadron.com ltd. ... (your header)
-
-using UnityEngine;
-using InputSystem = UnityEngine.InputSystem;   // ← Aliased
+﻿using UnityEngine;
+using UnityEngine.InputSystem;
 using System.Collections.Generic;
 
 namespace MassiveHadronLtd
 {
 	public static class MultiTouchEmulator
 	{
+		// Authoritative map — holds the PREVIOUS frame's simulated touches
 		private static Dictionary<int, Touch> map = new();
+
 		private const float EPSILON = 1e-6f;
 
 		public static Touch[] touches
@@ -17,16 +17,18 @@ namespace MassiveHadronLtd
 			{
 				var old = map;
 				var current = ComputeCurrentSimulatedTouches(old);
+
 				var result = new List<Touch>();
 
-				bool wasSimulatedPinch = old != null && IsExactlySimulatedPinch(old);
+				var wasSimulatedPinch = old != null && IsExactlySimulatedPinch(old);
 
+				// Pinch end cleanup (modifies old if needed)
 				if (wasSimulatedPinch && !current.ContainsKey(0) && !current.ContainsKey(1))
 				{
-					Vector2 finalPos = InputSystem.Mouse.current?.position.ReadValue() ?? Vector2.zero;
+					var finalPos = Mouse.current?.position.ReadValue() ?? Vector2.zero;
 					const float arbitraryDelta = 0.5f;
-					Vector2 arbitraryLeft = Vector2.left * arbitraryDelta;
-					Vector2 arbitraryRight = Vector2.right * arbitraryDelta;
+					var arbitraryLeft = Vector2.left * arbitraryDelta;
+					var arbitraryRight = Vector2.right * arbitraryDelta;
 
 					if (old.ContainsKey(0))
 					{
@@ -44,6 +46,7 @@ namespace MassiveHadronLtd
 					}
 				}
 
+				// Ended touches from previous frame
 				if (old != null)
 				{
 					foreach (var kvp in old)
@@ -51,18 +54,20 @@ namespace MassiveHadronLtd
 						if (!current.ContainsKey(kvp.Key))
 						{
 							var ended = kvp.Value;
-							ended.phase = UnityEngine.TouchPhase.Ended;   // ← Fixed
+							ended.phase = UnityEngine.TouchPhase.Ended;
 							result.Add(ended);
 						}
 					}
 				}
 
+				// Current frame touches with corrected phase
 				foreach (var kvp in current)
 				{
 					var touch = kvp.Value;
 					touch.phase = old.ContainsKey(kvp.Key)
 						? (touch.deltaPosition.sqrMagnitude > 0.0001f ? UnityEngine.TouchPhase.Moved : UnityEngine.TouchPhase.Stationary)
 						: UnityEngine.TouchPhase.Began;
+
 					result.Add(touch);
 				}
 
@@ -70,17 +75,20 @@ namespace MassiveHadronLtd
 			}
 		}
 
+		// Core shared logic
 		private static Dictionary<int, Touch> ComputeCurrentSimulatedTouches(Dictionary<int, Touch> previous)
 		{
 			var current = new Dictionary<int, Touch>();
 
-			if (InputSystem.Mouse.current == null) return current;
+			var mouse = Mouse.current;
+			if (mouse == null) return current;
 
-			Vector2 mousePos = InputSystem.Mouse.current.position.ReadValue();
-			Vector2 mouseDelta = InputSystem.Mouse.current.delta.ReadValue() * 16f;
-			float scroll = InputSystem.Mouse.current.scroll.ReadValue().y;
+			var mousePos = mouse.position.ReadValue();
+			var mouseDelta = mouse.delta.ReadValue();// * 16f;
+			float scroll = mouse.scroll.ReadValue().y;
 
-			if (InputSystem.Mouse.current.leftButton.isPressed)
+			// LMB: single finger
+			if (mouse.leftButton.isPressed)
 			{
 				current[0] = new Touch
 				{
@@ -91,7 +99,8 @@ namespace MassiveHadronLtd
 					type = TouchType.Direct
 				};
 			}
-			else if (InputSystem.Mouse.current.rightButton.isPressed)
+			// RMB: secondary finger simulation
+			else if (mouse.rightButton.isPressed)
 			{
 				current[0] = new Touch
 				{
@@ -117,17 +126,18 @@ namespace MassiveHadronLtd
 				};
 			}
 
+			// Scroll wheel: two-finger pinch
 			if (Mathf.Abs(scroll) > 0.001f)
 			{
-				var pinchScale = Mathf.Sqrt(Screen.width * Screen.width + Screen.height * Screen.height) / 4f;
-				var scaledScroll = scroll * pinchScale;
-				var center = mousePos;
+				float pinchScale = Mathf.Sqrt(Screen.width * Screen.width + Screen.height * Screen.height) / 4f;
+				float scaledScroll = scroll * pinchScale;
 
-				var deltaLeft = Vector2.left * scaledScroll;
-				var deltaRight = Vector2.right * scaledScroll;
+				Vector2 center = mousePos;
+				Vector2 deltaLeft = Vector2.left * scaledScroll;
+				Vector2 deltaRight = Vector2.right * scaledScroll;
 
-				var pos0 = center;
-				var pos1 = center;
+				Vector2 pos0 = center;
+				Vector2 pos1 = center;
 
 				if (scroll < 0)
 				{
@@ -172,25 +182,60 @@ namespace MassiveHadronLtd
 
 			if (d0.sqrMagnitude < EPSILON * EPSILON) return false;
 
-			var sum = d0 + d1;
-			var deltasCancel = sum.sqrMagnitude < EPSILON * EPSILON;
-			var oppositeSignsX = Mathf.Abs(d0.x + d1.x) < EPSILON;
-			var oppositeSignsY = Mathf.Abs(d0.y + d1.y) < EPSILON;
-			var nearZeroY = Mathf.Abs(d0.y) < EPSILON && Mathf.Abs(d1.y) < EPSILON;
+			Vector2 sum = d0 + d1;
+
+			bool deltasCancel = sum.sqrMagnitude < EPSILON * EPSILON;
+			bool oppositeSignsX = Mathf.Abs(d0.x + d1.x) < EPSILON;
+			bool oppositeSignsY = Mathf.Abs(d0.y + d1.y) < EPSILON;
+			bool nearZeroY = Mathf.Abs(d0.y) < EPSILON && Mathf.Abs(d1.y) < EPSILON;
 
 			return deltasCancel && oppositeSignsX && oppositeSignsY && nearZeroY;
 		}
 
-		private static UnityEngine.TouchPhase GetPhase(int id, Dictionary<int, Touch> oldMap)   // ← Also fixed return type
+		private static UnityEngine.TouchPhase GetPhase(int id, Dictionary<int, Touch> oldMap)
 		{
 			if (!oldMap.ContainsKey(id)) return UnityEngine.TouchPhase.Began;
 			return oldMap[id].deltaPosition.sqrMagnitude > 0.0001f ? UnityEngine.TouchPhase.Moved : UnityEngine.TouchPhase.Stationary;
 		}
 
-		// OnGUI and DrawQuad remain unchanged
-		public static void OnGUI() { /* your original OnGUI */ }
-		private static void DrawQuad(Rect rect, Color color) { /* your original DrawQuad */ }
+		// Debug visualization — shows previous frame's positions
+		public static void OnGUI()
+		{
+			foreach (var kvp in map)
+			{
+				Color col = kvp.Key == 0 ? new Color(1, 0, 0, 0.6f) : new Color(0, 0.7f, 1, 0.6f);
+				DrawQuad(new Rect(kvp.Value.position.x - 10, Screen.height - kvp.Value.position.y - 10, 20, 20), col);
+			}
+		}
+
+		private static void DrawQuad(Rect rect, Color color)
+		{
+			Texture2D tex = new Texture2D(1, 1);
+			tex.SetPixel(0, 0, color);
+			tex.Apply();
+			GUI.skin.box.normal.background = tex;
+			GUI.Box(rect, GUIContent.none);
+		}
 	}
 
-	// You can delete TouchCacheController if InputXController already calls CommitCurrentToMap()
+	// Auto-created singleton
+	internal class TouchCacheController : MonoBehaviour
+	{
+		private static TouchCacheController instance;
+
+		[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+		private static void CreateInstance()
+		{
+			if (instance != null) return;
+			var go = new GameObject("[MultiTouchEmulator Controller]");
+			go.hideFlags = HideFlags.HideAndDontSave;
+			instance = go.AddComponent<TouchCacheController>();
+			DontDestroyOnLoad(go);
+		}
+
+		private void LateUpdate()
+		{
+			MultiTouchEmulator.CommitCurrentToMap();
+		}
+	}
 }

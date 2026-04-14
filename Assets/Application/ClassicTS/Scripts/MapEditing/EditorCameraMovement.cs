@@ -64,8 +64,8 @@ namespace ClassicTilestorm
                 var t0 = InputX.touches[0];
                 var t1 = InputX.touches[1];
 
-                if ((t0.phase == UnityEngine.TouchPhase.Stationary || t0.phase == UnityEngine.TouchPhase.Moved) &&
-                    (t1.phase == UnityEngine.TouchPhase.Stationary || t1.phase == UnityEngine.TouchPhase.Moved))
+                if ((t0.phase == TouchPhase.Stationary || t0.phase == TouchPhase.Moved) &&
+                    (t1.phase == TouchPhase.Stationary || t1.phase == TouchPhase.Moved))
                 {
                     pointerX = (t0.deltaPosition.x + t1.deltaPosition.x) * 0.5f;
                     pointerY = (t0.deltaPosition.y + t1.deltaPosition.y) * 0.5f;
@@ -75,11 +75,14 @@ namespace ClassicTilestorm
 			// Desktop - Right mouse button look
 			if (InputX.GetMouseButton(1))
 			{
-				Vector2 delta = InputX.GetMouseDelta();
-				pointerX = delta.x;
-				pointerY = delta.y;
+				//var delta = InputX.GetMouseDelta();
+				//pointerX = delta.x;
+				//pointerY = delta.y;
+				pointerX = InputX.GetAxis("Mouse X");
+				pointerY = InputX.GetAxis("Mouse Y");
 			}
 #endif
+			//Debug.Log(pointerX);
 
 			// Apply your compensation scalar
 			pointerX *= InputX.TOUCH_LOOK_COMPENSATION_SCALAR;
@@ -107,7 +110,7 @@ namespace ClassicTilestorm
 			// Mouse wheel zoom
 			if (GuiUtils.IsMouseInsideWindow())
 			{
-				float scroll = InputX.GetAxisRaw("Mouse ScrollWheel") * ScrollSpeed * InputX.TOUCH_SCROLL_COMPENSATION_SCALAR;
+				float scroll = InputX.GetAxis("Mouse ScrollWheel") * ScrollSpeed * InputX.TOUCH_SCROLL_COMPENSATION_SCALAR;
 				if (scroll != 0f)
 					translation += Vector3.forward * scroll * ModifiedZoomSpeed;
 			}
