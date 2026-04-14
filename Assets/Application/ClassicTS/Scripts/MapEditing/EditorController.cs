@@ -249,7 +249,7 @@ namespace ClassicTilestorm
 				case ControllerMode.SelectTile:
 					if (InputX.GetMouseButtonDown(0))
 					{
-						if (StartTileDrag(Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)))
+						if (StartTileDrag(InputX.GetKey(KeyCode.LeftControl) || InputX.GetKey(KeyCode.RightControl)))
 							SetMode(ControllerMode.DragTile);
 						else
 							EditorCameraMovement.StartPanning(currentWorld);
