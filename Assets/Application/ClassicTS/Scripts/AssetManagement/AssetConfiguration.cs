@@ -7,16 +7,16 @@ namespace ClassicTilestorm.Assets
 			ModelAssets.NameRemapper = ClassicTileStormAssetRemapHelper.RemapName;
 
 			// FIX: Trim and normalize the path — this is critical
-			ModelAssets.RegisterRoot(AssetPath.GeometryPath.Trim('/').Trim());
+			ModelAssets.RegisterRoot(AssetPath.GeometryPath?.Trim('/').Trim());
 			ModelAssets.RegisterRoot("Levels");//'HD' paths
 			ModelAssets.RegisterRoot("Levels/Med");//'HD' paths
-			PrefabAssets.RegisterRoot(AssetPath.PrefabPath.Trim('/').Trim());
-			TextureAssets.RegisterRoot(AssetPath.TexturePath.Trim('/').Trim());
-			Texture2DAssets.RegisterRoot(AssetPath.TexturePath.Trim('/').Trim());
-			MaterialAssets.RegisterRoot(AssetPath.MaterialPath.Trim('/').Trim());
-			SkyboxAssets.RegisterRoot(AssetPath.SkycubesPath.Trim('/').Trim());
-			SoundAssets.RegisterRoot(AssetPath.SoundPath.Trim('/').Trim()); // e.g. "ClassicTS/Sounds/"
-			MusicAssets.RegisterRoot(AssetPath.MusicPath.Trim('/').Trim()); // e.g. "ClassicTS/Music/"
+			PrefabAssets.RegisterRoot(AssetPath.PrefabPath?.Trim('/').Trim());
+			TextureAssets.RegisterRoot(AssetPath.TexturePath?.Trim('/').Trim());
+			Texture2DAssets.RegisterRoot(AssetPath.TexturePath?.Trim('/').Trim());
+			MaterialAssets.RegisterRoot(AssetPath.MaterialPath?.Trim('/').Trim());
+			SkyboxAssets.RegisterRoot(AssetPath.SkycubesPath?.Trim('/').Trim());
+			SoundAssets.RegisterRoot(AssetPath.SoundPath?.Trim('/').Trim()); // e.g. "ClassicTS/Sounds/"
+			MusicAssets.RegisterRoot(AssetPath.MusicPath?.Trim('/').Trim()); // e.g. "ClassicTS/Music/"
 		}
 
 		public static void ClearAllCaches()

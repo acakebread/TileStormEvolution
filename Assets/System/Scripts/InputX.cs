@@ -9,12 +9,37 @@ namespace MassiveHadronLtd
 {
 	public static class InputX
 	{
+		// ===================================================================
+		// WEBGL MOUSE DELTA NORMALIZATION
+		// ===================================================================
+		private const float WEBGL_MOUSE_SCALE = 0.50f;   // ← Tune this value (usually 0.40f - 0.60f)
+
+		private static float ApplyMouseScale(float value)
+		{
+#if UNITY_WEBGL && !UNITY_EDITOR
+            return value * WEBGL_MOUSE_SCALE;
+#else
+			return value;
+#endif
+		}
+
+		private static Vector2 ApplyMouseScale(Vector2 value)
+		{
+#if UNITY_WEBGL && !UNITY_EDITOR
+            return value * WEBGL_MOUSE_SCALE;
+#else
+			return value;
+#endif
+		}
+
+		// ===================================================================
 		// New clean API
+		// ===================================================================
 		public static bool GetKeyDown(Key key) => key != Key.None && Keyboard.current != null && Keyboard.current[key].wasPressedThisFrame;
 		public static bool GetKey(Key key) => key != Key.None && Keyboard.current != null && Keyboard.current[key].isPressed;
 		public static bool GetKeyUp(Key key) => key != Key.None && Keyboard.current != null && Keyboard.current[key].wasReleasedThisFrame;
 
-		// Legacy API (keeps every old script working)
+		// Legacy API
 		public static bool GetKeyDown(KeyCode key) => GetKeyDown(key.ToKey());
 		public static bool GetKey(KeyCode key) => GetKey(key.ToKey());
 		public static bool GetKeyUp(KeyCode key) => GetKeyUp(key.ToKey());
@@ -91,15 +116,12 @@ namespace MassiveHadronLtd
                 if (touch.fingerId == 0) btn = 0;
                 else if (touch.fingerId == 1) btn = 1;
                 if (btn < 0) continue;
-
                 active.Add(btn);
-
                 if (!holdStates.TryGetValue(btn, out var st))
                 {
                     st = new HoldState();
                     holdStates[btn] = st;
                 }
-
                 if (touch.phase == UnityEngine.TouchPhase.Began)
                 {
                     st.isHeld = false;
@@ -121,13 +143,11 @@ namespace MassiveHadronLtd
 				if (getMouseButton(b))
 				{
 					active.Add(b);
-
 					if (!holdStates.TryGetValue(b, out var st))
 					{
 						st = new HoldState();
 						holdStates[b] = st;
 					}
-
 					if (getMouseButtonDown(b))
 					{
 						st.isHeld = false;
@@ -221,7 +241,6 @@ namespace MassiveHadronLtd
             var t0 = ts.FirstOrDefault(t => t.fingerId == 0);
             var t1 = ts.FirstOrDefault(t => t.fingerId == 1);
             if (t0.Equals(default(Touch)) || t1.Equals(default(Touch))) return false;
-
             bool bothActive = (t0.phase == UnityEngine.TouchPhase.Began || t0.phase == UnityEngine.TouchPhase.Moved) &&
                               (t1.phase == UnityEngine.TouchPhase.Began || t1.phase == UnityEngine.TouchPhase.Moved);
             if (bothActive)
@@ -233,7 +252,6 @@ namespace MassiveHadronLtd
                     return false;
                 return true;
             }
-
             bool bothEndedSamePos = t0.phase == UnityEngine.TouchPhase.Ended &&
                                     t1.phase == UnityEngine.TouchPhase.Ended &&
                                     Vector2.Distance(t0.position, t1.position) < 0.01f &&
@@ -249,14 +267,11 @@ namespace MassiveHadronLtd
                 if (axisName == "Mouse X") return mouseDelta.x;
                 if (axisName == "Mouse Y") return mouseDelta.y;
             }
-
             var ts = touches;
             if (ts.Length != 2) return 0f;
-
             var t0 = ts.FirstOrDefault(t => t.fingerId == 0);
             var t1 = ts.FirstOrDefault(t => t.fingerId == 1);
             if (!t0.IsValid() || !t1.IsValid()) return 0f;
-
             Vector2 prev0 = t0.position;
             Vector2 prev1 = t1.position;
             Vector2 curr0 = t0.position + t0.deltaPosition;
@@ -264,19 +279,8 @@ namespace MassiveHadronLtd
             float distPrev = Vector2.Distance(prev0, prev1);
             float distCurr = Vector2.Distance(curr0, curr1);
             float deltaDist = distCurr - distPrev;
-
             float scrollSensitivity = 1f / Mathf.Sqrt(Screen.width * Screen.width + Screen.height * Screen.height);
             return deltaDist * scrollSensitivity;
-
-            static Vector3 GetMouseDelta()
-            {
-                var ts = touches;
-                if (ts.Length == 0) return Vector3.zero;
-                if (ts.Length == 1) return ts[0].deltaPosition;
-                Vector2 sum = Vector2.zero;
-                foreach (var t in ts) sum += t.deltaPosition;
-                return sum / ts.Length;
-            }
         }
 
         private static bool IsValid(this Touch t) => t.phase != UnityEngine.TouchPhase.Canceled && t.phase != UnityEngine.TouchPhase.Ended;
@@ -285,64 +289,73 @@ namespace MassiveHadronLtd
         public const float TOUCH_SCROLL_COMPENSATION_SCALAR = 2f;
 
 #else
-		// Desktop - New Input System
-		private static Vector3 getMousePosition => InputSystem.Mouse.current?.position.ReadValue() ?? Vector3.zero;
+		// Desktop - New Input System with WebGL compensation
+		private static Vector3 getMousePosition => Mouse.current?.position.ReadValue() ?? Vector3.zero;
 
 		private static bool getMouseButtonDown(int button)
 		{
-			if (InputSystem.Mouse.current == null) return false;
+			if (Mouse.current == null) return false;
 			return button switch
 			{
-				0 => InputSystem.Mouse.current.leftButton.wasPressedThisFrame,
-				1 => InputSystem.Mouse.current.rightButton.wasPressedThisFrame,
-				2 => InputSystem.Mouse.current.middleButton.wasPressedThisFrame,
+				0 => Mouse.current.leftButton.wasPressedThisFrame,
+				1 => Mouse.current.rightButton.wasPressedThisFrame,
+				2 => Mouse.current.middleButton.wasPressedThisFrame,
 				_ => false
 			};
 		}
 
 		private static bool getMouseButton(int button)
 		{
-			if (InputSystem.Mouse.current == null) return false;
+			if (Mouse.current == null) return false;
 			return button switch
 			{
-				0 => InputSystem.Mouse.current.leftButton.isPressed,
-				1 => InputSystem.Mouse.current.rightButton.isPressed,
-				2 => InputSystem.Mouse.current.middleButton.isPressed,
+				0 => Mouse.current.leftButton.isPressed,
+				1 => Mouse.current.rightButton.isPressed,
+				2 => Mouse.current.middleButton.isPressed,
 				_ => false
 			};
 		}
 
 		private static bool getMouseButtonUp(int button)
 		{
-			if (InputSystem.Mouse.current == null) return false;
+			if (Mouse.current == null) return false;
 			return button switch
 			{
-				0 => InputSystem.Mouse.current.leftButton.wasReleasedThisFrame,
-				1 => InputSystem.Mouse.current.rightButton.wasReleasedThisFrame,
-				2 => InputSystem.Mouse.current.middleButton.wasReleasedThisFrame,
+				0 => Mouse.current.leftButton.wasReleasedThisFrame,
+				1 => Mouse.current.rightButton.wasReleasedThisFrame,
+				2 => Mouse.current.middleButton.wasReleasedThisFrame,
 				_ => false
 			};
 		}
 
 		private static float getAxis(string axisName)
 		{
-			if (InputSystem.Mouse.current == null) return 0f;
+			if (Mouse.current == null) return 0f;
 
-			if (axisName == "Mouse X") return GetMouseDelta().x;
-			if (axisName == "Mouse Y") return GetMouseDelta().y;
+			if (axisName == "Mouse X")
+				return ApplyMouseScale(GetMouseDelta().x);
+
+			if (axisName == "Mouse Y")
+				return ApplyMouseScale(GetMouseDelta().y);
+
 			if (axisName == "Mouse ScrollWheel")
-				return InputSystem.Mouse.current.scroll.ReadValue().y;
+				return InputSystem.Mouse.current.scroll.ReadValue().y * WEBGL_MOUSE_SCALE;  // Scroll also scaled
 
 			return 0f;
 		}
 
-		public static Vector2 GetMouseDelta() => InputSystem.Mouse.current?.delta.ReadValue() ?? Vector2.zero;
+		public static Vector2 GetMouseDelta()
+		{
+			if (Mouse.current == null) return Vector2.zero;
+			return ApplyMouseScale(Mouse.current.delta.ReadValue());
+		}
 
 		public const float TOUCH_LOOK_COMPENSATION_SCALAR = 1f;
 		public const float TOUCH_SCROLL_COMPENSATION_SCALAR = 1f;
 #endif
 	}
 
+	// Controller (unchanged)
 	internal class InputXController : MonoBehaviour
 	{
 		private static InputXController instance;
