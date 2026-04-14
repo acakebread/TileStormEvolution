@@ -349,14 +349,14 @@ namespace MassiveHadronLtd
 
 		private bool GetKeyDownWithRepeat(KeyCode key)
 		{
-			if (Input.GetKeyDown(key))
+			if (InputX.GetKeyDown(key))
 			{
 				repeatTimer = initialRepeatDelay;
 				isRepeating = true;
 				return true;
 			}
 
-			if (Input.GetKey(key) && isRepeating && repeatTimer <= 0f)
+			if (InputX.GetKey(key) && isRepeating && repeatTimer <= 0f)
 			{
 				repeatTimer = repeatRate;
 				return true;
@@ -375,8 +375,8 @@ namespace MassiveHadronLtd
 
 		private bool AnyNavigationKeyPressed()
 		{
-			return Input.GetKey(KeyCode.UpArrow) || Input.GetKey(KeyCode.DownArrow) ||
-				   Input.GetKey(KeyCode.PageUp) || Input.GetKey(KeyCode.PageDown);
+			return InputX.GetKey(KeyCode.UpArrow) || InputX.GetKey(KeyCode.DownArrow) ||
+				   InputX.GetKey(KeyCode.PageUp) || InputX.GetKey(KeyCode.PageDown);
 		}
 	}
 }
