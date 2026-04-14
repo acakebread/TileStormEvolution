@@ -11,6 +11,8 @@
 /[Uu]ser[Ss]ettings/
 /[Aa]ssets/[Pp]rivate.meta
 /[Aa]ssets/[Pp]rivate/*
+/[Aa]ssets/Resources/AssetManifests.meta
+/[Aa]ssets/Resources/AssetManifests/*
 /.utmp
 
 # MemoryCaptures can get excessive in size.
