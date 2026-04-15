@@ -62,24 +62,24 @@ namespace MassiveHadronLtd
 						new GUIContent("Fresnel Sharpness", "Higher = reflection only at extreme grazing angles\nLower = broader reflection"));
 					break;
 
-				case ReflectionEffectCamera.EffectMode.OceanEffect:
-					EditorGUILayout.PropertyField(serializedObject.FindProperty("mirrorTint"), new GUIContent("Base Color"));
-					EditorGUILayout.PropertyField(serializedObject.FindProperty("rippleSpeed"));
-					EditorGUILayout.PropertyField(serializedObject.FindProperty("rippleAmplitude"));
-					EditorGUILayout.PropertyField(serializedObject.FindProperty("rippleFrequency"));
-					EditorGUILayout.PropertyField(serializedObject.FindProperty("rippleOffset"));
-					EditorGUILayout.PropertyField(serializedObject.FindProperty("noiseStrength"));
-					EditorGUILayout.PropertyField(serializedObject.FindProperty("noiseTexture"));
-					EditorGUILayout.PropertyField(serializedObject.FindProperty("frostDepth"));
-					EditorGUILayout.PropertyField(serializedObject.FindProperty("frostThreshold"));
-					EditorGUILayout.PropertyField(serializedObject.FindProperty("frostFadeRange"));
+				//case ReflectionEffectCamera.EffectMode.OceanEffect:
+				//	EditorGUILayout.PropertyField(serializedObject.FindProperty("mirrorTint"), new GUIContent("Base Color"));
+				//	EditorGUILayout.PropertyField(serializedObject.FindProperty("rippleSpeed"));
+				//	EditorGUILayout.PropertyField(serializedObject.FindProperty("rippleAmplitude"));
+				//	EditorGUILayout.PropertyField(serializedObject.FindProperty("rippleFrequency"));
+				//	EditorGUILayout.PropertyField(serializedObject.FindProperty("rippleOffset"));
+				//	EditorGUILayout.PropertyField(serializedObject.FindProperty("noiseStrength"));
+				//	EditorGUILayout.PropertyField(serializedObject.FindProperty("noiseTexture"));
+				//	EditorGUILayout.PropertyField(serializedObject.FindProperty("frostDepth"));
+				//	EditorGUILayout.PropertyField(serializedObject.FindProperty("frostThreshold"));
+				//	EditorGUILayout.PropertyField(serializedObject.FindProperty("frostFadeRange"));
 
-					EditorGUILayout.Space();
-					EditorGUILayout.LabelField("Fresnel Reflection", EditorStyles.boldLabel);
-					EditorGUILayout.PropertyField(serializedObject.FindProperty("reflectionStrength"), new GUIContent("Reflection Strength"));
-					EditorGUILayout.PropertyField(serializedObject.FindProperty("fresnelSharpness"),
-						new GUIContent("Fresnel Sharpness", "Higher = reflection only at extreme grazing angles\nLower = broader reflection"));
-					break;
+				//	EditorGUILayout.Space();
+				//	EditorGUILayout.LabelField("Fresnel Reflection", EditorStyles.boldLabel);
+				//	EditorGUILayout.PropertyField(serializedObject.FindProperty("reflectionStrength"), new GUIContent("Reflection Strength"));
+				//	EditorGUILayout.PropertyField(serializedObject.FindProperty("fresnelSharpness"),
+				//		new GUIContent("Fresnel Sharpness", "Higher = reflection only at extreme grazing angles\nLower = broader reflection"));
+				//	break;
 
 				default:
 					EditorGUILayout.PropertyField(serializedObject.FindProperty("mirrorTint"));
