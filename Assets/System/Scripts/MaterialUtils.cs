@@ -76,6 +76,19 @@ namespace MassiveHadronLtd
 			};
 		}
 
+		// New defaults for the Fresnel reflection feature
+		[Serializable]
+		public struct FresnelReflectionDefaults
+		{
+			public float reflectionStrength;
+			public float fresnelPower;
+			public static FresnelReflectionDefaults Get() => new()
+			{
+				reflectionStrength = 0.25f,
+				fresnelPower = 12f
+			};
+		}
+
 		public static Material CreateSurfaceFilmMaterial(Color baseColor, Texture2D noiseTexture, float filmIntensity = 0.2f, float noiseScale = 1f)
 		{
 			var surfaceFilmShader = Shader.Find("Unlit/URPSurfaceFilm");
@@ -161,11 +174,14 @@ namespace MassiveHadronLtd
 		}
 
 		public static Material CreatePerlinWangOpaque(
-			RenderTexture reflectionTexture,
-			Color dimColor,
-			Texture2D noiseTexture,
-			float filmIntensity = 0.2f,
-			float noiseScale = 1f)
+					RenderTexture reflectionTexture,
+					Color dimColor,
+					Texture2D noiseTexture,
+					float filmIntensity = 0.2f,
+					float noiseScale = 1f,
+					float reflectionStrength = 0.25f,
+					Texture skyboxTexture = null,
+					float fresnelPower = 12f)
 		{
 			var shader = Shader.Find("Unlit/URPPerlinWangOpaque");
 			if (!shader)
@@ -184,6 +200,12 @@ namespace MassiveHadronLtd
 			mat.SetTexture("_NoiseTex", noiseTexture);
 			mat.SetFloat("_FilmIntensity", filmIntensity);
 			mat.SetFloat("_NoiseScale", noiseScale);
+
+			// New Fresnel reflection properties
+			mat.SetFloat("_ReflectionStrength", reflectionStrength);
+			mat.SetFloat("_FresnelPower", fresnelPower);
+			if (skyboxTexture != null)
+				mat.SetTexture("_Skybox", skyboxTexture);
 
 			return mat;
 		}
@@ -250,19 +272,38 @@ namespace MassiveHadronLtd
 			return material;
 		}
 
-		public static Material CreateFrostOpaqueMaterial(Color baseColor, float depth = 1f, RenderTexture reflectionTexture = null, Texture2D noiseTexture = null, float noiseStrength = 0.02f)
+		public static Material CreateFrostOpaqueMaterial(
+			Color baseColor,
+			float depth = 1f,
+			RenderTexture reflectionTexture = null,
+			Texture2D noiseTexture = null,
+			float noiseStrength = 0.02f,
+			float reflectionStrength = 0.25f,
+			Texture skyboxTexture = null,
+			float fresnelPower = 12f)
 		{
 			var frostShader = Shader.Find("Unlit/URPFrostOpaque");
 			if (!frostShader)
 			{
 				Debug.LogWarning("MaterialUtils: Unlit/URPFrostOpaque shader not found! Falling back to URP/Unlit.");
-				return new Material(Shader.Find("Universal Render Pipeline/Unlit")) { color = new Color(0.25f, 0.25f, 0.25f, 1.0f) }; // Opaque fallback
+				return new Material(Shader.Find("Universal Render Pipeline/Unlit")) { color = new Color(0.25f, 0.25f, 0.25f, 1.0f) };
 			}
 
-			var material = new Material(frostShader) { renderQueue = (int)RenderQueue.Geometry };
+			var material = new Material(frostShader)
+			{
+				renderQueue = (int)RenderQueue.Geometry
+			};
+
 			material.SetColor("_BaseColor", baseColor);
 			material.SetFloat("_Depth", depth);
 			material.SetFloat("_NoiseStrength", noiseStrength);
+
+			// New Fresnel reflection properties
+			material.SetFloat("_ReflectionStrength", reflectionStrength);
+			material.SetFloat("_FresnelPower", fresnelPower);
+			if (skyboxTexture != null)
+				material.SetTexture("_Skybox", skyboxTexture);
+
 			if (reflectionTexture != null)
 				material.SetTexture("_MainTex", reflectionTexture);
 			if (noiseTexture != null)
@@ -273,6 +314,9 @@ namespace MassiveHadronLtd
 				material.SetFloat("_FilmIntensity", 0);
 			if (material.HasProperty("_NoiseScale"))
 				material.SetFloat("_NoiseScale", 0);
+
+			material.DisableKeyword("_SURFACE_TYPE_TRANSPARENT");
+			material.SetOverrideTag("RenderType", "Opaque");
 
 			// Force shader recompilation
 			material.shader = frostShader;

@@ -27,29 +27,40 @@ public class ReflectionEffectCameraEditor : Editor
 				break;
 
 			case ReflectionEffectCamera.EffectMode.SurfaceFilm:
-				EditorGUILayout.PropertyField(serializedObject.FindProperty("mirrorTint"), new GUIContent("Mirror Tint"));
+				EditorGUILayout.PropertyField(serializedObject.FindProperty("mirrorTint"), new GUIContent("Mirror Tint / Dim Color"));
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("noiseTexture"));
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("noiseScale"));
+
+				EditorGUILayout.Space();
+				EditorGUILayout.LabelField("Fresnel Reflection", EditorStyles.boldLabel);
+				EditorGUILayout.PropertyField(serializedObject.FindProperty("reflectionStrength"), new GUIContent("Reflection Strength"));
+				EditorGUILayout.PropertyField(serializedObject.FindProperty("fresnelPower"), new GUIContent("Fresnel Power (1–40)"));
 				break;
 
 			case ReflectionEffectCamera.EffectMode.FrostEffect:
-				EditorGUILayout.PropertyField(serializedObject.FindProperty("mirrorTint"));
+				EditorGUILayout.PropertyField(serializedObject.FindProperty("mirrorTint"), new GUIContent("Base Color"));
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("noiseTexture"));
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("noiseStrength"));
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("frostDepth"));
+
+				EditorGUILayout.Space();
+				EditorGUILayout.LabelField("Fresnel Reflection", EditorStyles.boldLabel);
+				EditorGUILayout.PropertyField(serializedObject.FindProperty("reflectionStrength"), new GUIContent("Reflection Strength"));
+				EditorGUILayout.PropertyField(serializedObject.FindProperty("fresnelPower"), new GUIContent("Fresnel Power (1–40)"));
 				break;
 
 			case ReflectionEffectCamera.EffectMode.Water:
-				EditorGUILayout.PropertyField(serializedObject.FindProperty("mirrorTint"));
+				EditorGUILayout.PropertyField(serializedObject.FindProperty("mirrorTint"), new GUIContent("Base Color"));
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("rippleSpeed"));
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("rippleAmplitude"));
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("rippleFrequency"));
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("rippleOffset"));
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("reflectionStrength"));
+				EditorGUILayout.PropertyField(serializedObject.FindProperty("fresnelPower"), new GUIContent("Fresnel Power (1–40)"));
 				break;
 
 			case ReflectionEffectCamera.EffectMode.OceanEffect:
-				EditorGUILayout.PropertyField(serializedObject.FindProperty("mirrorTint"));
+				EditorGUILayout.PropertyField(serializedObject.FindProperty("mirrorTint"), new GUIContent("Base Color"));
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("rippleSpeed"));
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("rippleAmplitude"));
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("rippleFrequency"));
@@ -59,6 +70,15 @@ public class ReflectionEffectCameraEditor : Editor
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("frostDepth"));
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("frostThreshold"));
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("frostFadeRange"));
+
+				EditorGUILayout.Space();
+				EditorGUILayout.LabelField("Fresnel Reflection", EditorStyles.boldLabel);
+				EditorGUILayout.PropertyField(serializedObject.FindProperty("reflectionStrength"), new GUIContent("Reflection Strength"));
+				EditorGUILayout.PropertyField(serializedObject.FindProperty("fresnelPower"), new GUIContent("Fresnel Power (1–40)"));
+				break;
+
+			default: // Debug / Null
+				EditorGUILayout.PropertyField(serializedObject.FindProperty("mirrorTint"));
 				break;
 		}
 

@@ -8,6 +8,9 @@ Shader "Unlit/URPFrostOpaque"
         _MainTex ("Texture", 2D) = "white" {}
         _NoiseTex ("Noise Texture", 2D) = "white" {}
         _NoiseStrength ("Noise Strength", Range(0, 0.1)) = 0.02
+        _ReflectionStrength ("Reflection Strength", Range(0, 1)) = 0.25
+        _Skybox ("Skybox", Cube) = "" {}
+        _FresnelPower ("Fresnel Exponent", Range(1, 40)) = 12
     }
     SubShader
     {
@@ -34,6 +37,7 @@ Shader "Unlit/URPFrostOpaque"
             {
                 float4 positionOS : POSITION;
                 float2 uv : TEXCOORD0;
+                float3 normalOS : NORMAL;
             };
 
             struct Varyings
@@ -41,6 +45,9 @@ Shader "Unlit/URPFrostOpaque"
                 float4 positionCS : SV_POSITION;
                 float2 uv : TEXCOORD0;
                 float4 screenPos : TEXCOORD1;
+                float3 positionWS : TEXCOORD2;
+                float3 normalWS : TEXCOORD3;
+                float3 viewDirWS : TEXCOORD4;
             };
 
             CBUFFER_START(UnityPerMaterial)
@@ -48,6 +55,8 @@ Shader "Unlit/URPFrostOpaque"
                 float _Depth;
                 float _DepthMax;
                 float _NoiseStrength;
+                float _ReflectionStrength;
+                float _FresnelPower;
                 float4 _MainTex_TexelSize;
             CBUFFER_END
 
@@ -55,6 +64,8 @@ Shader "Unlit/URPFrostOpaque"
             SAMPLER(sampler_MainTex);
             TEXTURE2D(_NoiseTex);
             SAMPLER(sampler_NoiseTex);
+            TEXTURECUBE(_Skybox);
+            SAMPLER(sampler_Skybox);
 
             Varyings vert(Attributes input)
             {
@@ -62,6 +73,9 @@ Shader "Unlit/URPFrostOpaque"
                 output.positionCS = TransformObjectToHClip(input.positionOS.xyz);
                 output.uv = input.uv;
                 output.screenPos = ComputeScreenPos(output.positionCS);
+                output.positionWS = mul(unity_ObjectToWorld, input.positionOS).xyz;
+                output.normalWS = TransformObjectToWorldNormal(input.normalOS);
+                output.viewDirWS = GetWorldSpaceViewDir(output.positionWS);
                 return output;
             }
 
@@ -102,22 +116,38 @@ Shader "Unlit/URPFrostOpaque"
                 for (float d = 1; d <= ct; ++d)
                 {
                     float2 texelOffset = _MainTex_TexelSize.xy * d * scale;
-                    for (int i = 0; i < 4; i++)
+                    for (int j = 0; j < 4; j++)
                     {
-                        sum += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, screenUV + texelOffset * sampleOffsets[i]);
+                        sum += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, screenUV + texelOffset * sampleOffsets[j]);
                     }
                     measurements += 4;
                 }
 
                 half4 color = sum / measurements;
 
+                // Add noise
                 half4 noise = SAMPLE_TEXTURE2D(_NoiseTex, sampler_NoiseTex, input.uv);
                 color.rgb += (noise.rgb - 0.5) * _NoiseStrength;
 
+                // Blend base color (original behavior)
                 color.rgb = color.rgb * (1.0 - _BaseColor.a) + _BaseColor.rgb * _BaseColor.a;
+
+                // === Added Fresnel Reflection ===
+                float3 normalWS = normalize(input.normalWS);
+                float3 viewDirWS = normalize(input.viewDirWS);
+                float3 reflectDir = reflect(-viewDirWS, normalWS);
+
+                half4 reflectionColor = SAMPLE_TEXTURECUBE(_Skybox, sampler_Skybox, reflectDir);
+
+                float cosTheta = saturate(dot(viewDirWS, normalWS));
+                float fresnelTerm = pow(1.0 - cosTheta, _FresnelPower);
+                float reflectionIntensity = fresnelTerm * _ReflectionStrength;
+
+                color.rgb = lerp(color.rgb, reflectionColor.rgb, reflectionIntensity);
+                // === End Reflection ===
+
                 return half4(color.rgb, 1);
             }
-
             ENDHLSL
         }
     }
