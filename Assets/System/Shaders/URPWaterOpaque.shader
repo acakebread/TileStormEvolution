@@ -97,34 +97,29 @@
             {
                 float2 screenUV = input.screenPos.xy / input.screenPos.w;
                 
-                // Normalize and scale inputs
+                // Normalize and scale inputs (your ripple code unchanged)
                 float speed = _RippleSpeed * RIPPLE_SPEED_SCALE;
                 float amplitude = _RippleAmplitude * RIPPLE_AMPLITUDE_SCALE;
                 float frequency = _RippleFrequency * RIPPLE_FREQUENCY_SCALE;
                 float time = _TimeSeed * speed;
 
-                // Procedural ripple displacement for texture sampling
                 float2 uv = input.uv;
 
-                // Four waves at 45-degree angles
-                float2 wave1Dir = normalize(float2(cos(0.0), sin(0.0))); // 0°
-                float2 wave2Dir = normalize(float2(cos(0.785398), sin(0.785398))); // 45°
-                float2 wave3Dir = normalize(float2(cos(1.570796), sin(1.570796))); // 90°
-                float2 wave4Dir = normalize(float2(cos(2.356194), sin(2.356194))); // 135°
+                float2 wave1Dir = normalize(float2(cos(0.0), sin(0.0)));
+                float2 wave2Dir = normalize(float2(cos(0.785398), sin(0.785398)));
+                float2 wave3Dir = normalize(float2(cos(1.570796), sin(1.570796)));
+                float2 wave4Dir = normalize(float2(cos(2.356194), sin(2.356194)));
 
-                // Seeds with UV and phase offsets
                 float seed1 = dot(uv, wave1Dir) * frequency + time + _RippleOffset * 0.0;
                 float seed2 = dot(uv, wave2Dir) * frequency + time + _RippleOffset * 0.25;
                 float seed3 = dot(uv, wave3Dir) * frequency + time + _RippleOffset * 0.5;
                 float seed4 = dot(uv, wave4Dir) * frequency + time + _RippleOffset * 0.75;
 
-                // Combine multiple sine terms for noise
                 float wave1 = (sin(seed1 * frequency) + sin(seed1 * 1.61803398875) - sin(seed1 * 1.41421356237));
                 float wave2 = (sin(seed2 * frequency) + sin(seed2 * 1.73205080757) - sin(seed2 * 1.30901699437));
                 float wave3 = (sin(seed3 * frequency) + sin(seed3 * 1.61803398875) - sin(seed3 * 1.41421356237));
                 float wave4 = (sin(seed4 * frequency) + sin(seed4 * 1.73205080757) - sin(seed4 * 1.30901699437));
 
-                // Combine waves for displacement
                 float2 displacement = amplitude * (
                     wave1 * wave1Dir +
                     wave2 * wave2Dir +
@@ -132,53 +127,61 @@
                     wave4 * wave4Dir
                 ) / input.screenPos.w;
 
-                // Apply displacement to UVs for texture sampling
                 float2 displacedUV = screenUV + displacement;
 
-                // Sample the depth buffer at displaced UV
-                float sampledDepth = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, displacedUV).r;
-                float fragmentDepth = input.screenPos.z / input.screenPos.w;
+                // ===================================================================
+                // THIS IS THE OFFICIAL URP FIX FOR WEBGL (and all platforms)
+                // SampleSceneDepth + NDC adjustment so sampled depth is in EXACTLY
+                // the same space as fragmentDepthRaw = screenPos.z / screenPos.w
+                // This eliminates the "magnified / different space / distance cutoff"
+                // ===================================================================
+                float sampledDepth = SampleSceneDepth(displacedUV);   // official helper from DeclareDepthTexture.hlsl
 
-                // Convert depths to linear eye-space for comparison
-                float sampledDepthLinear = LinearEyeDepth(sampledDepth, _ZBufferParams);
-                float fragmentDepthLinear = LinearEyeDepth(fragmentDepth, _ZBufferParams);
+                // On WebGL/OpenGL the depth texture stores values differently.
+                // This lerp makes sampledDepth match the exact NDC z that Unity writes
+                // for your water plane (the space your fragmentDepthRaw lives in).
+                #if !UNITY_REVERSED_Z
+                    sampledDepth = lerp(UNITY_NEAR_CLIP_VALUE, 1.0, sampledDepth);
+                #endif
 
-                // Compute normal for reflections
-                float3 normalWS = normalize(input.normalWS); // Base normal
-                float3 perturbNormal = float3(displacement.x, 0.0, displacement.y) * _NormalScale * 1.0;
-                float3 reflectionNormal = normalize(normalWS + perturbNormal); // Add and normalize
+                float fragmentDepthRaw = input.screenPos.z / input.screenPos.w;
 
-                // Compute reflection vector
+                // Now both depths are in identical space → comparison is reliable at any distance
+                bool objectInFront;
+                #if UNITY_REVERSED_Z
+                    objectInFront = (sampledDepth > fragmentDepthRaw);   // reversed platforms: larger = closer
+                #else
+                    objectInFront = (sampledDepth < fragmentDepthRaw);   // WebGL: smaller = closer
+                #endif
+
+                // Reflection setup (unchanged)
+                float3 normalWS = normalize(input.normalWS);
+                float3 perturbNormal = float3(displacement.x, 0.0, displacement.y) * _NormalScale;
+                float3 reflectionNormal = normalize(normalWS + perturbNormal);
+
                 float3 viewDirWS = normalize(input.viewDirWS);
                 float3 reflectDir = reflect(-viewDirWS, reflectionNormal);
 
-                // Sample skybox with reflection vector
                 half4 reflectionColor = SAMPLE_TEXTURECUBE(_Skybox, sampler_Skybox, reflectDir);
 
                 float cosTheta = saturate(dot(viewDirWS, reflectionNormal));
                 float fresnelTerm = pow(1.0 - cosTheta, _FresnelSharpness);
                 float reflectionIntensity = fresnelTerm * _ReflectionStrength;
 
-                #if !defined(SHADER_API_GLES) && !defined(SHADER_API_GLES3) // Non-WebGL
-                // Handle depth test for texture sampling
-                if (sampledDepthLinear < fragmentDepthLinear)
+                half4 color;
+
+                if (objectInFront)
                 {
-                    // Sample at undisplaced UV as fallback
-                    half4 color = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, screenUV);
+                    // Object in front → use undisplaced UV (no wobbling)
+                    color = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, screenUV);
                     color.rgb = lerp(color.rgb, _BaseColor.rgb, _BaseColor.a);
-                    // Blend reflection with fallback color
                     color.rgb = lerp(color.rgb, reflectionColor.rgb, reflectionIntensity);
                     return half4(color.rgb, 1);
                 }
-                #endif
 
-                // Sample texture with displaced UVs
-                half4 color = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, displacedUV);
-
-                // Blend with base color for water tint
+                // No object in front → use rippled/displaced UV
+                color = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, displacedUV);
                 color.rgb = lerp(color.rgb, _BaseColor.rgb, _BaseColor.a);
-
-                // Blend reflection with water color
                 color.rgb = lerp(color.rgb, reflectionColor.rgb, reflectionIntensity);
 
                 return half4(color.rgb, 1);
