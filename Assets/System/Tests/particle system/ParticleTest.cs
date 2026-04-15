@@ -9,7 +9,7 @@ public class ParticleTest : MonoBehaviour
 	void Awake()
 	{
 		// Find all ParticleController instances in the scene, unsorted for performance
-		controllers = FindObjectsByType<ParticleController>(FindObjectsSortMode.None);
+		controllers = FindObjectsByType<ParticleController>(FindObjectsInactive.Exclude);
 		buttonStates = new bool[controllers.Length];
 	}
 
@@ -22,7 +22,7 @@ public class ParticleTest : MonoBehaviour
 
 		for (int i = 0; i < controllers.Length; i++)
 		{
-			Rect buttonRect = new Rect(10, yOffset + i * (buttonHeight + 5), buttonWidth, buttonHeight);
+			Rect buttonRect = new (10, yOffset + i * (buttonHeight + 5), buttonWidth, buttonHeight);
 			bool wasPressed = buttonStates[i];
 			buttonStates[i] = GUI.RepeatButton(buttonRect, controllers[i].gameObject.name);
 

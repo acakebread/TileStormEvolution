@@ -23,7 +23,7 @@ namespace MassiveHadronLtd
 
 		[Header("Appearance")]
 		public bool useThreeZoneSlicing = false;
-		[SerializeField] public Material particleMaterial;
+		public Material particleMaterial;
 		public Color color = Color.white;
 		public float radius = 0.02f;
 		[Range(0f, 1f)] public float fadeStartTime = 1f;
@@ -52,7 +52,7 @@ namespace MassiveHadronLtd
 		[Range(1, 128)] public int particleCount = 1;
 		public Vector3 scatterScalar = Vector3.zero;
 		[Range(0.1f, 10f)] public float cycleTime = 0.1f;
-		[SerializeField] public List<Pulse> pulses = new List<Pulse> { new Pulse { start = 0f, end = 0.1f } };
+		public List<Pulse> pulses = new() { new Pulse { start = 0f, end = 0.1f } };
 
 		[System.Serializable]
 		public class Pulse
@@ -80,7 +80,7 @@ namespace MassiveHadronLtd
 			public ScaleTable(float[] v, int r) { values = v; resolution = r; }
 
 			[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-			public float Evaluate(float norm)
+			public readonly float Evaluate(float norm)
 			{
 				int i = (int)(norm * (resolution - 1));
 				i = Mathf.Clamp(i, 0, resolution - 2);
@@ -94,7 +94,7 @@ namespace MassiveHadronLtd
 		private float timelinePosition = 0f;
 		private float lastTimelinePosition = 0f;
 
-		private int _debugActiveCount = 0;
+		private readonly int _debugActiveCount = 0;
 		public int DebugActiveCount => _debugActiveCount;
 
 		private void Awake()
@@ -135,7 +135,7 @@ namespace MassiveHadronLtd
 			if (randomiseTimelineOffset && cycleTime > 0f)
 			{
 				if (timelineSeed != 0)
-					Random.InitState(timelineSeed ^ GetInstanceID());
+					Random.InitState(timelineSeed ^ GetHashCode());
 
 				timelinePosition = Random.value * cycleTime;
 				lastTimelinePosition = timelinePosition; // CRITICAL
@@ -158,8 +158,7 @@ namespace MassiveHadronLtd
 			}
 
 			if (customParticleSystem == null) return;
-			var uacd = cam.GetComponent<UniversalAdditionalCameraData>();
-			if (uacd == null) return;
+			if (!cam.TryGetComponent<UniversalAdditionalCameraData>(out var _)) return;
 
 			customParticleSystem.Render(cam);
 		}

@@ -283,8 +283,7 @@ namespace MassiveHadronLtd
 			if (scrollRect == null || scrollRect.content == null || scrollRect.viewport == null)
 				return;
 
-			var itemRT = selectable.GetComponent<RectTransform>();
-			if (itemRT == null) return;
+			if (!selectable.TryGetComponent<RectTransform>(out var itemRT)) return;
 
 			Canvas.ForceUpdateCanvases();
 
@@ -334,8 +333,7 @@ namespace MassiveHadronLtd
 
 			foreach (var s in selectables)
 			{
-				var rt = s.GetComponent<RectTransform>();
-				if (rt == null) continue;
+				if (!s.TryGetComponent<RectTransform>(out var rt)) continue;
 				totalHeight += rt.rect.height;
 				count++;
 			}

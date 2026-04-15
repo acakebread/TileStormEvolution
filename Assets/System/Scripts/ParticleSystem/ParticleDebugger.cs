@@ -9,7 +9,7 @@ namespace MassiveHadronLtd
 		[Header("Display")]
 		public bool showInPlayMode = true;
 		public bool showInEditMode = true; // Kept, but will be ignored in builds
-		public Vector2 screenOffset = new Vector2(15, 15);
+		public Vector2 screenOffset = new (15, 15);
 
 		[Header("Update")]
 		[Range(0.05f, 1f)] public float guiUpdateInterval = 0.1f;
@@ -47,7 +47,7 @@ namespace MassiveHadronLtd
 
 		private void RefreshControllers()
 		{
-			var all = FindObjectsByType<ParticleController>(FindObjectsSortMode.None);
+			var all = FindObjectsByType<ParticleController>(FindObjectsInactive.Exclude);
 			bool changed = _controllers.Count != all.Length || !_controllers.SequenceEqual(all);
 
 			if (changed)

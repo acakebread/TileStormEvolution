@@ -382,8 +382,7 @@ namespace MassiveHadronLtd
 		private static void CreateInstance()
 		{
 			if (instance != null) return;
-			var go = new GameObject("[InputX Controller]");
-			go.hideFlags = HideFlags.HideAndDontSave;
+			var go = new GameObject("[InputX Controller]") { hideFlags = HideFlags.HideAndDontSave };
 			instance = go.AddComponent<InputXController>();
 			DontDestroyOnLoad(go);
 		}

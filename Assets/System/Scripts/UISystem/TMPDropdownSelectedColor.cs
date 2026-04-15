@@ -91,7 +91,7 @@ public class TMPDropdownSelectedGraphic : MonoBehaviour
 	// Check if any other dropdown is expanded
 	private bool FindAnyOtherExpandedDropdown()
 	{
-		var all = FindObjectsByType<TMP_Dropdown>(FindObjectsSortMode.None);
+		var all = FindObjectsByType<TMP_Dropdown>(FindObjectsInactive.Exclude);
 		foreach (var dd in all)
 		{
 			if (dd != dropdown && dd.IsExpanded)
