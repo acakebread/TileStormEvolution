@@ -76,16 +76,15 @@ namespace MassiveHadronLtd
 			};
 		}
 
-		// New defaults for the Fresnel reflection feature
 		[Serializable]
 		public struct FresnelReflectionDefaults
 		{
 			public float reflectionStrength;
-			public float fresnelPower;
+			public float fresnelSharpness;        // ← changed
 			public static FresnelReflectionDefaults Get() => new()
 			{
 				reflectionStrength = 0.25f,
-				fresnelPower = 12f
+				fresnelSharpness = 12f
 			};
 		}
 
@@ -181,7 +180,7 @@ namespace MassiveHadronLtd
 					float noiseScale = 1f,
 					float reflectionStrength = 0.25f,
 					Texture skyboxTexture = null,
-					float fresnelPower = 12f)
+					float fresnelSharpness = 12f)
 		{
 			var shader = Shader.Find("Unlit/URPPerlinWangOpaque");
 			if (!shader)
@@ -203,7 +202,7 @@ namespace MassiveHadronLtd
 
 			// New Fresnel reflection properties
 			mat.SetFloat("_ReflectionStrength", reflectionStrength);
-			mat.SetFloat("_FresnelPower", fresnelPower);
+			mat.SetFloat("_FresnelSharpness", fresnelSharpness);
 			if (skyboxTexture != null)
 				mat.SetTexture("_Skybox", skyboxTexture);
 
@@ -280,7 +279,7 @@ namespace MassiveHadronLtd
 			float noiseStrength = 0.02f,
 			float reflectionStrength = 0.25f,
 			Texture skyboxTexture = null,
-			float fresnelPower = 12f)
+			float fresnelSharpness = 12f)
 		{
 			var frostShader = Shader.Find("Unlit/URPFrostOpaque");
 			if (!frostShader)
@@ -300,7 +299,8 @@ namespace MassiveHadronLtd
 
 			// New Fresnel reflection properties
 			material.SetFloat("_ReflectionStrength", reflectionStrength);
-			material.SetFloat("_FresnelPower", fresnelPower);
+			material.SetFloat("_FresnelSharpness", fresnelSharpness);
+
 			if (skyboxTexture != null)
 				material.SetTexture("_Skybox", skyboxTexture);
 
@@ -363,48 +363,59 @@ namespace MassiveHadronLtd
 			return material;
 		}
 
-		public static Material CreateWaterMaterialOpaque(Color baseColor, RenderTexture reflectionTexture, float rippleSpeed = 0.5f, float rippleAmplitude = 0.5f, float rippleFrequency = 0.5f, float rippleOffset = 0.5f, float reflectionStrength = 0.8f, Texture skyboxTexture = null, float depthThreshold = 5.0f, float depthTolerance = 0.01f, float debugDepthScalar = 0.0f)
+		public static Material CreateWaterMaterialOpaque(
+			Color baseColor,
+			RenderTexture reflectionTexture,
+			float rippleSpeed = 0.5f,
+			float rippleAmplitude = 0.5f,
+			float rippleFrequency = 0.5f,
+			float rippleOffset = 0.5f,
+			float reflectionStrength = 0.8f,
+			Texture skyboxTexture = null,
+			float fresnelSharpness = 12f,           // ← added
+			float depthThreshold = 5.0f,
+			float depthTolerance = 0.01f,
+			float debugDepthScalar = 0.0f)
 		{
 			var waterShader = Shader.Find("Unlit/URPWaterOpaque");
 			if (!waterShader)
 			{
 				Debug.LogWarning("MaterialUtils: Unlit/URPWaterOpaque shader not found! Falling back to URP/Unlit.");
-				return new Material(Shader.Find("Universal Render Pipeline/Unlit")) { color = new Color(0.25f, 0.5f, 0.75f, 1.0f) }; // Opaque fallback
+				return new Material(Shader.Find("Universal Render Pipeline/Unlit")) { color = new Color(0.25f, 0.5f, 0.75f, 1.0f) };
 			}
 
 			var material = new Material(waterShader) { renderQueue = (int)RenderQueue.Geometry };
+
 			material.SetColor("_BaseColor", baseColor);
 			material.SetFloat("_RippleSpeed", rippleSpeed);
 			material.SetFloat("_RippleAmplitude", rippleAmplitude);
 			material.SetFloat("_RippleFrequency", rippleFrequency);
 			material.SetFloat("_RippleOffset", rippleOffset);
 			material.SetFloat("_ReflectionStrength", reflectionStrength);
+			material.SetFloat("_FresnelSharpness", fresnelSharpness);     // ← added
+
 			if (skyboxTexture != null)
 				material.SetTexture("_Skybox", skyboxTexture);
+
 			material.SetFloat("_TimeSeed", 0f);
 			material.SetFloat("_DepthThreshold", depthThreshold);
 			material.SetFloat("_DepthTolerance", depthTolerance);
 			material.SetFloat("_DebugDepthScalar", debugDepthScalar);
+
 			if (reflectionTexture != null)
 				material.SetTexture("_MainTex", reflectionTexture);
 
 			// Clear unrelated properties
-			if (material.HasProperty("_NoiseTex"))
-				material.SetTexture("_NoiseTex", null);
-			if (material.HasProperty("_Depth"))
-				material.SetFloat("_Depth", 0);
-			if (material.HasProperty("_NoiseStrength"))
-				material.SetFloat("_NoiseStrength", 0);
-			if (material.HasProperty("_FilmIntensity"))
-				material.SetFloat("_FilmIntensity", 0);
-			if (material.HasProperty("_NoiseScale"))
-				material.SetFloat("_NoiseScale", 0);
+			if (material.HasProperty("_NoiseTex")) material.SetTexture("_NoiseTex", null);
+			if (material.HasProperty("_Depth")) material.SetFloat("_Depth", 0);
+			if (material.HasProperty("_NoiseStrength")) material.SetFloat("_NoiseStrength", 0);
+			if (material.HasProperty("_FilmIntensity")) material.SetFloat("_FilmIntensity", 0);
+			if (material.HasProperty("_NoiseScale")) material.SetFloat("_NoiseScale", 0);
 
 			material.DisableKeyword("_SURFACE_TYPE_TRANSPARENT");
 			material.SetOverrideTag("RenderType", "Opaque");
 
-			// Force shader recompilation
-			material.shader = waterShader;
+			material.shader = waterShader; // Force recompilation
 			return material;
 		}
 

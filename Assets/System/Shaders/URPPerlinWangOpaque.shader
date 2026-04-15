@@ -11,7 +11,7 @@
         _NoiseTexSize ("Noise Texture Size (width,height)", Vector) = (256,256,0,0)
         _ReflectionStrength ("Reflection Strength", Range(0, 1)) = 0.25
         _Skybox ("Skybox", Cube) = "" {}
-        _FresnelPower ("Fresnel Exponent", Range(1, 40)) = 12
+        _FresnelSharpness ("Fresnel Sharpness - Higher = reflection only at extreme grazing angles (recommended 8–30)", Range(1, 40)) = 12
     }
 
     SubShader
@@ -54,7 +54,7 @@
                 float _FilmIntensity;
                 float4 _NoiseTexSize;
                 float _ReflectionStrength;
-                float _FresnelPower;
+                float _FresnelSharpness;
             CBUFFER_END
 
             TEXTURE2D(_MainTex); SAMPLER(sampler_MainTex);
@@ -120,7 +120,7 @@
                 half4 reflectionColor = SAMPLE_TEXTURECUBE(_Skybox, sampler_Skybox, reflectDir);
 
                 float cosTheta = saturate(dot(viewDirWS, normalWS));
-                float fresnelTerm = pow(1.0 - cosTheta, _FresnelPower);
+                float fresnelTerm = pow(1.0 - cosTheta, _FresnelSharpness);
                 float reflectionIntensity = fresnelTerm * _ReflectionStrength;
 
                 color.rgb = lerp(color.rgb, reflectionColor.rgb, reflectionIntensity);

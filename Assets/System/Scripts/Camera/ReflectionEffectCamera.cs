@@ -41,7 +41,7 @@ namespace MassiveHadronLtd
 			SurfaceFilm,
 			FrostEffect,
 			Water,
-			OceanEffect
+			//OceanEffect
 		}
 
 		[SerializeField] private EffectMode effectMode = EffectMode.Null;
@@ -61,8 +61,8 @@ namespace MassiveHadronLtd
 		[SerializeField, Range(0f, 1f)] private float rippleOffset = 0.5f;
 
 		[SerializeField, Range(0f, 1f)] private float reflectionStrength = 0.5f;
-		[SerializeField, Range(1f, 40f), Tooltip("Fresnel Exponent - Higher values = reflection mostly at grazing angles")]
-		private float fresnelPower = 12f;                    // ← NEW
+		[SerializeField, Range(1f, 40f), Tooltip("Higher values = reflection appears only at very grazing angles\nLower values = broader reflection")]
+		private float fresnelSharpness = 12f;
 
 		[SerializeField, Range(0f, 1f)] private float frostThreshold = 0.8f;
 		[SerializeField, Range(0f, 0.2f)] private float frostFadeRange = 0.1f;
@@ -200,7 +200,7 @@ namespace MassiveHadronLtd
 					mirrorTint = sf.tint;
 					noiseScale = sf.noiseScale;
 					reflectionStrength = 0.35f;   // good default for film
-					fresnelPower = 15f;
+					fresnelSharpness = 15f;
 					break;
 				case EffectMode.FrostEffect:
 					var fr = MaterialUtils.FrostDefaults.Get();
@@ -208,7 +208,7 @@ namespace MassiveHadronLtd
 					frostDepth = fr.depth;
 					noiseStrength = fr.noiseStrength;
 					reflectionStrength = 0.3f;    // good default for frost
-					fresnelPower = 18f;
+					fresnelSharpness = 18f;
 					break;
 				case EffectMode.Water:
 					var w = MaterialUtils.WaterDefaults.Get();
@@ -218,22 +218,22 @@ namespace MassiveHadronLtd
 					rippleFrequency = w.rippleFrequency;
 					rippleOffset = w.rippleOffset;
 					reflectionStrength = w.reflectionStrength;
-					fresnelPower = 12f;
+					fresnelSharpness = 12f;
 					break;
-				case EffectMode.OceanEffect:
-					var o = MaterialUtils.OceanDefaults.Get();
-					mirrorTint = o.tint;
-					rippleSpeed = o.rippleSpeed;
-					rippleAmplitude = o.rippleAmplitude;
-					rippleFrequency = o.rippleFrequency;
-					rippleOffset = o.rippleOffset;
-					frostDepth = o.frostDepth;
-					noiseStrength = o.noiseStrength;
-					frostThreshold = o.frostThreshold;
-					frostFadeRange = o.frostFadeRange;
-					reflectionStrength = 0.4f;
-					fresnelPower = 14f;
-					break;
+				//case EffectMode.OceanEffect:
+				//	var o = MaterialUtils.OceanDefaults.Get();
+				//	mirrorTint = o.tint;
+				//	rippleSpeed = o.rippleSpeed;
+				//	rippleAmplitude = o.rippleAmplitude;
+				//	rippleFrequency = o.rippleFrequency;
+				//	rippleOffset = o.rippleOffset;
+				//	frostDepth = o.frostDepth;
+				//	noiseStrength = o.noiseStrength;
+				//	frostThreshold = o.frostThreshold;
+				//	frostFadeRange = o.frostFadeRange;
+				//	reflectionStrength = 0.4f;
+				//	fresnelSharpness = 14f;
+				//	break;
 			}
 		}
 
@@ -273,7 +273,7 @@ namespace MassiveHadronLtd
 						isTextureDynamic = true;
 						effectMaterial = MaterialUtils.CreatePerlinWangOpaque(
 							effectRT, mirrorTint, noiseTexture, mirrorTint.a, noiseScale,
-							reflectionStrength, tintedSkyboxTexture, fresnelPower);   // ← NEW
+							reflectionStrength, tintedSkyboxTexture, fresnelSharpness);   // ← NEW
 						break;
 
 					case EffectMode.FrostEffect:
@@ -281,22 +281,22 @@ namespace MassiveHadronLtd
 						isTextureDynamic = true;
 						effectMaterial = MaterialUtils.CreateFrostOpaqueMaterial(
 							mirrorTint, frostDepth, effectRT, noiseTexture, noiseStrength,
-							reflectionStrength, tintedSkyboxTexture, fresnelPower);   // ← NEW
+							reflectionStrength, tintedSkyboxTexture, fresnelSharpness);   // ← NEW
 						break;
 
 					case EffectMode.Water:
 						effectMaterial = MaterialUtils.CreateWaterMaterialOpaque(
 							mirrorTint, effectRT, rippleSpeed, rippleAmplitude, rippleFrequency, rippleOffset,
-							reflectionStrength, tintedSkyboxTexture);
+							reflectionStrength, tintedSkyboxTexture, fresnelSharpness);
 						break;
 
-					case EffectMode.OceanEffect:
-						noiseTexture = WangTileGenerator.GenerateWangTileAtlas();
-						isTextureDynamic = true;
-						effectMaterial = MaterialUtils.CreateOceanOpaqueMaterial(
-							mirrorTint, rippleSpeed, rippleAmplitude, rippleFrequency, rippleOffset,
-							frostDepth, noiseStrength, frostThreshold, frostFadeRange, null, noiseTexture);
-						break;
+					//case EffectMode.OceanEffect:
+					//	noiseTexture = WangTileGenerator.GenerateWangTileAtlas();
+					//	isTextureDynamic = true;
+					//	effectMaterial = MaterialUtils.CreateOceanOpaqueMaterial(
+					//		mirrorTint, rippleSpeed, rippleAmplitude, rippleFrequency, rippleOffset,
+					//		frostDepth, noiseStrength, frostThreshold, frostFadeRange, null, noiseTexture);
+					//	break;
 
 					default:
 						effectMaterial = null;
@@ -351,7 +351,7 @@ namespace MassiveHadronLtd
 
 					// Fresnel reflection
 					effectMaterial.SetFloat("_ReflectionStrength", reflectionStrength);
-					effectMaterial.SetFloat("_FresnelPower", fresnelPower);
+					effectMaterial.SetFloat("_FresnelSharpness", fresnelSharpness);
 					if (tintedSkyboxTexture != null)
 						effectMaterial.SetTexture("_Skybox", tintedSkyboxTexture);
 					break;
@@ -364,7 +364,7 @@ namespace MassiveHadronLtd
 
 					// Fresnel reflection
 					effectMaterial.SetFloat("_ReflectionStrength", reflectionStrength);
-					effectMaterial.SetFloat("_FresnelPower", fresnelPower);
+					effectMaterial.SetFloat("_FresnelSharpness", fresnelSharpness);
 					if (tintedSkyboxTexture != null)
 						effectMaterial.SetTexture("_Skybox", tintedSkyboxTexture);
 
@@ -379,25 +379,25 @@ namespace MassiveHadronLtd
 					effectMaterial.SetFloat("_RippleFrequency", rippleFrequency);
 					effectMaterial.SetFloat("_RippleOffset", rippleOffset);
 					effectMaterial.SetFloat("_ReflectionStrength", reflectionStrength);
-					effectMaterial.SetFloat("_FresnelPower", fresnelPower);   // optional but harmless
+					effectMaterial.SetFloat("_FresnelSharpness", fresnelSharpness);
 					if (tintedSkyboxTexture != null) effectMaterial.SetTexture("_Skybox", tintedSkyboxTexture);
 					break;
 
-				case EffectMode.OceanEffect:
-					effectMaterial.SetTexture("_MainTex", effectRT);
-					effectMaterial.SetColor("_BaseColor", mirrorTint);
-					effectMaterial.SetFloat("_RippleSpeed", rippleSpeed);
-					effectMaterial.SetFloat("_RippleAmplitude", rippleAmplitude);
-					effectMaterial.SetFloat("_RippleFrequency", rippleFrequency);
-					effectMaterial.SetFloat("_RippleOffset", rippleOffset);
-					effectMaterial.SetFloat("_DepthThreshold", 128.0f);
-					effectMaterial.SetFloat("_FrostDepth", frostDepth);
-					effectMaterial.SetFloat("_FrostNoiseStrength", noiseStrength);
-					effectMaterial.SetFloat("_FrostThreshold", frostThreshold);
-					effectMaterial.SetFloat("_FrostFadeRange", frostFadeRange);
-					if (noiseTexture != null) effectMaterial.SetTexture("_NoiseTex", noiseTexture);
-					if (tintedSkyboxTexture != null) effectMaterial.SetTexture("_Skybox", tintedSkyboxTexture);
-					break;
+				//case EffectMode.OceanEffect:
+				//	effectMaterial.SetTexture("_MainTex", effectRT);
+				//	effectMaterial.SetColor("_BaseColor", mirrorTint);
+				//	effectMaterial.SetFloat("_RippleSpeed", rippleSpeed);
+				//	effectMaterial.SetFloat("_RippleAmplitude", rippleAmplitude);
+				//	effectMaterial.SetFloat("_RippleFrequency", rippleFrequency);
+				//	effectMaterial.SetFloat("_RippleOffset", rippleOffset);
+				//	effectMaterial.SetFloat("_DepthThreshold", 128.0f);
+				//	effectMaterial.SetFloat("_FrostDepth", frostDepth);
+				//	effectMaterial.SetFloat("_FrostNoiseStrength", noiseStrength);
+				//	effectMaterial.SetFloat("_FrostThreshold", frostThreshold);
+				//	effectMaterial.SetFloat("_FrostFadeRange", frostFadeRange);
+				//	if (noiseTexture != null) effectMaterial.SetTexture("_NoiseTex", noiseTexture);
+				//	if (tintedSkyboxTexture != null) effectMaterial.SetTexture("_Skybox", tintedSkyboxTexture);
+				//	break;
 			}
 		}
 
@@ -599,8 +599,8 @@ namespace MassiveHadronLtd
 				"frosteffect" => EffectMode.FrostEffect,
 				"water" => EffectMode.Water,
 				"watereffect" => EffectMode.Water,
-				"ocean" => EffectMode.OceanEffect,
-				"oceaneffect" => EffectMode.OceanEffect,
+				//"ocean" => EffectMode.OceanEffect,
+				//"oceaneffect" => EffectMode.OceanEffect,
 				_ => EffectMode.Null
 			};
 		}
@@ -615,7 +615,7 @@ namespace MassiveHadronLtd
 				EffectMode.SurfaceFilm => "Film",
 				EffectMode.FrostEffect => "Frost",
 				EffectMode.Water => "Water",
-				EffectMode.OceanEffect => "Ocean",
+				//EffectMode.OceanEffect => "Ocean",
 				_ => null
 			};
 		}

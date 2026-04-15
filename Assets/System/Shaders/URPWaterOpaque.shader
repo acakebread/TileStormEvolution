@@ -13,8 +13,8 @@
         _ReflectionStrength ("Reflection Strength", Range(0, 1)) = 0.25
         _Skybox ("Skybox", Cube) = "" {}
         _NormalScale ("Normal Scale", Range(0, 5)) = 2.0
-        _FresnelPower ("Fresnel Exponent - use 15–30 for stylized water (reflection mostly at very grazing angles)", Range(1, 40)) = 12 }
-
+        _FresnelSharpness ("Fresnel Sharpness - Higher = reflection only at extreme grazing angles (recommended 8–30)", Range(1, 40)) = 12
+    }
     SubShader
     {
         Tags
@@ -65,7 +65,7 @@
                 float _DepthThreshold;
                 float _ReflectionStrength;
                 float _NormalScale;
-                float _FresnelPower;
+                float _FresnelSharpness;
                 float4x4 _ReflectionViewProjMatrix;
                 float4 _MainTex_TexelSize;
             CBUFFER_END
@@ -156,7 +156,7 @@
                 half4 reflectionColor = SAMPLE_TEXTURECUBE(_Skybox, sampler_Skybox, reflectDir);
 
                 float cosTheta = saturate(dot(viewDirWS, reflectionNormal));
-                float fresnelTerm = pow(1.0 - cosTheta, _FresnelPower);
+                float fresnelTerm = pow(1.0 - cosTheta, _FresnelSharpness);
                 float reflectionIntensity = fresnelTerm * _ReflectionStrength;
 
                 #if !defined(SHADER_API_GLES) && !defined(SHADER_API_GLES3) // Non-WebGL

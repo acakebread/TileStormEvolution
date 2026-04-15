@@ -10,7 +10,7 @@ Shader "Unlit/URPFrostOpaque"
         _NoiseStrength ("Noise Strength", Range(0, 0.1)) = 0.02
         _ReflectionStrength ("Reflection Strength", Range(0, 1)) = 0.25
         _Skybox ("Skybox", Cube) = "" {}
-        _FresnelPower ("Fresnel Exponent", Range(1, 40)) = 12
+        _FresnelSharpness ("Fresnel Sharpness - Higher = reflection only at extreme grazing angles (recommended 8–30)", Range(1, 40)) = 12
     }
     SubShader
     {
@@ -56,7 +56,7 @@ Shader "Unlit/URPFrostOpaque"
                 float _DepthMax;
                 float _NoiseStrength;
                 float _ReflectionStrength;
-                float _FresnelPower;
+                float _FresnelSharpness;
                 float4 _MainTex_TexelSize;
             CBUFFER_END
 
@@ -140,7 +140,7 @@ Shader "Unlit/URPFrostOpaque"
                 half4 reflectionColor = SAMPLE_TEXTURECUBE(_Skybox, sampler_Skybox, reflectDir);
 
                 float cosTheta = saturate(dot(viewDirWS, normalWS));
-                float fresnelTerm = pow(1.0 - cosTheta, _FresnelPower);
+                float fresnelTerm = pow(1.0 - cosTheta, _FresnelSharpness);
                 float reflectionIntensity = fresnelTerm * _ReflectionStrength;
 
                 color.rgb = lerp(color.rgb, reflectionColor.rgb, reflectionIntensity);
