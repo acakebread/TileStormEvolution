@@ -274,7 +274,7 @@ namespace MassiveHadronLtd
 		{
 			const int size = 256;
 
-			Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false)
+			Texture2D tex = new (size, size, TextureFormat.RGBA32, false)
 			{
 				wrapMode = TextureWrapMode.Repeat,
 				filterMode = FilterMode.Point,
