@@ -101,7 +101,7 @@ namespace MassiveHadronLtd
 			provider.RegisterCommand(RenderPassEvent.BeforeRenderingTransparents, OnBeforeRenderingTransparents);
 
 			var mainCameraData = mainCamera.gameObject.GetComponent<UniversalAdditionalCameraData>();
-			if (postProcessingCamera != null) mainCameraData.cameraStack.Add(postProcessingCamera);
+			if (postProcessingCamera) mainCameraData.cameraStack.Add(postProcessingCamera);
 
 			CreateReflectionCamera();
 			CreateTextureCamera();
@@ -249,12 +249,12 @@ namespace MassiveHadronLtd
 				Debug.Log($"[ReflectionEffectCamera] Rebuilding material for mode: {value}", this);
 
 				// Cleanup previous material and dynamic texture
-				if (effectMaterial != null)
+				if (effectMaterial)
 				{
 					DestroyImmediate(effectMaterial);
 					effectMaterial = null;
 				}
-				if (noiseTexture != null && isTextureDynamic)
+				if (noiseTexture && isTextureDynamic)
 				{
 					DestroyImmediate(noiseTexture);
 					noiseTexture = null;
@@ -310,7 +310,7 @@ namespace MassiveHadronLtd
 				}
 
 				// Setup cameras
-				if (effectMaterial != null)
+				if (effectMaterial)
 				{
 					if (textureCamera)
 					{
@@ -347,13 +347,12 @@ namespace MassiveHadronLtd
 					effectMaterial.SetColor("_DimColor", mirrorTint);
 					effectMaterial.SetFloat("_FilmIntensity", mirrorTint.a);
 					effectMaterial.SetFloat("_NoiseScale", noiseScale);
-					if (noiseTexture != null) effectMaterial.SetTexture("_NoiseTex", noiseTexture);
+					if (noiseTexture) effectMaterial.SetTexture("_NoiseTex", noiseTexture);
 
 					// Fresnel reflection
 					effectMaterial.SetFloat("_ReflectionStrength", reflectionStrength);
 					effectMaterial.SetFloat("_FresnelSharpness", fresnelSharpness);
-					if (tintedSkyboxTexture != null)
-						effectMaterial.SetTexture("_Skybox", tintedSkyboxTexture);
+					if (tintedSkyboxTexture) effectMaterial.SetTexture("_Skybox", tintedSkyboxTexture);
 					break;
 
 				case EffectMode.FrostEffect:
@@ -365,10 +364,8 @@ namespace MassiveHadronLtd
 					// Fresnel reflection
 					effectMaterial.SetFloat("_ReflectionStrength", reflectionStrength);
 					effectMaterial.SetFloat("_FresnelSharpness", fresnelSharpness);
-					if (tintedSkyboxTexture != null)
-						effectMaterial.SetTexture("_Skybox", tintedSkyboxTexture);
-
-					if (noiseTexture != null) effectMaterial.SetTexture("_NoiseTex", noiseTexture);
+					if (tintedSkyboxTexture) effectMaterial.SetTexture("_Skybox", tintedSkyboxTexture);
+					if (noiseTexture) effectMaterial.SetTexture("_NoiseTex", noiseTexture);
 					break;
 
 				case EffectMode.Water:
@@ -380,7 +377,7 @@ namespace MassiveHadronLtd
 					effectMaterial.SetFloat("_RippleOffset", rippleOffset);
 					effectMaterial.SetFloat("_ReflectionStrength", reflectionStrength);
 					effectMaterial.SetFloat("_FresnelSharpness", fresnelSharpness);
-					if (tintedSkyboxTexture != null) effectMaterial.SetTexture("_Skybox", tintedSkyboxTexture);
+					if (tintedSkyboxTexture) effectMaterial.SetTexture("_Skybox", tintedSkyboxTexture);
 					break;
 
 				//case EffectMode.OceanEffect:
@@ -395,8 +392,8 @@ namespace MassiveHadronLtd
 				//	effectMaterial.SetFloat("_FrostNoiseStrength", noiseStrength);
 				//	effectMaterial.SetFloat("_FrostThreshold", frostThreshold);
 				//	effectMaterial.SetFloat("_FrostFadeRange", frostFadeRange);
-				//	if (noiseTexture != null) effectMaterial.SetTexture("_NoiseTex", noiseTexture);
-				//	if (tintedSkyboxTexture != null) effectMaterial.SetTexture("_Skybox", tintedSkyboxTexture);
+				//	if (noiseTexture) effectMaterial.SetTexture("_NoiseTex", noiseTexture);
+				//	if (tintedSkyboxTexture) effectMaterial.SetTexture("_Skybox", tintedSkyboxTexture);
 				//	break;
 			}
 		}
@@ -404,7 +401,7 @@ namespace MassiveHadronLtd
 		private void Update()
 		{
 			timeSeed += Time.deltaTime;
-			if (effectMaterial != null && effectMaterial.HasFloat("_TimeSeed"))
+			if (effectMaterial && effectMaterial.HasFloat("_TimeSeed"))
 				effectMaterial.SetFloat("_TimeSeed", timeSeed);
 
 			if (mainCamera != null && mainCamera.targetTexture == null)
@@ -534,7 +531,7 @@ namespace MassiveHadronLtd
 				textureCamera.enabled = effectMaterial != null;
 			}
 
-			if (effectMaterial != null && effectMaterial.HasProperty("_MainTex"))
+			if (effectMaterial && effectMaterial.HasProperty("_MainTex"))
 				effectMaterial.SetTexture("_MainTex", effectRT);
 		}
 
