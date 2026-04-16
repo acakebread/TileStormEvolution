@@ -98,7 +98,7 @@ namespace ClassicTilestorm
 		}
 
 		[Header("detail level")]
-		[SerializeField] private int detailLevel = 1;// Default to Game Only
+		[SerializeField] private int detailLevel = 1;
 		public static int DetailLevel
 		{
 			get => PlayerPrefsX.GetInt("DetailLevel", instance.detailLevel);
@@ -160,7 +160,7 @@ namespace ClassicTilestorm
 			}
 		}
 
-		// ─────── Editor button helper (only thing that needs the path) ───────
+		// ─────── Editor button helper ───────
 #if UNITY_EDITOR
 		[CustomEditor(typeof(ApplicationSettings))]
 		private class PreviewSettingsEditor : Editor
@@ -183,60 +183,55 @@ namespace ClassicTilestorm
 
 		private static ApplicationSettings instance;
 
-
-		//[Header("debug [to be removed]")]
-		//public Texture2D testTexture;
-		//public static Texture2D TestTexture { get => instance?.testTexture; set => instance.testTexture = value; }
-
-		//public Material outline128x128;
-		//public static Material Outline128x128 { get => instance?.outline128x128; set => instance.outline128x128 = value; }
-
-		//public Material background128x128;
-		//public static Material Background128x128 { get => instance?.background128x128; set => instance.background128x128 = value; }
-
-		//public UnityEngine.UI.Image panelTarget;
-		//public static UnityEngine.UI.Image PanelTarget { get => instance?.panelTarget; set => instance.panelTarget = value; }
-
-		//public UnityEngine.UI.RawImage gridTarget;
-		//public static UnityEngine.UI.RawImage GridTarget { get => instance?.gridTarget; set => instance.gridTarget = value; }
-
-		//public UnityEngine.UI.RawImage focusTarget;
-		//public static UnityEngine.UI.RawImage FocusTarget { get => instance?.focusTarget; set => instance.focusTarget = value; }
-
 		private void Awake()
 		{
 			instance = this;
 			remapGeometry = RemapGeometry;
-			//if (null != outline128x128) ScreenSpaceUtil.SetOutlineMaterial(outline128x128);
 		}
 
 		private void OnValidate()
 		{
-			// Skip runtime-specific actions when not in play mode
 			if (!Application.isPlaying) return;
-
-			if (instance != this) return; // Ensure it's the runtime instance
-
-//			var persistedValue = PlayerPrefsX.GetBool("RemapGeometry", remapGeometry);
-
-//			if (remapGeometry != persistedValue)
-//			{
-//				// Still persist the value immediately
-//				RemapGeometry = remapGeometry;
-
-//				// BUT: Defer the event invoke and geometry refresh until safe (after OnValidate)
-//#if UNITY_EDITOR
-//				EditorApplication.delayCall += () => OnRemapGeometryChanged?.Invoke(remapGeometry);
-//#else
-//			    // In builds (unlikely to hit this path), invoke immediately
-//				OnRemapGeometryChanged?.Invoke(remapGeometry);
-//#endif
-//			}
+			if (instance != this) return;
 		}
 
 		public static string DatabaseFolder => PreviewSettingsStatic.DatabaseFolder;
 		public static string ExportFolder => PreviewSettingsStatic.ExportFolder;
 
+		// ====================== EDITOR HELPER (for manifest generation) ======================
+#if UNITY_EDITOR
+		/// <summary>
+		/// Forces loading of the ApplicationSettings instance so AssetPath.XXXPath
+		/// return correct values in MenuItems and PreprocessBuild, even without entering Play Mode.
+		/// </summary>
+		public static void Editor_ForceLoadInstance()
+		{
+			if (instance != null)
+				return;
+
+			// Use FindAnyObjectByType instead of the obsolete FindFirstObjectByType
+			instance = Object.FindAnyObjectByType<ApplicationSettings>(FindObjectsInactive.Include);
+
+			if (instance == null)
+			{
+				Debug.LogWarning("ApplicationSettings instance not found in any loaded scene.\n" +
+								 "Asset manifests will only use hardcoded fallback roots (e.g. Levels).");
+			}
+			else
+			{
+				// Force populate AssetPath statics with the values from the component
+				AssetPath.GeometryPath = instance.geometryPath;
+				AssetPath.TexturePath = instance.texturePath;
+				AssetPath.MaterialPath = instance.materialPath;
+				AssetPath.SkycubesPath = instance.skycubesPath;
+				AssetPath.PrefabPath = instance.prefabPath;
+				AssetPath.SoundPath = instance.soundPath;
+				AssetPath.MusicPath = instance.musicPath;
+
+				Debug.Log("<color=cyan>ApplicationSettings instance loaded for editor manifest generation.</color>");
+			}
+		}
+#endif
 	}
 
 	public static class PreviewSettingsStatic
