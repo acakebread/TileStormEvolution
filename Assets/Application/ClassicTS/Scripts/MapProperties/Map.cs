@@ -124,7 +124,21 @@ namespace ClassicTilestorm
 		[JsonIgnore] public int Count => Width * Height;
 		[JsonIgnore] public int[] State { get => state = state?.Length == width * height ? state : Enumerable.Range(0, width * height).ToArray(); }//set => state = value; 
 		[JsonIgnore] public string Music { get => music; set => music = value; }
-		[JsonIgnore] public string Skybox { get => skybox; set { if (skybox != value) { tinted = null; skybox = value; } } }
+		// Skybox setter
+		[JsonIgnore]
+		public string Skybox
+		{
+			get => skybox;
+			set
+			{
+				if (skybox != value)
+				{
+					RefreshTintedCubemap();        // release old
+					skybox = value;
+				}
+			}
+		}
+
 		[JsonIgnore] public ReflectionEffectCamera.EffectMode Effect
 		{
 			get => ReflectionEffectCamera.ParseEffectMode(string.IsNullOrEmpty(effect) ? "Water" : effect);
@@ -395,7 +409,6 @@ namespace ClassicTilestorm
 			OnMapEdited = null;
 
 			DestroyAllGraphTiles();
-
 			CleanupAttachmentInstances();
 
 			if (parent != null)
@@ -418,13 +431,15 @@ namespace ClassicTilestorm
 					UnityEngine.Object.DestroyImmediate(directionalLight);
 				directionalLight = null;
 			}
-			tinted = null;
+
+			RefreshTintedCubemap();
 
 			state = null;
 
 			if (parent != null)
 				parent = null;
 		}
+
 
 		private Tile CreateTile(Variant variant, Transform parent, Vector3 renderPosition) => new Tile(variant, parent, renderPosition);
 
@@ -995,35 +1010,43 @@ namespace ClassicTilestorm
 			return RectInt.zero;
 		}
 
-		// lighting
-		private Cubemap _tinted = null;
-		private Cubemap tinted
+		// lighting - ref-counted tinted cubemap
+		private Ref<Cubemap> _tintedRef;
+
+		[JsonIgnore]
+		public Cubemap TintedCubemap
 		{
-			get => _tinted = null == _tinted ? CubemapUtility.GetTintedCubemap(SkyboxMaterial) : _tinted;
-			set
+			get
 			{
-				if (_tinted != value)
+				// Create the Ref wrapper ONLY if we don't have one yet.
+				// Never recreate it on every access.
+				if (_tintedRef == null)
 				{
-					UnityEngine.Object.Destroy(_tinted);
-					_tinted = value;
+					var rawCubemap = CubemapUtility.GetTintedCubemap(SkyboxMaterial);
+					if (rawCubemap != null)
+						_tintedRef = Ref<Cubemap>.Create(() => rawCubemap);
 				}
+				return _tintedRef?.Value;
 			}
+		}
+
+		public void RefreshTintedCubemap()
+		{
+			_tintedRef?.Set(null);
+			_tintedRef = null;
 		}
 
 		public void UpdateLighting(Material skymat = null)
 		{
-			//if (null == ambient || null == skyrgb || null == skyvec)
-			//	tinted = CubemapUtility.GetTintedCubemap(SkyboxMaterial);
-
 			if (null == ambient)
-				ambientRGB = CubemapUtility.ComputeAmbientColor(tinted, 2f);
+				ambientRGB = CubemapUtility.ComputeAmbientColor(TintedCubemap, 2f);
 
 			if (null == directionalLight)
 				directionalLight = DirectionalLightUtility.Instantiate(parent);
 			if (null == directionalLight) return;
 
 			if (null == skyrgb || null == skyvec)
-				skyRBG = directionalLight.UpdateFromTintendCubemap(tinted);//doing some extra work here that can be saved in refactor
+				skyRBG = directionalLight.UpdateFromTintendCubemap(TintedCubemap);
 
 			if (null != SkyRGB)
 				directionalLight.UpdateColour(SkyRGB);
@@ -1049,13 +1072,18 @@ namespace ClassicTilestorm
 
 			skybox = other.skybox;
 			skyvec = other.skyvec;
+
 			if (updateRenderSettings)
-				OnRenderSettingsChanged?.Invoke(RenderSettings);// for reflection effect camera connected to this map
+			{
+				RefreshTintedCubemap();                    // force refresh when skybox changes
+				OnRenderSettingsChanged?.Invoke(RenderSettings);
+			}
 
 			//effect
 			effect = other.effect;
 			OnEffectChanged?.Invoke(Effect);
 		}
+
 
 		public Action<UnityRenderSettings> OnRenderSettingsChanged;// for reflection effect camera connected to this map
 	}

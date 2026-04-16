@@ -274,21 +274,3 @@ namespace ClassicTilestorm
 		public static Action OnDefininionsModified;
 	}
 }
-
-
-//private static string _defaultTileHash;
-//public static string DefaultTileHash
-//{
-//	get
-//	{
-//		if (_defaultTileHash == null)
-//		{
-//			const string legacyName = "tile_empty";
-
-//			// Full-range 32-bit hash
-//			int hash32 = RadixHash.GetStableHash32(legacyName);
-//			_defaultTileHash = HTB50Settings.ToString(hash32);
-//		}
-//		return _defaultTileHash;
-//	}
-//}

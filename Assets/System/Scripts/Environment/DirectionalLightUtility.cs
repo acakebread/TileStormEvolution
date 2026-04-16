@@ -113,7 +113,7 @@ namespace MassiveHadronLtd
 				Debug.LogWarning("No light direction determined - resorting to default");
 			}
 
-			Debug.Log($"Sky updated: BrightColor={brightColor}, Lum={lum:F3}, Intensity={directionalLight.intensity:F2}");
+			//Debug.Log($"Sky updated: BrightColor={brightColor}, Lum={lum:F3}, Intensity={directionalLight.intensity:F2}");
 
 			return directionalLight.color;
 		}

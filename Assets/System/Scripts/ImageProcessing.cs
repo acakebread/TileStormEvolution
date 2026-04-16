@@ -104,7 +104,8 @@ namespace MassiveHadronLtd
 			int bestX = width / 2;
 			int bestY = height * 3 / 4;   // default bias toward sky
 
-			for (int y = startY; y < endY; y++)
+			//for (int y = startY; y < endY; y++)
+			for (int y = endY - 1; y > startY; y--)//for now invert the search because the old method search from sky to horizon and favoured higher light sources
 			{
 				for (int x = 0; x < width; x++)
 				{

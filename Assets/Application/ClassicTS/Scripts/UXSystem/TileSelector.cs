@@ -126,13 +126,17 @@ namespace ClassicTilestorm
 		private void Start() => RebuildAtlas(); //private IEnumerator Start() { yield return null; RebuildAtlas(); }//needed to prevent black icons//private void Start() => RebuildAtlas();
 
 		private Coroutine _atlasBuildCoroutine;
+
 		public void RebuildAtlas()
 		{
-			// Clean up old atlas first
+			// === CRITICAL: Always destroy the old atlas first ===
 			if (_atlas != null)
 			{
 				if (_atlasBuildCoroutine != null)
+				{
 					StopCoroutine(_atlasBuildCoroutine);
+					_atlasBuildCoroutine = null;
+				}
 
 				_atlas.Dispose();
 				_atlas = null;
@@ -142,7 +146,13 @@ namespace ClassicTilestorm
 				.Where(d => !d.IsDefaultEquivalent())
 				.ToList();
 
-			// This now returns instantly
+			if (filteredDefs.Count == 0)
+			{
+				Debug.LogWarning("No definitions to build atlas for.");
+				return;
+			}
+
+			// Create the new atlas
 			_atlas = new IconAtlas(
 				ICON_SIZE,
 				COLUMNS,
@@ -154,7 +164,6 @@ namespace ClassicTilestorm
 
 			if (_atlas != null)
 			{
-				// Start progressive rendering (tune the number if needed)
 				_atlasBuildCoroutine = StartCoroutine(BuildAtlasWithUIUpdates());
 			}
 
@@ -163,8 +172,6 @@ namespace ClassicTilestorm
 			panelY = panelTargetY = -panelHeight;
 		}
 
-
-		// New coroutine that wraps the atlas build and forces UI refresh each frame
 		private IEnumerator BuildAtlasWithUIUpdates()
 		{
 			if (_atlas == null) yield break;
@@ -173,18 +180,10 @@ namespace ClassicTilestorm
 
 			while (buildCoroutine.MoveNext())
 			{
-				// Let the atlas do its work for this batch
 				yield return buildCoroutine.Current;
-
-				// Force the UI to refresh immediately so new icons appear smoothly
 				ScreenSpaceUtil.ForceRebuild();
-
-				// Optional: also force canvas update if your RawImage layout is finicky
-				// Canvas.ForceUpdateCanvases();
-				// or LayoutRebuilder.ForceRebuildLayoutImmediate(panelTarget.rectTransform);
 			}
 
-			// Final cleanup / one last refresh
 			ScreenSpaceUtil.ForceRebuild();
 			Debug.Log("Atlas build + UI updates completed.");
 		}
@@ -557,6 +556,21 @@ namespace ClassicTilestorm
 
 			// Case 3: Mouse outside grid (or no selection) → default prompt
 			return "Hover over a tile";
+		}
+
+		private void OnDestroy()
+		{
+			if (_atlas != null)
+			{
+				_atlas.Dispose();
+				_atlas = null;
+			}
+
+			if (_atlasBuildCoroutine != null)
+			{
+				StopCoroutine(_atlasBuildCoroutine);
+				_atlasBuildCoroutine = null;
+			}
 		}
 	}
 }

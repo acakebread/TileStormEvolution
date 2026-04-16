@@ -155,7 +155,9 @@ namespace MassiveHadronLtd
 			if (null == linearrect)
 				return Vector2.one * 0.5f;
 
-			return ImageProcessing.FindSunUV(linearrect, scanAboveHorizonOnly: scanAboveHorizonOnly);
+			var result = ImageProcessing.FindSunUV(linearrect, scanAboveHorizonOnly: scanAboveHorizonOnly); ;
+			Object.DestroyImmediate(linearrect);
+			return result;
 		}
 
 		/// <summary>

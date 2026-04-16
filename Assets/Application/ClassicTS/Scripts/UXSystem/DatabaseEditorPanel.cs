@@ -56,7 +56,7 @@ namespace ClassicTilestorm
 
 		#endregion
 
-		#region Preview Settings (replacing old orbit & camera section)
+		#region Preview Settings – Map View
 
 		[Header("Preview Settings – Map View")]
 		[SerializeField] private float fieldOfView = 50f;
@@ -91,6 +91,9 @@ namespace ClassicTilestorm
 
 		private GimbalOrbitController orbitController;
 
+		// Ref-counted tinted cubemap used by the current preview
+		private Ref<Cubemap> _previewTintedRef;
+
 		// ────────────────────────────────────────────────────────────────────────────────
 		//   Unity Lifecycle
 		// ────────────────────────────────────────────────────────────────────────────────
@@ -105,7 +108,7 @@ namespace ClassicTilestorm
 		{
 			base.OnEnable();
 
-			ScenePreviewUtil.Initialize(CurrentMap.RenderSettings, previewCameraPrefab);
+			ScenePreviewUtil.Initialize(CurrentMap?.RenderSettings ?? default, previewCameraPrefab);
 			ScenePreviewUtil.SetPreviewUI(previewImage);
 
 			InitializeOrbitController();
@@ -118,8 +121,6 @@ namespace ClassicTilestorm
 			RefreshMapList();
 
 			UpdateMapPreview();
-			if (null == currentClone)
-				Debug.LogError("failed to create preview");
 		}
 
 		protected override void OnDisable()
@@ -132,11 +133,8 @@ namespace ClassicTilestorm
 
 			ClearMapListItems();
 
-			if (currentPreviewRoot != null)
-			{
-				DestroyImmediate(currentPreviewRoot);
-				currentPreviewRoot = null;
-			}
+			// Clean up preview and release any tinted cubemap
+			CleanupPreview();
 
 			ScenePreviewUtil.Cleanup();
 
@@ -148,6 +146,25 @@ namespace ClassicTilestorm
 			base.OnDisable();
 		}
 
+		private void CleanupPreview()
+		{
+			if (currentClone != null)
+			{
+				currentClone.Destroy();
+				currentClone = null;
+			}
+
+			if (currentPreviewRoot != null)
+			{
+				DestroyImmediate(currentPreviewRoot);
+				currentPreviewRoot = null;
+			}
+
+			// Release the ref-counted tinted cubemap
+			_previewTintedRef?.Set(null);
+			_previewTintedRef = null;
+		}
+
 		private void Update()
 		{
 			if (!isActiveAndEnabled) return;
@@ -157,7 +174,7 @@ namespace ClassicTilestorm
 		}
 
 		// ────────────────────────────────────────────────────────────────────────────────
-		//   Skybox Dropdown (All related code grouped)
+		//   Dropdowns
 		// ────────────────────────────────────────────────────────────────────────────────
 
 		private void PopulateSkyboxDropdown() =>
@@ -183,10 +200,6 @@ namespace ClassicTilestorm
 			SyncColorButtonsToCurrentMap();
 		}
 
-		// ────────────────────────────────────────────────────────────────────────────────
-		//   Character Dropdown
-		// ────────────────────────────────────────────────────────────────────────────────
-
 		private void PopulateCharacterDropdown()
 		{
 			var characterNames = new List<string>
@@ -211,10 +224,6 @@ namespace ClassicTilestorm
 				CurrentMap.character = newCharacter;
 		}
 
-		// ────────────────────────────────────────────────────────────────────────────────
-		//   Music Dropdown
-		// ────────────────────────────────────────────────────────────────────────────────
-
 		private void PopulateMusicDropdown() =>
 			PopulateDropdown(musicDropdown, Assets.ProjectAssets.GetMusicNames(), noneMusicOptionText);
 
@@ -231,10 +240,6 @@ namespace ClassicTilestorm
 			if (newMusic != CurrentMap.music)
 				CurrentMap.music = newMusic;
 		}
-
-		// ────────────────────────────────────────────────────────────────────────────────
-		//   Effect (Ground Plane) Dropdown
-		// ────────────────────────────────────────────────────────────────────────────────
 
 		private void PopulateEffectDropdown()
 		{
@@ -264,11 +269,15 @@ namespace ClassicTilestorm
 		{
 			if (currentClone == null) return;
 
+			LeakDetector.LogSnapshot("BEFORE Effect Dropdown Change");
+
 			var selected = index >= 0 && index < effectDropdown.options.Count ? effectDropdown.options[index].text : null;
 			var newEffect = (selected == noneEffectOptionText) ? null : selected;
 			currentClone.Effect = ReflectionEffectCamera.ParseEffectMode(newEffect);
 
 			UpdateMapPreview();
+
+			LeakDetector.LogSnapshot("AFTER Effect Dropdown Change");
 		}
 
 		// ────────────────────────────────────────────────────────────────────────────────
@@ -328,10 +337,6 @@ namespace ClassicTilestorm
 			}
 		}
 
-		// ────────────────────────────────────────────────────────────────────────────────
-		//   Directional Position Config (new)
-		// ────────────────────────────────────────────────────────────────────────────────
-
 		public void OnDirectionalPositionConfigTogglePressed(Toggle src)
 		{
 			if (null == currentClone) return;
@@ -351,7 +356,6 @@ namespace ClassicTilestorm
 		{
 			if (currentClone == null) return;
 
-			// Close competing panels
 			UIController.ClosePanel<ColourSelectorPanel>();
 			UIController.ClosePanel<TextureCoordEditorPanel>();
 
@@ -362,24 +366,22 @@ namespace ClassicTilestorm
 				var sourceCubemap = CubemapUtility.GetTintedCubemap(skyMat);
 				var skyboxTexture = null != sourceCubemap ? EquirectangularCubemapUtility.Create(sourceCubemap, width: 512, height: 512) : null;
 
-				var tex_coord = new Vector2(0.5f, 0.75f);//default
+				var tex_coord = new Vector2(0.5f, 0.75f);
 				if (null != currentClone.skyvec)
 					tex_coord = EquirectangularCubemapUtility.DirectionToUV(-currentClone.SkyVec);
 				else
-					tex_coord = null != skyboxTexture ? ImageProcessing.FindSunUV(skyboxTexture, scanAboveHorizonOnly: true) : new Vector2(0.5f, 0.75f);//default
+					tex_coord = null != skyboxTexture ? ImageProcessing.FindSunUV(skyboxTexture, scanAboveHorizonOnly: true) : new Vector2(0.5f, 0.75f);
 
-				skyboxPanel.SetInitialSkybox(skyboxTexture, tex_coord, onUpdate : normalizedUV =>
+				skyboxPanel.SetInitialSkybox(skyboxTexture, tex_coord, onUpdate: normalizedUV =>
 				{
 					currentClone.SkyVec = -EquirectangularCubemapUtility.UVToDirection(normalizedUV);
 					currentClone.UpdateLighting();
 					UpdateMapPreview();
 
-					// Turn off "auto" toggle when user manually sets position
 					if (directionalPositionConfigAutoToggle != null)
 						directionalPositionConfigAutoToggle.SetIsOnWithoutNotify(false);
 				},
-				onClose : () => { if (null != skyboxTexture) Destroy(skyboxTexture); }
-				);
+				onClose: () => { if (null != skyboxTexture) Destroy(skyboxTexture); });
 			}
 		}
 
@@ -582,10 +584,6 @@ namespace ClassicTilestorm
 				txt.text = "Delete";
 		}
 
-		// ────────────────────────────────────────────────────────────────────────────────
-		//   Dropdown Helpers (used by all dropdowns)
-		// ────────────────────────────────────────────────────────────────────────────────
-
 		private void PopulateDropdown(TMP_Dropdown dropdown, IEnumerable<string> items, string noneOption)
 		{
 			if (dropdown == null) return;
@@ -687,26 +685,17 @@ namespace ClassicTilestorm
 		}
 
 		// ────────────────────────────────────────────────────────────────────────────────
-		//   Preview Management
+		//   Preview Management  (THIS IS THE PART THAT WAS LEAKING)
 		// ────────────────────────────────────────────────────────────────────────────────
 
 		private bool InitialiseMapPreview()
 		{
 			if (ScenePreviewUtil.PreviewCamera == null || previewImage == null) return false;
 
-			if (null != currentClone)
-			{
-				currentClone.Destroy();
-				currentClone = null;
-			}
+			// CRITICAL: Always clean up previous preview first
+			CleanupPreview();
 
 			var map = CurrentMap;
-			if (null != currentPreviewRoot)
-			{
-				DestroyImmediate(currentPreviewRoot);
-				currentPreviewRoot = null;
-			}
-
 			if (map == null || map.Width <= 0 || map.Height <= 0)
 			{
 				previewImage.color = new Color(0.3f, 0.3f, 0.3f, 0.6f);
@@ -757,10 +746,15 @@ namespace ClassicTilestorm
 			if (null == currentClone)
 				return;
 
+			LeakDetector.LogSnapshot("BEFORE Preview Update");
+
+			// This now properly triggers cleanup inside ScenePreviewUtil / ReflectionEffectCamera
 			ScenePreviewUtil.UpdateEffect(currentClone.Effect);
 			ScenePreviewUtil.UpdateRenderSettings(currentClone.RenderSettings);
 
 			UpdateMainView();
+
+			LeakDetector.LogSnapshot("AFTER Preview Update");
 
 			void UpdateMainView()
 			{

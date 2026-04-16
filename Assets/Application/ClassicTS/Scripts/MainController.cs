@@ -72,6 +72,14 @@ namespace ClassicTilestorm
 
 			var mainReflection = Camera.main?.GetComponent<ReflectionEffectCamera>();
 
+			Resources.UnloadUnusedAssets();
+
+			//GeometryFactory.ResetCounters();
+			//LogTextureLeak("BEFORE loading new map");
+
+			LeakDetector.ResetCounters("MapLoad");
+			LeakDetector.LogSnapshot("BEFORE loading new map");
+
 			// ─── Cleanup previous map ─────────────────────────────────────
 			if (CurrentMap != null)
 			{
@@ -116,6 +124,10 @@ namespace ClassicTilestorm
 			// Skybox - auto fixup legacy map data - ends here
 
 			CurrentMap.Initialise(MapRoot, !ApplicationSettings.Scrambled);
+
+			//LogTextureLeak("AFTER loading new map");
+			LeakDetector.LogSnapshot("AFTER loading new map");
+
 			if (null != mainReflection)
 				mainReflection.OnRenderSettingsChanged(CurrentMap.RenderSettings);
 
@@ -288,5 +300,30 @@ namespace ClassicTilestorm
 			Debug.Log("Export currently only available in Unity Editor");
 #endif
 		}
+
+		//private void LogTextureLeak(string label)
+		//{
+		//	var textures = Resources.FindObjectsOfTypeAll<Texture2D>();
+		//	var cubemaps = Resources.FindObjectsOfTypeAll<Cubemap>();
+
+		//	long texBytes = 0;
+		//	foreach (var t in textures)
+		//		texBytes += UnityEngine.Profiling.Profiler.GetRuntimeMemorySizeLong(t);
+
+		//	long cubeBytes = 0;
+		//	foreach (var c in cubemaps)
+		//		cubeBytes += UnityEngine.Profiling.Profiler.GetRuntimeMemorySizeLong(c);
+
+		//	Debug.Log($"[{label}] Textures: {textures.Length} | {texBytes / (1024f * 1024f):F2} MB");
+		//	Debug.Log($"[{label}] Cubemaps: {cubemaps.Length} | {cubeBytes / (1024f * 1024f):F2} MB");
+
+		//	// Show the biggest ones
+		//	var biggest = textures.OrderByDescending(t => UnityEngine.Profiling.Profiler.GetRuntimeMemorySizeLong(t)).Take(8);
+		//	foreach (var t in biggest)
+		//	{
+		//		long size = UnityEngine.Profiling.Profiler.GetRuntimeMemorySizeLong(t);
+		//		Debug.Log($"   → {t.name} ({t.width}x{t.height}) - {size / (1024f * 1024f):F2} MB");
+		//	}
+		//}
 	}
 }

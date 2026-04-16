@@ -126,6 +126,11 @@ namespace MassiveHadronLtd
 					catch (Exception ex)
 					{
 						Debug.LogWarning($"Icon {i} failed: {ex.Message}");
+						if (icon != null)
+						{
+							UnityEngine.Object.DestroyImmediate(icon);
+							icon = null;
+						}
 					}
 
 					if (icon != null)
@@ -136,7 +141,10 @@ namespace MassiveHadronLtd
 						int x = col * CellSize;
 
 						Texture.SetPixels32(x, y, CellSize, CellSize, icon.GetPixels32());
+
+						// This is the critical line — destroy the temporary icon texture immediately
 						UnityEngine.Object.DestroyImmediate(icon);
+						icon = null;
 					}
 
 					_nextIndex++;
