@@ -43,16 +43,16 @@ namespace MassiveHadronLtd
 
 		private void SetDefaultOrientation() => transform.rotation = Quaternion.Euler(75f, 60f, 0f);
 
-		public void UpdateFromSettings(Color value, float[] skyvec = null, float intensity = 1f)
-		{
-			directionalLight.color = value;
-			directionalLight.intensity = intensity;
-			if (null != skyvec && skyvec.Length >= 2)
-				transform.rotation = Quaternion.LookRotation(-LinearCubemapUtility.UVToDirection(new Vector2(skyvec[0], skyvec[1])));
-			else
-				SetDefaultOrientation();
-			ClearCache();
-		}
+		//public void UpdateFromSettings(Color value, float[] skyvec = null, float intensity = 1f)
+		//{
+		//	directionalLight.color = value;
+		//	directionalLight.intensity = intensity;
+		//	if (null != skyvec && skyvec.Length >= 2)
+		//		transform.rotation = Quaternion.LookRotation(-LinearCubemapUtility.UVToDirection(new Vector2(skyvec[0], skyvec[1])));
+		//	else
+		//		SetDefaultOrientation();
+		//	ClearCache();
+		//}
 
 		public void UpdateColour(Color value, float intensity = 1f)
 		{
@@ -60,7 +60,7 @@ namespace MassiveHadronLtd
 			directionalLight.intensity = intensity;
 		}
 
-		public void UpdateDirection(Vector3 direction) => transform.rotation = Quaternion.LookRotation(direction);
+		public void UpdateDirection(Vector3 direction) => transform.rotation = Quaternion.LookRotation(direction.normalized);
 
 		/// <summary>
 		/// Updates the directional light using a tinted cubemap.
@@ -88,9 +88,9 @@ namespace MassiveHadronLtd
 			}
 			else
 			{
-				//var lightDir = AtlasCubemapUtility.FindLightDirection(cubemap);
-				//var lightDir = EquirectangularCubemapUtility.FindLightDirection(cubemap);
-				lightDir = LinearCubemapUtility.FindLightDirection(cubemap);
+				//lightDir = AtlasCubemapUtility.FindLightDirection(cubemap);
+				lightDir = EquirectangularCubemapUtility.FindLightDirection(cubemap, scanAboveHorizonOnly: true);
+				//lightDir = LinearCubemapUtility.FindLightDirection(cubemap);
 
 				_cachedLightDirection = lightDir;
 				_lastCubemapForDirection = cubemap;

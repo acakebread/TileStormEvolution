@@ -346,7 +346,7 @@ namespace ClassicTilestorm
 			else
 			{
 				var skyMat = SkyboxUtility.GetSkyboxMaterialForName(currentClone.skybox);
-				currentClone.SkyVec = LinearCubemapUtility.FindLightDirection(CubemapUtility.GetTintedCubemap(skyMat), scanAboveHorizonOnly: true);
+				currentClone.SkyVec = EquirectangularCubemapUtility.FindLightDirection(CubemapUtility.GetTintedCubemap(skyMat), scanAboveHorizonOnly: true);
 			}
 			currentClone.UpdateLighting();
 			UpdateMapPreview();
@@ -364,7 +364,7 @@ namespace ClassicTilestorm
 			{
 				var skyMat = SkyboxUtility.GetSkyboxMaterialForName(currentClone.skybox);
 				var sourceCubemap = CubemapUtility.GetTintedCubemap(skyMat);
-				var skyboxTexture = null != sourceCubemap ? EquirectangularCubemapUtility.Create(sourceCubemap, width: 512, height: 512) : null;
+				var skyboxTexture = null != sourceCubemap ? EquirectangularCubemapUtility.Create(sourceCubemap, width: 512, height: 256) : null;
 
 				var tex_coord = new Vector2(0.5f, 0.75f);
 				if (null != currentClone.skyvec)
