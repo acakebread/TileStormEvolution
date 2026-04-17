@@ -26,6 +26,10 @@ namespace ClassicTilestorm.Assets
 			TextureAssets.ClearCache();
 			Texture2DAssets.ClearCache();
 			MaterialAssets.ClearCache();
+			//don't know if these need clearing
+			//SkyboxAssets.ClearCache();
+			//SoundAssets.ClearCache();
+			//MusicAssets.ClearCache();
 		}
 	}
 }

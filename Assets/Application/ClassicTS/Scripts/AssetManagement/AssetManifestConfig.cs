@@ -30,22 +30,15 @@ namespace ClassicTilestorm.Assets
 
 			if (typeof(T) == typeof(Material))
 			{
-				if (roots != null && roots.Any(r => r != null &&
-					(r.Contains("Skycubes", StringComparison.OrdinalIgnoreCase) ||
-					 r.Contains("SkyCubes", StringComparison.OrdinalIgnoreCase))))
-				{
+				if (roots != null && roots.Any(r => r != null && r.Contains("Skycubes", StringComparison.OrdinalIgnoreCase)))
 					return "Skycubes";
-				}
 				return "Materials";
 			}
 
 			if (typeof(T) == typeof(AudioClip))
 			{
-				if (roots != null && roots.Any(r => r != null &&
-					(r.Contains("Music", StringComparison.OrdinalIgnoreCase))))
-				{
+				if (roots != null && roots.Any(r => r != null && (r.Contains("Music", StringComparison.OrdinalIgnoreCase))))
 					return "Music";
-				}
 				return "Sounds";
 			}
 

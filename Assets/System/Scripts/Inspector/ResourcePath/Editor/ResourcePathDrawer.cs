@@ -31,7 +31,7 @@ public class ResourcePathDrawer : PropertyDrawer
 		Rect buttonRect = new Rect(adjustedPosition.x + labelWidth + fieldWidth + 5f, adjustedPosition.y, 55f, adjustedPosition.height);
 
 		// Use a unique key per object instance
-		string uniqueKey = $"ResourcePath_Displayed_{property.serializedObject.targetObject.GetInstanceID()}_{property.propertyPath}";
+		string uniqueKey = $"ResourcePath_Displayed_{property.serializedObject.targetObject.GetHashCode()}_{property.propertyPath}";
 		displayedPath = EditorPrefs.GetString(uniqueKey, displayedPath);
 		if (string.IsNullOrEmpty(displayedPath)) displayedPath = property.stringValue; // Fallback to relative path
 
@@ -63,7 +63,7 @@ public class ResourcePathDrawer : PropertyDrawer
 		openDialog = false;
 
 		// Use a unique key per object instance
-		string uniqueKey = $"ResourcePath_Displayed_{propToUpdate.serializedObject.targetObject.GetInstanceID()}_{propToUpdate.propertyPath}";
+		string uniqueKey = $"ResourcePath_Displayed_{propToUpdate.serializedObject.targetObject.GetHashCode()}_{propToUpdate.propertyPath}";
 		string initialPath = Application.dataPath;
 		string storedDisplayedPath = EditorPrefs.GetString(uniqueKey, "");
 		if (!string.IsNullOrEmpty(storedDisplayedPath) && storedDisplayedPath.StartsWith("Assets/"))

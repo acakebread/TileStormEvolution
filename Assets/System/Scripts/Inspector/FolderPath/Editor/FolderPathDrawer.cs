@@ -23,7 +23,7 @@ public class FolderPathDrawer : PropertyDrawer
 		Rect fieldRect = new Rect(position.x + labelWidth, position.y, fieldWidth, position.height);
 		Rect buttonRect = new Rect(position.x + labelWidth + fieldWidth + 5f, position.y, 55f, position.height);
 
-		string prefKey = $"FolderPath_Displayed_{property.serializedObject.targetObject.GetInstanceID()}_{property.propertyPath}";
+		string prefKey = $"FolderPath_Displayed_{property.serializedObject.targetObject.GetHashCode()}_{property.propertyPath}";
 		displayedPath = EditorPrefs.GetString(prefKey, displayedPath);
 		if (string.IsNullOrEmpty(displayedPath)) displayedPath = property.stringValue;
 
@@ -55,7 +55,7 @@ public class FolderPathDrawer : PropertyDrawer
 		openDialog = false;
 
 		string initialPath = Application.dataPath;
-		string prefKey = $"FolderPath_Displayed_{propToUpdate.serializedObject.targetObject.GetInstanceID()}_{propToUpdate.propertyPath}";
+		string prefKey = $"FolderPath_Displayed_{propToUpdate.serializedObject.targetObject.GetHashCode()}_{propToUpdate.propertyPath}";
 		string storedDisplayedPath = EditorPrefs.GetString(prefKey, "");
 		if (!string.IsNullOrEmpty(storedDisplayedPath) && storedDisplayedPath.StartsWith("Assets/"))
 		{
