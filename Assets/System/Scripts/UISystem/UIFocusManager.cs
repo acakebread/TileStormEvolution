@@ -15,7 +15,8 @@ namespace MassiveHadronLtd.UI
 			{
 				if (_instance == null)
 				{
-					var found = FindObjectsByType<UIFocusManager>(FindObjectsSortMode.None);
+					// Fixed: Use the new non-obsolete overload (fastest, no sorting needed)
+					var found = FindObjectsByType<UIFocusManager>();
 					_instance = found.Length > 0 ? found[0] : null;
 
 					if (_instance == null)
@@ -32,7 +33,7 @@ namespace MassiveHadronLtd.UI
 		}
 
 		private static GameObject currentFocus;
-		private static GameObject lastUserSelected;          // ← new: remembers last meaningful selection
+		private static GameObject lastUserSelected;
 
 		private void LateUpdate()
 		{
@@ -55,7 +56,6 @@ namespace MassiveHadronLtd.UI
 
 			var selected = es.currentSelectedGameObject;
 
-			// If we have a real selection → remember it (unless it's a blocker/transient)
 			if (selected != null && !IsTransient(selected))
 			{
 				lastUserSelected = selected;
@@ -63,7 +63,6 @@ namespace MassiveHadronLtd.UI
 
 			GameObject candidate = null;
 
-			// Priority order
 			if (AnyDropdownIsExpanded())
 			{
 				candidate = FindFirstExpandedDropdown();
@@ -77,15 +76,13 @@ namespace MassiveHadronLtd.UI
 			{
 				candidate = selected;
 
-				// If selection is inside a scroll view → promote the scroll view itself
 				var scroll = FindScrollContaining(selected);
 				if (scroll != null)
 				{
 					candidate = scroll;
-					lastUserSelected = scroll;  // remember scroll view too
+					lastUserSelected = scroll;
 				}
 			}
-			// When nothing is selected → keep last meaningful thing
 			else if (lastUserSelected != null)
 			{
 				candidate = lastUserSelected;
@@ -120,11 +117,14 @@ namespace MassiveHadronLtd.UI
 
 		private static GameObject FindFirstExpandedDropdown()
 		{
-			var tmps = FindObjectsByType<TMP_Dropdown>(FindObjectsSortMode.None);
-			foreach (var dd in tmps) if (dd.IsExpanded) return dd.gameObject;
+			// Fixed: Use new overloads
+			var tmps = FindObjectsByType<TMP_Dropdown>();
+			foreach (var dd in tmps)
+				if (dd.IsExpanded) return dd.gameObject;
 
-			var legacys = FindObjectsByType<Dropdown>(FindObjectsSortMode.None);
-			foreach (var dd in legacys) if (HasDropdownListChild(dd)) return dd.gameObject;
+			var legacys = FindObjectsByType<Dropdown>();
+			foreach (var dd in legacys)
+				if (HasDropdownListChild(dd)) return dd.gameObject;
 
 			return null;
 		}
@@ -136,11 +136,14 @@ namespace MassiveHadronLtd.UI
 
 		private static GameObject FindFirstFocusedInput()
 		{
-			var tmps = FindObjectsByType<TMP_InputField>(FindObjectsSortMode.None);
-			foreach (var input in tmps) if (input.isFocused) return input.gameObject;
+			// Fixed: Use new overloads
+			var tmps = FindObjectsByType<TMP_InputField>();
+			foreach (var input in tmps)
+				if (input.isFocused) return input.gameObject;
 
-			var legacys = FindObjectsByType<InputField>(FindObjectsSortMode.None);
-			foreach (var input in legacys) if (input.isFocused) return input.gameObject;
+			var legacys = FindObjectsByType<InputField>();
+			foreach (var input in legacys)
+				if (input.isFocused) return input.gameObject;
 
 			return null;
 		}
@@ -170,13 +173,11 @@ namespace MassiveHadronLtd.UI
 		{
 			if (currentFocus == null) return false;
 
-			// Block keys when any dropdown, input field, or other keyboard-capturing UI has focus
 			return currentFocus.GetComponent<TMP_Dropdown>() != null ||
 				   currentFocus.GetComponent<Dropdown>() != null ||
 				   currentFocus.GetComponent<TMP_InputField>()?.isFocused == true ||
 				   currentFocus.GetComponent<InputField>()?.isFocused == true ||
-				   currentFocus.GetComponent<TMP_InputField>()?.isFocused == true ||
-				   currentFocus.GetComponentInParent<ScrollRect>() != null; // optional: block when scroll view has focus
+				   currentFocus.GetComponentInParent<ScrollRect>() != null;
 		}
 	}
 }
