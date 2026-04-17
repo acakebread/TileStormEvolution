@@ -34,7 +34,6 @@
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
-            #pragma unroll // Optimize for WebGL
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareDepthTexture.hlsl"
 

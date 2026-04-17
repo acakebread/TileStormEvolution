@@ -30,7 +30,6 @@ Shader "Unlit/URPFrostOpaque"
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
-            #pragma unroll
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
             struct Attributes

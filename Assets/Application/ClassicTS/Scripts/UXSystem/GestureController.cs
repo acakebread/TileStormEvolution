@@ -6,7 +6,7 @@ namespace ClassicTilestorm
 	[RequireComponent(typeof(GestureSystem))]
 	public class GestureController : MonoBehaviour
 	{
-		private new Camera camera;
+		private Camera targetCamera;
 		private IMapPlay imap;
 		private TileStrip tileStrip;
 		private Vector3 last;
@@ -17,7 +17,7 @@ namespace ClassicTilestorm
 
 		public void Initialise(Camera camera, IMapPlay imap)
 		{
-			this.camera = camera;
+			this.targetCamera = camera;
 			this.imap = imap;
 			tileStrip = default;
 			dragIndex = -1;
@@ -47,7 +47,7 @@ namespace ClassicTilestorm
 
 		private void OnBeginDrag(Vector3 screenPos)
 		{
-			var vert = Map.ScreenToWorld(camera, screenPos);
+			var vert = Map.ScreenToWorld(targetCamera, screenPos);
 			var index = imap.VectorToIndex(vert);
 			var tile = imap.GetTile(index);
 			if (false == tile.IsDrag) return;
@@ -64,14 +64,14 @@ namespace ClassicTilestorm
 
 			DebugVisualizationHelper.HighlightStrip(imap, tileStrip, false);
 
-			var vert = Map.ScreenToWorld(camera, screenPos);
+			var vert = Map.ScreenToWorld(targetCamera, screenPos);
 			TryDrag(vert - last);
 			last = vert;
 
 			DebugVisualizationHelper.HighlightStrip(imap, tileStrip, tileStrip.Count > 1);
 		}
 
-		private void OnEndDrag(Vector3 screenPos) => EndDrag(Map.ScreenToWorld(camera, screenPos) - last);
+		private void OnEndDrag(Vector3 screenPos) => EndDrag(Map.ScreenToWorld(targetCamera, screenPos) - last);
 
 		private void EndDrag(Vector3 offset)
 		{
