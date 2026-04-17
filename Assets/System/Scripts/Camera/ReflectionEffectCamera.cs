@@ -65,7 +65,7 @@ namespace MassiveHadronLtd
 		private float fresnelSharpness = 12f;
 
 		//[SerializeField, Range(0f, 1f)] private float frostThreshold = 0.8f;//not currently used
-		[SerializeField, Range(0f, 0.2f)] private float frostFadeRange = 0.1f;
+		//[SerializeField, Range(0f, 0.2f)] private float frostFadeRange = 0.1f;
 
 		private Camera mainCamera;
 		private Camera reflectionCamera;
