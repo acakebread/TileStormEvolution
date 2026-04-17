@@ -55,7 +55,7 @@ namespace ClassicTilestorm
 		RectInt ResizeMap(RectInt extents);
 		bool CropToContent(bool consolidate = false, Action<Vector2Int> onOriginDelta = null);
 
-		bool RemoveTileAt(Vector3 pos);//does not affect bounds
+		bool RemoveTileAt(Vector3 pos);
 		Variant GetVariantAt(int mapIndex);
 		Variant GetVariantAt(Vector3 pos);
 		void AddAttachment(MapAttachment _);
@@ -82,7 +82,7 @@ namespace ClassicTilestorm
 		[JsonProperty(Order = 3)] public string music;
 		[JsonProperty(Order = 4)] public string effect;
 		[JsonProperty(Order = 5)] public string skybox;
-		[JsonProperty(Order = 6)] public string button;//probably not needed any more
+		[JsonProperty(Order = 6)] public string button;
 
 		// ─────────────────────────────────────────────
 		// Dimensions and Tile Data
@@ -90,8 +90,8 @@ namespace ClassicTilestorm
 		private const int MAP_MAX_SIZE = 64;
 		[JsonProperty(Order = 10)] public int width;
 		[JsonProperty(Order = 11)] public int height;
-		[JsonProperty(Order = 12)] public int[] tiles;     // seed indices
-		[JsonProperty(Order = 13)] public int[] solve;     // delta - hope to remove need for this and resolve procedurally
+		[JsonProperty(Order = 12)] public int[] tiles;
+		[JsonProperty(Order = 13)] public int[] solve;
 		public const int TableJsonOrder = 20;
 
 		// ─────────────────────────────────────────────
@@ -117,29 +117,31 @@ namespace ClassicTilestorm
 		public bool ShouldSerializeskyvec() => null != skyvec;
 
 		public Action<Map, bool, Vector3> OnMapEdited { get; set; }
-		[JsonIgnore] public Transform parent { get; set; }//had to make public for now for preview creation in maputil
+		[JsonIgnore] public Transform parent { get; set; }
 
 		[JsonIgnore] public int Width => width;
 		[JsonIgnore] public int Height => height;
 		[JsonIgnore] public int Count => Width * Height;
-		[JsonIgnore] public int[] State { get => state = state?.Length == width * height ? state : Enumerable.Range(0, width * height).ToArray(); }//set => state = value; 
+		[JsonIgnore] public int[] State { get => state = state?.Length == width * height ? state : Enumerable.Range(0, width * height).ToArray(); }
+
 		[JsonIgnore] public string Music { get => music; set => music = value; }
-		// Skybox setter
+
+		// Skybox setter - clean, no ref stuff
 		[JsonIgnore]
 		public string Skybox
 		{
 			get => skybox;
 			set
 			{
-				if (skybox != value)
-				{
-					RefreshTintedCubemap();        // release old
-					skybox = value;
-				}
+				if (skybox == value)
+					return;
+				skybox = value;
+				TintedCubemap = null;
 			}
 		}
 
-		[JsonIgnore] public ReflectionEffectCamera.EffectMode Effect
+		[JsonIgnore]
+		public ReflectionEffectCamera.EffectMode Effect
 		{
 			get => ReflectionEffectCamera.ParseEffectMode(string.IsNullOrEmpty(effect) ? "Water" : effect);
 			set => effect = ReflectionEffectCamera.EffectModeToString(value);
@@ -148,22 +150,25 @@ namespace ClassicTilestorm
 		public Action<ReflectionEffectCamera.EffectMode> OnEffectChanged;
 
 		[JsonIgnore] private Color ambientRGB;
-		[JsonIgnore] public Color AmbientRGB
+		[JsonIgnore]
+		public Color AmbientRGB
 		{
 			get => null != ambient ? StringUtil.FromHexString(ambient, defaultColor: Color.white) : ambientRGB;
 			set => ambient = value.ToHexString(includeAlpha: true);
 		}
 
 		[JsonIgnore] private Color skyRBG;
-		[JsonIgnore] public Color SkyRGB
+		[JsonIgnore]
+		public Color SkyRGB
 		{
 			get => null != skyrgb ? StringUtil.FromHexString(skyrgb, defaultColor: Color.white) : skyRBG;
 			set => skyrgb = value.ToHexString(includeAlpha: true);
 		}
 
-		[JsonIgnore] public Vector3 SkyVec 
+		[JsonIgnore]
+		public Vector3 SkyVec
 		{
-			get => null != skyvec ? new(skyvec[0], skyvec[1], skyvec[2]) : Vector3.zero; 
+			get => null != skyvec ? new(skyvec[0], skyvec[1], skyvec[2]) : Vector3.zero;
 			set => skyvec = new float[] { value.x, value.y, value.z };
 		}
 
@@ -174,12 +179,8 @@ namespace ClassicTilestorm
 		// ─────────────────────────────────────────────
 		// Tile data — variants is now the only source of truth
 		// ─────────────────────────────────────────────
-
 		[JsonIgnore] public Variant[] variants = Array.Empty<Variant>();
 
-		// ─────────────────────────────────────────────
-		// Recommended clean access for future code
-		// ─────────────────────────────────────────────
 		internal interface IVariantAccess
 		{
 			Variant[] Variants { get; set; }
@@ -210,7 +211,6 @@ namespace ClassicTilestorm
 			if (state == null || mapIndex < 0 || mapIndex >= state.Length)
 				return new Variant(0);
 
-			// Apply current permutation (scrambled/solved state)
 			return GetVariantForIndex(state[mapIndex]);
 		}
 
@@ -219,19 +219,18 @@ namespace ClassicTilestorm
 			if (state == null || mapIndex < 0 || mapIndex >= state.Length)
 				return null;
 
-			// Apply current permutation (scrambled/solved state)
 			return ResourceManager.GetDefinition(GetVariantForIndex(state[mapIndex]).hash);
 		}
 
 		// ─────────────────────────────────────────────
-		// Runtime tile (graph) instances (lazy / just-in-time)
+		// Runtime tile (graph) instances
 		// ─────────────────────────────────────────────
-
-		[JsonIgnore] private int[] state; // runtime permutation, never serialized
+		[JsonIgnore] private int[] state;
 
 		[JsonIgnore] private int graphCount => graph.Length;
-		[JsonIgnore] private Tile[] _graph; // private backing field (never serialized)
-		[JsonIgnore] private Tile[] graph
+		[JsonIgnore] private Tile[] _graph;
+		[JsonIgnore]
+		private Tile[] graph
 		{
 			get
 			{
@@ -246,13 +245,8 @@ namespace ClassicTilestorm
 
 				_graph = new Tile[width * height];
 
-#if VERBOSE
-				Debug.Log($"Rebuilding graph | state first 8: [{string.Join(", ", tiles.Take(8))}]");                                                                                                    
-#endif
-
 				for (var visualIndex = 0; visualIndex < _graph.Length; visualIndex++)
 				{
-					Debug.Assert(tiles[visualIndex] >= 0 && tiles[visualIndex] < variants.Length, "variant index out of bounds");
 					_graph[visualIndex] = CreateTile(variants[tiles[visualIndex]], parent, TileRenderPosition(visualIndex));
 #if DEBUG
 					UpdateGraphTileInfo(visualIndex);
@@ -262,7 +256,7 @@ namespace ClassicTilestorm
 				return _graph;
 			}
 
-			set 
+			set
 			{
 				if (null != _graph) foreach (var iter in _graph) iter.Dispose();
 				_graph = value;
@@ -272,10 +266,7 @@ namespace ClassicTilestorm
 		private void UpdateGraph()
 		{
 			if (state == null || graphCount != state.Length)
-			{
-				Debug.Assert(false, "mismatched indices and runtime tiles");
 				return;
-			}
 
 			for (var visualIndex = 0; visualIndex < state.Length; ++visualIndex)
 			{
@@ -286,15 +277,14 @@ namespace ClassicTilestorm
 				var go = mapTile.gameObject;
 				if (go == null) continue;
 
-				Debug.Assert(tiles[visualIndex] >= 0 && tiles[visualIndex] < variants.Length, "variant index out of bounds");
-				go.transform.position = TileRenderPosition(visualIndex) + variants[tiles[visualIndex]].delta;//reset position
+				go.transform.position = TileRenderPosition(visualIndex) + variants[tiles[visualIndex]].delta;
 #if DEBUG
 				UpdateGraphTileInfo(State[visualIndex]);
 #endif
 			}
 		}
 
-		internal bool InitialiseGraph() => graph?.Length > 0;// force tile creation on clone
+		internal bool InitialiseGraph() => graph?.Length > 0;
 
 		internal void InvalidateGraphCache() => DestroyAllGraphTiles();
 
@@ -310,7 +300,8 @@ namespace ClassicTilestorm
 			go.name = $"{def?.name ?? "??"} ({go.transform.position.x:F1},{go.transform.position.z:F1})+{variant.delta:F2}@{variant.angle:F1}°";
 		}
 
-		[JsonIgnore] public UnityRenderSettings RenderSettings => new(
+		[JsonIgnore]
+		public UnityRenderSettings RenderSettings => new(
 			ambientMode: UnityEngine.Rendering.AmbientMode.Flat,
 			ambientLight: AmbientRGB,
 			ambientIntensity: 1f,
@@ -318,7 +309,7 @@ namespace ClassicTilestorm
 			ambientProbe: default,
 			subtractiveShadowColor: UnityEngine.RenderSettings.subtractiveShadowColor);
 
-		public Map() { } //{ //variants = Array.Empty<Variant>(); //tiles = Array.Empty<int>(); }
+		public Map() { }
 
 		public Map(int width = 16, int height = 16, string mapName = "New Map")
 		{
@@ -329,25 +320,18 @@ namespace ClassicTilestorm
 			this.width = width;
 			this.height = height;
 
-			// Get (or create) the canonical default tile definition
 			var defaultDef = ResourceManager.FindOrCreateDefaultDefinition();
 			var defaultHash = defaultDef.HashID;
 
-			// Minimal variant table: just the default tile (angle=0, delta=0)
-			variants = new Variant[] { new (defaultHash) };
+			variants = new Variant[] { new(defaultHash) };
 
-			// Every position in the grid points to variant index 0
 			var tileCount = width * height;
 			tiles = new int[tileCount];
-			Array.Fill(tiles, 0);           // 0 = default variant index
+			Array.Fill(tiles, 0);
 
-			// Optional: initialize solve array if you want it from the beginning
-			solve = new int[tileCount];     // all zeros = identity permutation
+			solve = new int[tileCount];
+			state = Enumerable.Range(0, tileCount).ToArray();
 
-			// Runtime state starts as identity
-			state = Enumerable.Range(0, tileCount).ToArray();//start at 'preset' i.e. not solved
-
-			// Clear / null out optional arrays
 			attachments = null;
 			waypoints = null;
 			music = null;
@@ -356,8 +340,7 @@ namespace ClassicTilestorm
 			button = null;
 		}
 
-		// Alternative: static factory method (sometimes cleaner to call)
-		public static Map CreateEmpty(int width = 16, int height = 16, string name = null) => new (width, height, name ?? $"Map {width}×{height}");
+		public static Map CreateEmpty(int width = 16, int height = 16, string name = null) => new(width, height, name ?? $"Map {width}×{height}");
 
 		public Map Clone() => new()
 		{
@@ -432,14 +415,14 @@ namespace ClassicTilestorm
 				directionalLight = null;
 			}
 
-			RefreshTintedCubemap();
+			if (null != tintedCubemap)
+				UnityEngine.Object.DestroyImmediate(tintedCubemap);
 
 			state = null;
 
 			if (parent != null)
 				parent = null;
 		}
-
 
 		private Tile CreateTile(Variant variant, Transform parent, Vector3 renderPosition) => new Tile(variant, parent, renderPosition);
 
@@ -450,14 +433,14 @@ namespace ClassicTilestorm
 #if UNITY_EDITOR
 		private static readonly Vector3 OFFSET = HALF_TILE;
 #else
-		private static readonly Vector3 OFFSET = Vector3.zero;
+        private static readonly Vector3 OFFSET = Vector3.zero;
 #endif
 		public static readonly Vector3 ORIGIN = OFFSET - HALF_TILE;
 
 		public static Vector3 WorldToRender(Vector3 value) => value + OFFSET;
 		public static Vector3 RenderToWorld(Vector3 value) => value - OFFSET;
 
-		public static bool RayToWorld(Ray ray, out Vector3 point)//special case with fixed plane at y=0
+		public static bool RayToWorld(Ray ray, out Vector3 point)
 		{
 			point = Vector3.zero;
 			if (RayToPlane(ray, new Plane(Vector3.up, Vector3.zero), out Vector3 result))
@@ -499,7 +482,7 @@ namespace ClassicTilestorm
 		public static bool ValidExtents(RectInt extents) => extents.width <= MAP_MAX_SIZE && extents.height <= MAP_MAX_SIZE;
 
 		public int VectorToIndex(Vector3 vec) => vec.x < 0 || vec.x >= width || vec.z < 0 || vec.z >= height ? width > 0 ? -1 : 0 : Mathf.FloorToInt(vec.z) * width + Mathf.FloorToInt(vec.x);
-		public Vector3 IndexToVector(int index) => width > 0 ? new(index % width, 0f, index / width) : Vector3.zero;//protection against divide by zero
+		public Vector3 IndexToVector(int index) => width > 0 ? new(index % width, 0f, index / width) : Vector3.zero;
 		public Vector3 TileRenderPosition(int index) => WorldToRender(IndexToVector(index));
 
 		public int CameraHitTile(Camera camera, Vector3 position) => VectorToIndex(ScreenToWorld(camera, position));
@@ -524,8 +507,8 @@ namespace ClassicTilestorm
 			return 0;
 		}
 
-		public Tile GetTile(Vector3 pos, bool logicalIndex = true) => GetTile(VectorToIndex(pos), logicalIndex);//active state or seed state
-		public Tile GetTile(int index, bool logicalIndex = true) => state == null || index < 0 || index >= state.Length ? default : GetGraphTile(logicalIndex ? state[index] : index);//active state or seed state
+		public Tile GetTile(Vector3 pos, bool logicalIndex = true) => GetTile(VectorToIndex(pos), logicalIndex);
+		public Tile GetTile(int index, bool logicalIndex = true) => state == null || index < 0 || index >= state.Length ? default : GetGraphTile(logicalIndex ? state[index] : index);
 
 		public void Preset()
 		{
@@ -845,11 +828,6 @@ namespace ClassicTilestorm
 
 		public bool RemoveTileAt(Vector3 pos) => UpdateTileAt(pos, new Variant(ResourceManager.DefaultHash)) != -1;
 
-		/// <summary>
-		/// Updates a tile at the given grid position. Position must be within current map bounds.
-		/// Does NOT perform automatic resizing or cropping.
-		/// </summary>
-		/// <returns>Final tile index if successful, -1 if out of bounds or other failure</returns>
 		public int UpdateTileAt(Vector3 pos, Variant variant)
 		{
 			if (tiles == null || tiles.Length == 0)
@@ -858,32 +836,25 @@ namespace ClassicTilestorm
 				return -1;
 			}
 
-			// Strict bounds check — no resize allowed in this version
 			var index = VectorToIndex(pos);
 			if (-1 == index)
 			{
-				Debug.LogWarning($"Cannot update tile at ({pos}) — position out of bounds and resizing is not allowed in UpdateTileAt");
+				Debug.LogWarning($"Cannot update tile at ({pos}) — position out of bounds");
 				return -1;
 			}
 
-			// Normalize delta to [0,1) range
-			variant.delta = new Vector3(Mathf.Repeat(pos.x, 1f), pos.y, Mathf.Repeat(pos.z, 1f));// delta is +ve modulo
-			
-			// ────────────────────────────────────────────────────────────────
-			// Update rendering / graph (single tile update path)
-			// ────────────────────────────────────────────────────────────────
+			variant.delta = new Vector3(Mathf.Repeat(pos.x, 1f), pos.y, Mathf.Repeat(pos.z, 1f));
 
-			// No resize/crop in this version — just update the single tile
 			var def = ResourceManager.GetDefinition(variant.hash);
-			var tableIndex = this.GetOrCreateVariantIndex(variant.hash, variant.delta, variant.angle);// Find or create variant entry
-			if (tiles[index] == tableIndex) return index;//no need to change anything variant is already valid
+			var tableIndex = this.GetOrCreateVariantIndex(variant.hash, variant.delta, variant.angle);
+			if (tiles[index] == tableIndex) return index;
+
 			tiles[index] = tableIndex;
 			var _graph = graph;
 			_graph[index].Dispose();
-			_graph[index] = CreateTile(variants[tableIndex], parent, TileRenderPosition(index)); 
+			_graph[index] = CreateTile(variants[tableIndex], parent, TileRenderPosition(index));
 			RefreshAttachments(GetAttachments(tileIndex: index));
 
-			// No bounds change possible in this version
 			OnMapEdited?.Invoke(this, false, Vector3.zero);
 
 			return index;
@@ -904,22 +875,11 @@ namespace ClassicTilestorm
 
 		private bool RepositionAndResize(RectInt extents)
 		{
-			//if (tiles == null || tiles.Length == 0) return false;
-
 			if (extents.width == width && extents.height == height && extents.x == 0 && extents.y == 0)
 				return false;
 
 			if (extents.width > MAP_MAX_SIZE || extents.height > MAP_MAX_SIZE)
-			{
-#if VERBOSE
-				Debug.LogWarning($"Resize rejected: would exceed max size ({MAP_MAX_SIZE}x{MAP_MAX_SIZE})");
-#endif
 				return false;
-			}
-
-#if VERBOSE
-			Debug.Log($"Resize Map '{name}' to {extents.width}x{extents.height}");
-#endif
 
 			var newSize = extents.width * extents.height;
 
@@ -1001,39 +961,22 @@ namespace ClassicTilestorm
 				RecreateTiles();
 				RefreshAttachments(GetAttachments());
 				OnMapEdited?.Invoke(this, true, new Vector3(-extents.x, 0f, -extents.y));
-#if VERBOSE
-				Debug.Log($"ResizeMap({extents}) → {width}×{height}  | origin and size delta {new RectInt(Mathf.FloorToInt(-extents.x), Mathf.FloorToInt(-extents.y), width - w, height - h)}");
-#endif
 				return new RectInt(Mathf.FloorToInt(-extents.x), Mathf.FloorToInt(-extents.y), width - w, height - h);
 			}
-			//OnMapEdited?.Invoke(this, false, Vector3.zero);//no need for this
 			return RectInt.zero;
 		}
 
-		// lighting - ref-counted tinted cubemap
-		private Ref<Cubemap> _tintedRef;
-
 		[JsonIgnore]
+		private Cubemap tintedCubemap = null;
 		public Cubemap TintedCubemap
 		{
-			get
+			get => tintedCubemap = null == tintedCubemap ? CubemapUtility.GetTintedCubemap(SkyboxMaterial) : tintedCubemap;
+			set
 			{
-				// Create the Ref wrapper ONLY if we don't have one yet.
-				// Never recreate it on every access.
-				if (_tintedRef == null)
-				{
-					var rawCubemap = CubemapUtility.GetTintedCubemap(SkyboxMaterial);
-					if (rawCubemap != null)
-						_tintedRef = Ref<Cubemap>.Create(() => rawCubemap);
-				}
-				return _tintedRef?.Value;
+				if (null != tintedCubemap)
+					UnityEngine.Object.DestroyImmediate(tintedCubemap);
+				tintedCubemap = value;
 			}
-		}
-
-		public void RefreshTintedCubemap()
-		{
-			_tintedRef?.Set(null);
-			_tintedRef = null;
 		}
 
 		public void UpdateLighting(Material skymat = null)
@@ -1060,12 +1003,10 @@ namespace ClassicTilestorm
 			if (null == other)
 				return;
 
-			//directional lighting
 			skyrgb = other.skyrgb;
 			skyRBG = other.skyRBG;
 			directionalLight.CopyFrom(other.directionalLight);
 
-			//render settings
 			var updateRenderSettings = ambient != other.ambient || skybox != other.skybox;
 			ambient = other.ambient;
 			ambientRGB = other.ambientRGB;
@@ -1075,16 +1016,13 @@ namespace ClassicTilestorm
 
 			if (updateRenderSettings)
 			{
-				RefreshTintedCubemap();                    // force refresh when skybox changes
 				OnRenderSettingsChanged?.Invoke(RenderSettings);
 			}
 
-			//effect
 			effect = other.effect;
 			OnEffectChanged?.Invoke(Effect);
 		}
 
-
-		public Action<UnityRenderSettings> OnRenderSettingsChanged;// for reflection effect camera connected to this map
+		public Action<UnityRenderSettings> OnRenderSettingsChanged;
 	}
 }

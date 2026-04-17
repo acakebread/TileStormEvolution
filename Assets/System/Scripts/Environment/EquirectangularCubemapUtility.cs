@@ -111,7 +111,9 @@ namespace MassiveHadronLtd
 			if (equirect == null)
 				return Vector3.up;
 
-			return ImageProcessing.FindSunUV(equirect, scanAboveHorizonOnly: scanAboveHorizonOnly);
+			var result = ImageProcessing.FindSunUV(equirect, scanAboveHorizonOnly: scanAboveHorizonOnly); ;
+			Object.DestroyImmediate(equirect);
+			return result;
 		}
 
 		/// <summary>
