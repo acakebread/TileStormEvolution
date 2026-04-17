@@ -126,6 +126,9 @@ namespace MassiveHadronLtd
 			return true;
 		}
 
+		// Add this at the top of the class, with the other constants
+		private static readonly int BaseColorPropertyID = Shader.PropertyToID("_BASE_COLOR");
+
 		private static void HighlightArrow(GameObject arrowGo)
 		{
 			if (arrowGo == null) return;
@@ -140,14 +143,20 @@ namespace MassiveHadronLtd
 			Renderer[] rends = arrowGo.GetComponentsInChildren<Renderer>(true);
 
 			foreach (var r in rends)
+			{
 				if (r.material != null)
-					originals[r] = r.material.color;
+				{
+					originals[r] = r.material.GetColor(BaseColorPropertyID);
+				}
+			}
 
 			activeHighlights[arrowGo] = (originals, Time.realtimeSinceStartup);
 
 			foreach (var r in rends)
+			{
 				if (r.material != null)
-					r.material.color = HIGHLIGHT_COLOR;
+					r.material.SetColor(BaseColorPropertyID, HIGHLIGHT_COLOR);
+			}
 		}
 
 		private static void UpdateAllHighlights()
@@ -165,7 +174,10 @@ namespace MassiveHadronLtd
 				foreach (var pair in originals)
 				{
 					if (pair.Key != null && pair.Key.material != null)
-						pair.Key.material.color = Color.Lerp(HIGHLIGHT_COLOR, pair.Value, t);
+					{
+						Color lerped = Color.Lerp(HIGHLIGHT_COLOR, pair.Value, t);
+						pair.Key.material.SetColor(BaseColorPropertyID, lerped);
+					}
 				}
 
 				if (t >= 1f)

@@ -64,7 +64,7 @@ namespace MassiveHadronLtd
 		[SerializeField, Range(1f, 40f), Tooltip("Higher values = reflection appears only at very grazing angles\nLower values = broader reflection")]
 		private float fresnelSharpness = 12f;
 
-		[SerializeField, Range(0f, 1f)] private float frostThreshold = 0.8f;
+		//[SerializeField, Range(0f, 1f)] private float frostThreshold = 0.8f;//not currently used
 		[SerializeField, Range(0f, 0.2f)] private float frostFadeRange = 0.1f;
 
 		private Camera mainCamera;

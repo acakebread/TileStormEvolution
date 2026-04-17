@@ -120,15 +120,27 @@ namespace MassiveHadronLtd
 				if (originalMats == null) return Array.Empty<Material>();
 
 				var result = new Material[originalMats.Length];
+
+				// Use the exact property name that works for your arrow shader
+				const string baseColorProperty = "_BASE_COLOR";   // This matched what worked in EditorDirectionUtil
+				int colorID = Shader.PropertyToID(baseColorProperty);
+
 				for (int i = 0; i < originalMats.Length; i++)
 				{
-					if (originalMats[i] == null) continue;
+					if (originalMats[i] == null)
+					{
+						result[i] = null;
+						continue;
+					}
 
 					var copy = new Material(originalMats[i]);
+
 					if (tintColor.HasValue)
 					{
-						copy.color = tintColor.Value;
+						// Use SetColor with the correct property ID instead of .color
+						copy.SetColor(colorID, tintColor.Value);
 					}
+
 					result[i] = copy;
 				}
 				return result;
