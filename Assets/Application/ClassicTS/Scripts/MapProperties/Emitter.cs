@@ -16,7 +16,8 @@ namespace ClassicTilestorm
 			if (data == null || data.Length != 7)
 			{
 				// Default: position at origin, looking straight UP, distance 10
-				Rebuild(position: Vector3.zero, rotation: Quaternion.LookRotation(Vector3.up), distance: 10f);
+				//Rebuild(position: Vector3.zero, rotation: Quaternion.LookRotation(Vector3.up), distance: 10f);
+				Rebuild(position: Vector3.zero, rotation: Quaternion.identity, distance: 10f);
 			}
 
 			// Default for new property
@@ -110,19 +111,30 @@ namespace ClassicTilestorm
 				}
 				else
 				{
-					Vector3 newForward = toTarget.normalized;
+					Vector3 newForward = toTarget.normalized;   // This is now our "up" direction
 					dist = toTarget.magnitude;
 
-					// Preserve roll: project current up vector onto plane perpendicular to new forward
-					Vector3 currentUp = rot * Vector3.up;
+					// === KEY CHANGE: Preserve roll relative to Y-up system ===
+					// Get the current "up" vector in world space from the existing rotation
+					Vector3 currentUp = rot * Vector3.up;        // What the emitter currently considers "its up"
+
+					// Project it onto the plane perpendicular to the new forward
 					Vector3 preservedUp = Vector3.ProjectOnPlane(currentUp, newForward);
 
 					if (preservedUp.sqrMagnitude < 0.01f)
-						preservedUp = Vector3.up;
+					{
+						// Fallback: choose a reasonable side vector
+						preservedUp = Vector3.Cross(newForward, Vector3.right).normalized;
+						if (preservedUp.sqrMagnitude < 0.01f)
+							preservedUp = Vector3.Cross(newForward, Vector3.forward).normalized;
+					}
 					else
+					{
 						preservedUp = preservedUp.normalized;
+					}
 
-					rot = Quaternion.LookRotation(newForward, preservedUp);
+					// Create rotation where newForward = +Y, and preservedUp defines roll
+					rot = Quaternion.LookRotation(preservedUp, newForward);   // Note: swapped arguments!
 				}
 			}
 

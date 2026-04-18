@@ -1,4 +1,4 @@
-#if UNITY_EDITOR
+﻿#if UNITY_EDITOR
 using UnityEditor;
 using UnityEngine;
 using System.Collections.Generic;
@@ -50,8 +50,12 @@ namespace MassiveHadronLtd
 			EditorGUI.BeginDisabledGroup(!controller.enablePhysics);
 			EditorGUILayout.PropertyField(serializedObject.FindProperty("gravity"));
 			EditorGUILayout.PropertyField(serializedObject.FindProperty("airFriction"));
-			EditorGUILayout.PropertyField(serializedObject.FindProperty("velocityBias"));
-			EditorGUILayout.PropertyField(serializedObject.FindProperty("velocityMagnitude"));
+			//EditorGUILayout.PropertyField(serializedObject.FindProperty("velocityBias"));
+			//EditorGUILayout.PropertyField(serializedObject.FindProperty("velocityMagnitude"));
+			EditorGUILayout.PropertyField(serializedObject.FindProperty("velocityScalarRange"));
+			// Spread Apex Angle with proper slider (0° - 360°)
+			SerializedProperty spreadProp = serializedObject.FindProperty("spreadApexAngle");
+			EditorGUILayout.Slider(spreadProp, 0f, 360f, new GUIContent("Spread Apex Angle"));
 			EditorGUILayout.PropertyField(serializedObject.FindProperty("enableCollision"));
 			EditorGUILayout.PropertyField(serializedObject.FindProperty("groundHeight"));
 			EditorGUILayout.PropertyField(serializedObject.FindProperty("bounceFriction"));
@@ -393,7 +397,7 @@ namespace MassiveHadronLtd
 			c.pulses = new List<ParticleController.Pulse> { new ParticleController.Pulse { start = 0f, end = 0.1f } };
 			c.enablePhysics = true;
 			c.gravity = 15f;
-			c.velocityMagnitude = new Vector3(3f, 8f, 3f);
+			//c.velocityMagnitude = new Vector3(3f, 8f, 3f);
 			c.enableCollision = true;
 			c.bounceFriction = 0.7f;
 			c.enableFloater = true;

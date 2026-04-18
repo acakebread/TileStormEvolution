@@ -32,8 +32,13 @@ namespace MassiveHadronLtd
 		public bool enablePhysics = false;
 		public float gravity = 10f;
 		[Range(0f, 1f)] public float airFriction = 0.01f;
-		public Vector3 velocityBias = Vector3.zero;
-		public Vector3 velocityMagnitude = Vector3.one;
+		//public Vector3 velocityBias = Vector3.zero;
+		//public Vector3 velocityMagnitude = Vector3.one;
+		public MinMaxRange velocityScalarRange = new MinMaxRange(1f, 1f);
+		[Tooltip("Apex spread angle in degrees.\n0 = no spread (straight)\n90 = ±45° cone\n180 = full hemisphere\n360 = full sphere")]
+		[Range(0f, 360f)]
+		public float spreadApexAngle = 20f;
+
 		public bool enableCollision = false;
 		public float groundHeight = 0f;
 		public float bounceFriction = 0.2f;
@@ -211,7 +216,53 @@ namespace MassiveHadronLtd
 			if (!updateParticles || customParticleSystem == null) return;
 
 			Vector3 position = transform.position + EllipsoidRandom.Inside(scatterScalar);
-			Vector3 velocity = velocityBias + EllipsoidRandom.Inside(velocityMagnitude);
+
+			// Base direction (local "up" in world space)
+			Vector3 baseDirection = (transform.rotation * Vector3.up).normalized;
+
+			// Random speed from the scalar range
+			float speed = Random.Range(velocityScalarRange.min, velocityScalarRange.max);
+
+			// === SPREAD CONE LOGIC ===
+			Vector3 finalDirection;
+
+			if (spreadApexAngle <= 0.01f)
+			{
+				// Zero spread - perfectly straight
+				finalDirection = baseDirection;
+			}
+			else if (spreadApexAngle >= 360f)
+			{
+				// Full sphere - completely random direction
+				finalDirection = Random.onUnitSphere;
+			}
+			else
+			{
+				float maxHalfAngleDeg = spreadApexAngle * 0.5f;
+
+				if (maxHalfAngleDeg > 180f)
+				{
+					// Exclude a cone on the negative side (for angles > 180°)
+					Vector3 randomDir = Random.onUnitSphere;
+					float excludeCos = Mathf.Cos((360f - spreadApexAngle) * 0.5f * Mathf.Deg2Rad);
+
+					// Rejection sampling: keep sampling until we are outside the excluded cone
+					while (Vector3.Dot(randomDir, -baseDirection) > excludeCos)
+					{
+						randomDir = Random.onUnitSphere;
+					}
+					finalDirection = randomDir;
+				}
+				else
+				{
+					// Standard cone spread (0° to 180°)
+					finalDirection = GetRandomDirectionInCone(baseDirection, maxHalfAngleDeg);
+				}
+			}
+
+			// Final velocity = direction * speed + bias
+			Vector3 velocity = finalDirection * speed;// + velocityBias;
+
 			float variation = lifetimeVariation;
 			float life = lifetime + Random.Range(-variation, variation);
 			if (life <= 0f) return;
@@ -264,6 +315,96 @@ namespace MassiveHadronLtd
 			p.Initialize();               // runs Initialize() on every behaviour
 		}
 
+		/// <summary>
+		/// Returns a uniformly distributed random unit vector inside a cone.
+		/// maxHalfAngleDeg = half the apex angle (spreadApexAngle / 2).
+		/// </summary>
+		private static Vector3 GetRandomDirectionInCone(Vector3 direction, float maxHalfAngleDeg)
+		{
+			float maxHalfAngleRad = maxHalfAngleDeg * Mathf.Deg2Rad;
+
+			// Uniform distribution on spherical cap
+			float z = Random.Range(Mathf.Cos(maxHalfAngleRad), 1f);
+			float theta = Random.Range(0f, Mathf.PI * 2f);
+			float r = Mathf.Sqrt(1f - z * z);
+
+			Vector3 localDir = new Vector3(r * Mathf.Cos(theta), r * Mathf.Sin(theta), z);
+
+			// Rotate from cone space (Z-forward) to world direction
+			Quaternion rotation = Quaternion.FromToRotation(Vector3.forward, direction);
+			return rotation * localDir;
+		}
+
+		//public void SpawnParticle()
+		//{
+		//	if (!updateParticles || customParticleSystem == null) return;
+
+		//	Vector3 position = transform.position + EllipsoidRandom.Inside(scatterScalar);
+		//	//Vector3 velocity = velocityBias + EllipsoidRandom.Inside(velocityMagnitude);
+		//	//Vector3 direction = transform.rotation * Vector3.up * velocityMagnitude.magnitude;
+		//	//Vector3 velocity = direction;// + velocityBias + EllipsoidRandom.Inside(velocityMagnitude);
+
+		//	// === NEW VELOCITY SYSTEM USING SCALAR RANGE ===
+		//	Vector3 baseDirection = transform.rotation * Vector3.up;
+
+		//	// Pick a random speed between min and max
+		//	float speed = Random.Range(velocityScalarRange.min, velocityScalarRange.max);
+
+		//	// Create final velocity: direction * random speed + bias
+		//	Vector3 velocity = baseDirection * speed + velocityBias;
+
+		//	float variation = lifetimeVariation;
+		//	float life = lifetime + Random.Range(-variation, variation);
+		//	if (life <= 0f) return;
+
+		//	Particle p = customParticleSystem.AllocateParticle();
+		//	if (p == null) return;
+
+		//	p.duration = life;
+		//	p.life = life;
+		//	p.position = position;
+		//	p.oldPosition = position;
+		//	p.radius = radius;
+		//	p.color = color;
+
+		//	// ------------------------------------------------------------
+		//	// 1. ALWAYS add colour & scale behaviours
+		//	// ------------------------------------------------------------
+		//	var colourBh = new ParticleBehaviourColour { fadeStartTime = fadeStartTime };
+		//	var scaleBh = new ParticleBehaviourScale { scaleTable = _sharedScaleTable, initialRadius = radius };
+
+		//	p.behaviours.Add(colourBh);
+		//	p.behaviours.Add(scaleBh);
+
+		//	// ------------------------------------------------------------
+		//	// 2. OPTIONAL physics
+		//	// ------------------------------------------------------------
+		//	if (enablePhysics)
+		//	{
+		//		p.behaviours.Add(new ParticlePhysicsBehaviour
+		//		{
+		//			velocity = velocity,
+		//			gravity = this.gravity,
+		//			friction = this.airFriction
+		//		});
+
+		//		if (enableCollision)
+		//		{
+		//			p.behaviours.Add(new ParticleGroundCollisionBehaviour
+		//			{
+		//				friction = bounceFriction,
+		//				groundHeight = groundHeight
+		//			});
+		//		}
+		//	}
+
+		//	// ------------------------------------------------------------
+		//	// 3. (Future) add any extra custom behaviours here
+		//	// ------------------------------------------------------------
+
+		//	p.Initialize();               // runs Initialize() on every behaviour
+		//}
+
 #if UNITY_EDITOR
 		public Material ParticleMaterial => particleMaterial;
 
@@ -283,5 +424,28 @@ namespace MassiveHadronLtd
 			if (Application.isPlaying)
 				RebakeScaleTable();
 		}
+
+		///// <summary>
+		///// Returns a uniformly distributed random unit vector inside a cone.
+		///// maxHalfAngleDeg = half the apex angle (e.g. spreadApexAngle / 2).
+		///// </summary>
+		//private static Vector3 GetRandomDirectionInCone(Vector3 direction, float maxHalfAngleDeg)
+		//{
+		//	float maxHalfAngleRad = maxHalfAngleDeg * Mathf.Deg2Rad;
+
+		//	// Uniform distribution on the spherical cap
+		//	float z = Random.Range(Mathf.Cos(maxHalfAngleRad), 1f);   // z in local cone space
+		//	float theta = Random.Range(0f, Mathf.PI * 2f);            // azimuthal angle
+		//	float r = Mathf.Sqrt(1f - z * z);
+
+		//	Vector3 localDir = new Vector3(r * Mathf.Cos(theta), r * Mathf.Sin(theta), z);
+
+		//	// Rotate localDir from cone space (Z = forward) to world space aligned with 'direction'
+		//	if (Vector3.Dot(Vector3.forward, direction) > 0.9999f)
+		//		return localDir; // already aligned with Z
+
+		//	Quaternion rotation = Quaternion.FromToRotation(Vector3.forward, direction);
+		//	return rotation * localDir;
+		//}
 	}
 }

@@ -108,10 +108,13 @@ namespace MassiveHadronLtd
 		}
 
 		// ===================================================================
-		// PROCEDURAL CONE MESH (unchanged — uses computed baseRadius)
+		// PROCEDURAL CONE MESH - now supports arbitrary normal direction
 		// ===================================================================
-		private static Mesh CreateConeMesh(float length, float baseRadius, int segments = 32)
+		private static Mesh CreateConeMesh(float length, float baseRadius, Vector3 normal = default, int segments = 32)
 		{
+			if (normal == default) normal = Vector3.up;
+			normal = normal.normalized;
+
 			var mesh = new Mesh { name = "GizmoCone" };
 
 			var vertices = new List<Vector3>();
@@ -120,22 +123,34 @@ namespace MassiveHadronLtd
 			var trianglesCapOuter = new List<int>();
 			var trianglesCapInner = new List<int>();
 
-			// Tip vertex
+			// Tip vertex at origin (local space)
 			vertices.Add(Vector3.zero); // index 0
 
-			// Base circle vertices
+			// Base circle vertices perpendicular to the normal
 			int baseStart = vertices.Count;
+
+			// Create an orthonormal basis for the base plane
+			Vector3 axis1 = Vector3.Cross(normal, Vector3.up);
+			if (axis1.sqrMagnitude < 0.0001f) // normal is nearly parallel to up
+				axis1 = Vector3.Cross(normal, Vector3.right);
+			axis1 = axis1.normalized;
+
+			Vector3 axis2 = Vector3.Cross(normal, axis1).normalized;
+
 			for (int i = 0; i < segments; i++)
 			{
 				float angle = i * Mathf.PI * 2f / segments;
 				float x = Mathf.Cos(angle) * baseRadius;
 				float y = Mathf.Sin(angle) * baseRadius;
-				vertices.Add(new Vector3(x, y, length));
+
+				// Build base vertex in local plane, then align to normal
+				Vector3 localBase = axis1 * x + axis2 * y + normal * length;
+				vertices.Add(localBase);
 			}
 
 			// Base center (for cap)
 			int baseCenter = vertices.Count;
-			vertices.Add(new Vector3(0, 0, length));
+			vertices.Add(normal * length);
 
 			// Side triangles (outer)
 			for (int i = 0; i < segments; i++)
@@ -144,12 +159,12 @@ namespace MassiveHadronLtd
 				int v1 = baseStart + i;
 				int v2 = baseStart + next;
 
-				trianglesOuter.Add(0);
+				trianglesOuter.Add(0);   // tip
 				trianglesOuter.Add(v2);
 				trianglesOuter.Add(v1);
 			}
 
-			// Side triangles (inner — reverse winding)
+			// Side triangles (inner — reverse winding for backface)
 			for (int i = 0; i < segments; i++)
 			{
 				int next = (i + 1) % segments;
@@ -173,7 +188,7 @@ namespace MassiveHadronLtd
 				trianglesCapOuter.Add(v1);
 			}
 
-			// Base cap (inner — reverse)
+			// Base cap (inner — reverse winding)
 			for (int i = 0; i < segments; i++)
 			{
 				int next = (i + 1) % segments;
