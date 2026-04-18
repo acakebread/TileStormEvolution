@@ -966,9 +966,8 @@ namespace ClassicTilestorm
 			return RectInt.zero;
 		}
 
-		[JsonIgnore]
 		private Cubemap tintedCubemap = null;
-		public Cubemap TintedCubemap
+		[JsonIgnore] public Cubemap TintedCubemap
 		{
 			get => tintedCubemap = null == tintedCubemap ? CubemapUtility.GetTintedCubemap(SkyboxMaterial) : tintedCubemap;
 			set
