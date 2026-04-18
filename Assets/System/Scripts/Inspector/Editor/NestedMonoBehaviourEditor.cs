@@ -1,100 +1,137 @@
 ﻿#if UNITY_EDITOR
 using UnityEditor;
-using UnityEngine;
 using UnityEditorInternal;
+using UnityEngine;
 
 namespace MassiveHadronLtd
 {
+	// This editor applies to ALL MonoBehaviours (be careful in large projects).
+	// It only adds special handling for nested classes; otherwise it falls back to normal drawing.
 	[CustomEditor(typeof(MonoBehaviour), true)]
 	public class NestedMonoBehaviourEditor : Editor
 	{
 		public override void OnInspectorGUI()
 		{
 			var type = target.GetType();
-
 			bool isNested = type.DeclaringType != null;
 
 			if (isNested)
 			{
-				DrawScriptHeader(type);
-				EditorGUILayout.Space(4);
+				DrawNestedScriptHeader(type);
+				EditorGUILayout.Space(2);
+			}
+			else
+			{
+				// For normal (non-nested) components, draw the default script field + properties
+				DrawDefaultInspector();
+				return;
 			}
 
+			// Draw the rest of the properties (excluding the hidden m_Script)
+			serializedObject.Update();
 			DrawPropertiesExcluding(serializedObject, "m_Script");
-
 			serializedObject.ApplyModifiedProperties();
 		}
 
-		private void DrawScriptHeader(System.Type type)
+		private void DrawNestedScriptHeader(System.Type type)
 		{
-			var rect = EditorGUILayout.GetControlRect();
+			// Get the MonoScript asset for the outer class
+			MonoScript scriptAsset = GetOuterMonoScript(type);
 
-			// Split into label + button area
-			const float buttonWidth = 20f;
-			var labelRect = new Rect(rect.x, rect.y, rect.width - buttonWidth, rect.height);
-			var buttonRect = new Rect(rect.x + rect.width - buttonWidth, rect.y, buttonWidth, rect.height);
+			Rect rect = EditorGUILayout.GetControlRect(false, 20f);
 
-			// Background
-			GUI.Box(rect, GUIContent.none, EditorStyles.helpBox);
+			// Background similar to native Script field
+			EditorGUI.DrawRect(rect, new Color(0.15f, 0.15f, 0.15f)); // dark gray
 
-			// Label
-			var content = new GUIContent(type.Name, "Edit Script");
-			EditorGUI.LabelField(new Rect(labelRect.x + 6, labelRect.y + 2, labelRect.width - 6, labelRect.height - 4), content);
+			// Label area
+			Rect labelRect = new Rect(rect.x + 6, rect.y + 2, rect.width - 60, rect.height - 4);
+			Rect buttonRect = new Rect(rect.xMax - 48, rect.y + 2, 42, rect.height - 4);
 
-			var e = Event.current;
+			string displayName = type.Name;
 
-			// Cursor for label
+			// Draw the label (bold + link cursor)
+			GUIStyle labelStyle = new GUIStyle(EditorStyles.boldLabel)
+			{
+				normal = { textColor = new Color(0.7f, 0.85f, 1f) } // light blue-ish
+			};
+
+			EditorGUI.LabelField(labelRect, displayName, labelStyle);
 			EditorGUIUtility.AddCursorRect(labelRect, MouseCursor.Link);
 
-			// LEFT CLICK (label)
+			// Object picker button (looks like the native one)
+			if (GUI.Button(buttonRect, GUIContent.none, "ObjectFieldButton"))
+			{
+				if (scriptAsset != null)
+					Selection.activeObject = scriptAsset;
+				else
+					OpenOuterScript(type);
+			}
+
+			// Click handling
+			var e = Event.current;
 			if (e.type == EventType.MouseDown && e.button == 0 && labelRect.Contains(e.mousePosition))
 			{
-				OpenDeclaringScript(type);
+				OpenOuterScript(type);
 				e.Use();
 			}
 
-			// RIGHT CLICK (label)
+			// Right-click context menu
 			if (e.type == EventType.ContextClick && labelRect.Contains(e.mousePosition))
 			{
-				var menu = new GenericMenu();
-				menu.AddItem(new GUIContent("Edit Script"), false, () => OpenDeclaringScript(type));
+				GenericMenu menu = new GenericMenu();
+				menu.AddItem(new GUIContent("Edit Script"), false, () => OpenOuterScript(type));
+				if (scriptAsset != null)
+					menu.AddItem(new GUIContent("Ping Script Asset"), false, () => EditorGUIUtility.PingObject(scriptAsset));
 				menu.ShowAsContext();
 				e.Use();
 			}
-
-			// Draw the little object-picker button
-			var buttonStyle = GUI.skin.FindStyle("ObjectFieldButton") ?? GUI.skin.button;
-
-			if (GUI.Button(buttonRect, GUIContent.none, buttonStyle))
-			{
-				// Option 1: just open script (consistent UX)
-				OpenDeclaringScript(type);
-
-				// Option 2 (optional): show context menu instead
-				// var menu = new GenericMenu();
-				// menu.AddItem(new GUIContent("Edit Script"), false, () => OpenDeclaringScript(type));
-				// menu.ShowAsContext();
-			}
 		}
 
-		private void OpenDeclaringScript(System.Type type)
+		private MonoScript GetOuterMonoScript(System.Type type)
 		{
-			var outer = type.DeclaringType.Name;
+			if (type.DeclaringType == null) return null;
 
-			var guids = AssetDatabase.FindAssets($"{outer} t:Script");
+			string outerName = type.DeclaringType.Name;
+			var guids = AssetDatabase.FindAssets(outerName + " t:MonoScript");
 
 			foreach (var guid in guids)
 			{
-				var path = AssetDatabase.GUIDToAssetPath(guid);
+				string path = AssetDatabase.GUIDToAssetPath(guid);
+				if (path.EndsWith(outerName + ".cs", System.StringComparison.OrdinalIgnoreCase))
+				{
+					return AssetDatabase.LoadAssetAtPath<MonoScript>(path);
+				}
+			}
+			return null;
+		}
 
-				if (path.EndsWith(outer + ".cs"))
+		private void OpenOuterScript(System.Type type)
+		{
+			if (type.DeclaringType == null) return;
+
+			string outerName = type.DeclaringType.Name;
+			var guids = AssetDatabase.FindAssets(outerName + " t:MonoScript");
+
+			foreach (var guid in guids)
+			{
+				string path = AssetDatabase.GUIDToAssetPath(guid);
+				if (path.EndsWith(outerName + ".cs", System.StringComparison.OrdinalIgnoreCase))
 				{
 					InternalEditorUtility.OpenFileAtLineExternal(path, 1);
 					return;
 				}
 			}
 
-			Debug.LogError($"Could not locate {outer}.cs");
+			// Fallback: open first result
+			if (guids.Length > 0)
+			{
+				string path = AssetDatabase.GUIDToAssetPath(guids[0]);
+				InternalEditorUtility.OpenFileAtLineExternal(path, 1);
+			}
+			else
+			{
+				Debug.LogWarning($"Could not find script file for outer class '{outerName}'");
+			}
 		}
 	}
 }
