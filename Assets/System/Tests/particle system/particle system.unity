@@ -26,7 +26,7 @@ RenderSettings:
   m_AmbientIntensity: 1
   m_AmbientMode: 0
   m_SubtractiveShadowColor: {r: 0.42, g: 0.478, b: 0.627, a: 1}
-  m_SkyboxMaterial: {fileID: 2100000, guid: 85ff05840d836914f8b987d982302ccf, type: 2}
+  m_SkyboxMaterial: {fileID: 0}
   m_HaloStrength: 0.5
   m_FlareStrength: 1
   m_FlareFadeSpeed: 3
@@ -129,7 +129,7 @@ GameObject:
   m_Component:
   - component: {fileID: 182906322}
   - component: {fileID: 182906321}
-  m_Layer: 0
+  m_Layer: 1
   m_Name: ParticleControllerAlgae
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -242,7 +242,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &391604675
 Transform:
   m_ObjectHideFlags: 0
@@ -256,7 +256,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1143789309}
+  m_Father: {fileID: 1760635935}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &391604676
 MonoBehaviour:
@@ -274,7 +274,7 @@ MonoBehaviour:
   priority: 0
   blendDistance: 0
   weight: 1
-  sharedProfile: {fileID: 11400000, guid: 0bd949236225da9469d229c64885842c, type: 2}
+  sharedProfile: {fileID: 11400000, guid: d0bfe6afc66d86741b5df737f902d9f6, type: 2}
 --- !u!1 &902300766
 GameObject:
   m_ObjectHideFlags: 0
@@ -285,7 +285,7 @@ GameObject:
   m_Component:
   - component: {fileID: 902300768}
   - component: {fileID: 902300767}
-  m_Layer: 0
+  m_Layer: 1
   m_Name: ParticleControllerAshes
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -392,13 +392,13 @@ GameObject:
   m_Component:
   - component: {fileID: 1081262123}
   - component: {fileID: 1081262124}
-  m_Layer: 0
+  m_Layer: 1
   m_Name: ParticleControllerSpark
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1081262123
 Transform:
   m_ObjectHideFlags: 0
@@ -582,7 +582,6 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 391604675}
   - {fileID: 1760635935}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -601,7 +600,7 @@ MonoBehaviour:
   lookSpeedH: 2
   lookSpeedV: 2
   zoomSpeed: 1
-  dragSpeed: 2
+  dragSpeed: 18
 --- !u!114 &1143789311
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -654,30 +653,25 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1143789306}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: debe350cb86502644be674b7e850e7b1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   planeNormal: {x: 0, y: 1, z: 0}
   offset: 0
-  effectMode: 4
-  previousEffectMode: 3
-  mirrorTint: {r: 0.31132078, g: 0.31132078, b: 0.31132078, a: 1}
-  baseColor: {r: 0.066037714, g: 0.058873247, b: 0.058873247, a: 0.43137255}
-  filmIntensity: 0.2
+  effectMode: 5
+  mirrorTint: {r: 0.05, g: 0.05, b: 0.05, a: 0.25}
   noiseScale: 1
   noiseTexture: {fileID: 0}
   frostDepth: 0.188
   noiseStrength: 0
-  rippleSpeed: 0.304
-  rippleAmplitude: 0.197
-  rippleFrequency: 0.289
-  rippleOffset: 0.5
-  reflectionStrength: 0.5
-  frostThreshold: 0.8
-  frostFadeRange: 0.1
-  postProcessingCamera: {fileID: 1760635932}
+  rippleSpeed: 0.2
+  rippleAmplitude: 0.075
+  rippleFrequency: 0.35
+  rippleOffset: 0
+  reflectionStrength: 0.95
+  fresnelSharpness: 12
 --- !u!1 &1458804427
 GameObject:
   m_ObjectHideFlags: 0
@@ -688,7 +682,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1458804429}
   - component: {fileID: 1458804428}
-  m_Layer: 0
+  m_Layer: 1
   m_Name: ParticleControllerDebug
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1080,7 +1074,8 @@ Transform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 391604675}
   m_Father: {fileID: 1143789309}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1910858981
@@ -1093,13 +1088,13 @@ GameObject:
   m_Component:
   - component: {fileID: 1910858983}
   - component: {fileID: 1910858984}
-  m_Layer: 0
+  m_Layer: 1
   m_Name: ParticleControllerFire
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &1910858983
 Transform:
   m_ObjectHideFlags: 0
@@ -1271,7 +1266,7 @@ Light:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2049721151}
   m_Enabled: 1
-  serializedVersion: 12
+  serializedVersion: 13
   m_Type: 1
   m_Color: {r: 1, g: 0.95686275, b: 0.8392157, a: 1}
   m_Intensity: 1
@@ -1323,7 +1318,7 @@ Light:
   m_UseBoundingSphereOverride: 0
   m_UseViewFrustumForShadowCasterCull: 1
   m_ForceVisible: 0
-  m_ShadowRadius: 0
+  m_ShapeRadius: 0
   m_ShadowAngle: 0
   m_LightUnit: 1
   m_LuxAtDistance: 1
@@ -1382,7 +1377,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2063531462}
   - component: {fileID: 2063531461}
-  m_Layer: 0
+  m_Layer: 1
   m_Name: ParticleControllerToxic
   m_TagString: Untagged
   m_Icon: {fileID: 0}

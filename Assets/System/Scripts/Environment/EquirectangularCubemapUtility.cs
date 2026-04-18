@@ -132,3 +132,112 @@ namespace MassiveHadronLtd
 		}
 	}
 }
+
+
+
+//using UnityEngine;
+
+//namespace MassiveHadronLtd
+//{
+//	public static class EquirectangularCubemapUtility
+//	{
+//		/// <summary>
+//		/// Creates a 2D equirectangular texture from a cubemap.
+//		/// </summary>
+//		public static Texture2D Create(Cubemap cubemap, int width = 512, int height = 256)
+//		{
+//			if (cubemap == null || !cubemap.isReadable)
+//			{
+//				Debug.LogError("Cubemap is null or not readable.");
+//				return null;
+//			}
+
+//			var tex = new Texture2D(width, height, TextureFormat.RGBA32, false)
+//			{
+//				name = cubemap.name + "_Equirect"
+//			};
+
+//			var pixels = new Color[width * height];
+
+//			for (int y = 0; y < height; y++)
+//			{
+//				float v = (float)y / (height - 1);
+//				float latitude = (v - 0.5f) * Mathf.PI;
+//				float sinLat = Mathf.Sin(latitude);
+//				float cosLat = Mathf.Cos(latitude);
+
+//				for (int x = 0; x < width; x++)
+//				{
+//					float u = (float)x / (width - 1);
+//					float longitude = (u - 0.5f) * Mathf.PI * 2f;
+
+//					float sinLon = Mathf.Sin(longitude);
+//					float cosLon = Mathf.Cos(longitude);
+
+//					Vector3 dir = new Vector3(cosLat * sinLon, sinLat, cosLat * cosLon);
+
+//					pixels[y * width + x] = CubemapUtility.SampleCubemap(cubemap, dir);
+//				}
+//			}
+
+//			tex.SetPixels(pixels);
+//			tex.Apply();
+//			return tex;
+//		}
+
+//		/// <summary>
+//		/// Finds the UV of the brightest area (sun) safely.
+//		/// Always destroys the temporary equirect texture.
+//		/// </summary>
+//		public static Vector2 FindLightUV(Cubemap cubemap, int w = 512, int h = 256, bool scanAboveHorizonOnly = true)
+//		{
+//			var equirect = Create(cubemap, w, h);
+//			if (equirect == null)
+//				return new Vector2(0.5f, 0.75f);
+
+//			try
+//			{
+//				return ImageProcessing.FindSunUV(equirect, scanAboveHorizonOnly);
+//			}
+//			finally
+//			{
+//				Object.DestroyImmediate(equirect);
+//			}
+//		}
+
+//		/// <summary>
+//		/// Finds the world direction of the brightest area.
+//		/// </summary>
+//		public static Vector3 FindLightDirection(Cubemap cubemap, int w = 512, int h = 256, bool scanAboveHorizonOnly = true)
+//		{
+//			var uv = FindLightUV(cubemap, w, h, scanAboveHorizonOnly);
+//			return -UVToDirection(uv);
+//		}
+
+//		public static Vector3 UVToDirection(Vector2 uv)
+//		{
+//			float longitude = (uv.x - 0.5f) * Mathf.PI * 2f;
+//			float latitude = (uv.y - 0.5f) * Mathf.PI;
+
+//			float cosLat = Mathf.Cos(latitude);
+
+//			return new Vector3(
+//				cosLat * Mathf.Sin(longitude),
+//				Mathf.Sin(latitude),
+//				cosLat * Mathf.Cos(longitude)
+//			).normalized;
+//		}
+
+//		public static Vector2 DirectionToUV(Vector3 dir)
+//		{
+//			dir = dir.normalized;
+//			float longitude = Mathf.Atan2(dir.x, dir.z);
+//			float latitude = Mathf.Asin(dir.y);
+
+//			float u = (longitude / (Mathf.PI * 2f)) + 0.5f;
+//			float v = (latitude / Mathf.PI) + 0.5f;
+
+//			return new Vector2(u, v);
+//		}
+//	}
+//}

@@ -1,7 +1,9 @@
 // Copyright 2019 massivehadron.com ltd. created 11/07/2019 by Andrew Cakebread
+// Updated for Unity New Input System - Direct Device Access + original scaling restored
 
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 
 namespace MassiveHadronLtd
 {
@@ -10,7 +12,7 @@ namespace MassiveHadronLtd
 		public float lookSpeedH = 2f;
 		public float lookSpeedV = 2f;
 		public float zoomSpeed = 12f;
-		public float dragSpeed = 18f;
+		public float dragSpeed = 18f;   // kept for future compatibility
 
 		private float yaw;
 		private float pitch;
@@ -23,82 +25,96 @@ namespace MassiveHadronLtd
 			pitch = transform.eulerAngles.x;
 			dragging = false;
 			skipNextScroll = false;
-
-			// Ensure EventSystem exists
-			if (!FindAnyObjectByType<EventSystem>()) new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
 		}
 
 		private void OnApplicationFocus(bool hasFocus)
 		{
-			if (hasFocus) skipNextScroll = true; // Skip scroll delta on first frame after focus
+			if (hasFocus)
+				skipNextScroll = true;
 		}
 
 		private void Update()
 		{
 			bool wasDragging = dragging;
 
-			// Handle mouse button down to start dragging
-			if ((Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1)) &&
-				!EventSystem.current.IsPointerOverGameObject())
+			// Start dragging (Left or Right mouse button, not over UI)
+			if ((Mouse.current.leftButton.wasPressedThisFrame || Mouse.current.rightButton.wasPressedThisFrame) &&
+				!IsPointerOverUI())
 			{
 				dragging = true;
-				// Update yaw and pitch to current camera rotation when dragging starts
 				yaw = transform.eulerAngles.y;
 				pitch = transform.eulerAngles.x;
 			}
 
-			// Get mouse or touch input
-			float pointerX = Input.GetAxis("Mouse X");
-			float pointerY = Input.GetAxis("Mouse Y");
-			if (Input.touchCount > 0)
-			{
-				pointerX = Input.touches[0].deltaPosition.x * 0.05f;
-				pointerY = Input.touches[0].deltaPosition.y * 0.05f;
-			}
-
-			// Handle camera rotation (skip deltas on first frame of drag)
-			if (dragging && wasDragging && (Input.touchCount > 0 || Input.GetMouseButton(0) || Input.GetMouseButton(1)))
-			{
-				yaw += lookSpeedH * pointerX;
-				pitch -= lookSpeedV * pointerY;
-				transform.eulerAngles = new Vector3(pitch, yaw, 0f);
-			}
-			else if (!(Input.touchCount > 0 || Input.GetMouseButton(0) || Input.GetMouseButton(1)))
+			// Stop dragging
+			if (!Mouse.current.leftButton.isPressed && !Mouse.current.rightButton.isPressed)
 			{
 				dragging = false;
 			}
 
-			// Zoom with mouse wheel
-			if (insideWindow())
+			// === Rotation while dragging ===
+			if (dragging && wasDragging)
 			{
-				float scroll = skipNextScroll ? 0f : Input.GetAxis("Mouse ScrollWheel");
-				transform.Translate(0, 0, scroll * zoomSpeed, Space.Self);
-				skipNextScroll = false; // Reset after scroll handling
+				Vector2 delta = Mouse.current.delta.ReadValue();
+
+				// Touch support with your original scaling
+				if (Touchscreen.current != null && Touchscreen.current.primaryTouch.press.isPressed)
+				{
+					delta = Touchscreen.current.primaryTouch.delta.ReadValue() * 0.05f;
+				}
+				else
+				{
+					// Mouse scaling to match old Input.GetAxis("Mouse X/Y") behavior
+					// Old system applied ~0.05f internally on Windows for Mouse X/Y
+					delta *= 0.05f;
+				}
+
+				yaw += lookSpeedH * delta.x;
+				pitch -= lookSpeedV * delta.y;
+
+				transform.eulerAngles = new Vector3(pitch, yaw, 0f);
 			}
 
-			// Translation
+			// === Zoom with mouse scroll ===
+			if (InsideWindow())
+			{
+				float scroll = skipNextScroll ? 0f : Mouse.current.scroll.ReadValue().y;
+				transform.Translate(0, 0, scroll * zoomSpeed, Space.Self);
+				skipNextScroll = false;
+			}
+
+			// === Keyboard translation (WASD + Q/E) ===
 			Vector3 translation = GetInputTranslationDirection() * zoomSpeed * Time.deltaTime;
 			transform.Translate(translation, Space.Self);
 		}
 
-		private bool insideWindow()
+		private bool IsPointerOverUI()
 		{
-			Vector3 mousePosition = Input.mousePosition;
-			return mousePosition.x >= 0 && mousePosition.x <= Screen.width && mousePosition.y >= 0 && mousePosition.y <= Screen.height;
+			if (EventSystem.current == null) return false;
+			return EventSystem.current.IsPointerOverGameObject();
+		}
+
+		private bool InsideWindow()
+		{
+			Vector2 mousePos = Mouse.current.position.ReadValue();
+			return mousePos.x >= 0 && mousePos.x <= Screen.width &&
+				   mousePos.y >= 0 && mousePos.y <= Screen.height;
 		}
 
 		private Vector3 GetInputTranslationDirection()
 		{
 			Vector3 direction = Vector3.zero;
-			if (Input.GetKey(KeyCode.W)) direction += Vector3.forward;
-			if (Input.GetKey(KeyCode.S)) direction += Vector3.back;
-			if (Input.GetKey(KeyCode.A)) direction += Vector3.left;
-			if (Input.GetKey(KeyCode.D)) direction += Vector3.right;
-			if (Input.GetKey(KeyCode.Q)) direction += Vector3.down;
-			if (Input.GetKey(KeyCode.E)) direction += Vector3.up;
+			var kb = Keyboard.current;
 
-			// Apply 5x speed multiplier when shift is held
-			if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) direction *= 5f;
+			if (kb.wKey.isPressed) direction += Vector3.forward;
+			if (kb.sKey.isPressed) direction += Vector3.back;
+			if (kb.aKey.isPressed) direction += Vector3.left;
+			if (kb.dKey.isPressed) direction += Vector3.right;
+			if (kb.qKey.isPressed) direction += Vector3.down;
+			if (kb.eKey.isPressed) direction += Vector3.up;
+
+			if (kb.leftShiftKey.isPressed || kb.rightShiftKey.isPressed)
+				direction *= 5f;
 
 			return direction;
 		}
