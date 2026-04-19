@@ -56,9 +56,11 @@ MonoBehaviour:
   fadeStartTime: 0.9
   enablePhysics: 1
   gravity: 10
-  airFriction: 0
-  velocityBias: {x: 0, y: 2, z: 0}
-  velocityMagnitude: {x: 2, y: 4, z: 2}
+  airFriction: 0.895
+  velocityScalarRange:
+    min: 4
+    max: 8
+  spreadApexAngle: 20
   enableCollision: 1
   groundHeight: 0.2
   bounceFriction: 0.2
