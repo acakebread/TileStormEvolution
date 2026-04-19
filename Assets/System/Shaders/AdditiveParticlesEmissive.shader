@@ -80,7 +80,7 @@
                     emissionMask = texColor.a;
                 #endif
 
-                half3 emission = emissionMask * _EmissionColor.rgb * _EmissionBoost * IN.color.a;  // ← key change: * IN.color.a
+                half3 emission = emissionMask * _EmissionColor.rgb * _EmissionBoost * IN.color.a;  // alternative half3 emission = emissionMask * _EmissionColor.rgb * _EmissionBoost * baseColor.a;
 
                 half3 finalColor = baseColor.rgb + emission;
 
