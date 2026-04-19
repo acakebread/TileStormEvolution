@@ -161,8 +161,6 @@ MonoBehaviour:
   enablePhysics: 0
   gravity: 0
   airFriction: 0.01
-  velocityBias: {x: 0, y: 0, z: 0}
-  velocityMagnitude: {x: 0, y: 0, z: 0}
   velocityScalarRange:
     min: 1
     max: 1
@@ -289,7 +287,7 @@ GameObject:
   m_Component:
   - component: {fileID: 640021365}
   - component: {fileID: 640021364}
-  m_Layer: 1
+  m_Layer: 6
   m_Name: ParticleControllerDebugVelocity
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -321,8 +319,6 @@ MonoBehaviour:
   enablePhysics: 1
   gravity: 0
   airFriction: 0
-  velocityBias: {x: 0, y: 0, z: 0}
-  velocityMagnitude: {x: 1, y: 1, z: 1}
   velocityScalarRange:
     min: 9
     max: 11
@@ -423,8 +419,6 @@ MonoBehaviour:
   enablePhysics: 0
   gravity: 0
   airFriction: 0.01
-  velocityBias: {x: 0, y: 0, z: 0}
-  velocityMagnitude: {x: 0, y: 0, z: 0}
   velocityScalarRange:
     min: 1
     max: 1
@@ -549,8 +543,6 @@ MonoBehaviour:
   enablePhysics: 1
   gravity: 10
   airFriction: 0.01
-  velocityBias: {x: 0, y: -0.5, z: 0}
-  velocityMagnitude: {x: 1, y: 0.1, z: 0.5}
   velocityScalarRange:
     min: 1
     max: 1
@@ -828,8 +820,6 @@ MonoBehaviour:
   enablePhysics: 1
   gravity: 0
   airFriction: 0
-  velocityBias: {x: 0, y: 0, z: 12}
-  velocityMagnitude: {x: 0, y: 0, z: 0}
   velocityScalarRange:
     min: 1
     max: 1
@@ -1253,8 +1243,6 @@ MonoBehaviour:
   enablePhysics: 1
   gravity: -2
   airFriction: 0
-  velocityBias: {x: 0, y: 0.1, z: 0}
-  velocityMagnitude: {x: 0.2, y: 0.6, z: 0.2}
   velocityScalarRange:
     min: 0.2
     max: 0.4
@@ -1513,8 +1501,6 @@ MonoBehaviour:
   enablePhysics: 1
   gravity: -1
   airFriction: 0.02
-  velocityBias: {x: 0, y: 0, z: 0}
-  velocityMagnitude: {x: 0.5, y: 0, z: 0.5}
   velocityScalarRange:
     min: 1
     max: 1
