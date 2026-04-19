@@ -313,7 +313,7 @@ MonoBehaviour:
   lifetimeVariation: 0
   useThreeZoneSlicing: 1
   particleMaterial: {fileID: 2100000, guid: 02223f9d74ca8f74999a27cdc04e130f, type: 2}
-  color: {r: 0, g: 0.18928158, b: 1, a: 1}
+  color: {r: 1, g: 1, b: 1, a: 1}
   radius: 0.03
   fadeStartTime: 0.5
   enablePhysics: 1
@@ -537,7 +537,7 @@ MonoBehaviour:
   lifetimeVariation: 0.5
   useThreeZoneSlicing: 1
   particleMaterial: {fileID: 2100000, guid: 02223f9d74ca8f74999a27cdc04e130f, type: 2}
-  color: {r: 0, g: 0.1882353, b: 1, a: 1}
+  color: {r: 1, g: 1, b: 1, a: 1}
   radius: 0.01
   fadeStartTime: 0.49
   enablePhysics: 1
