@@ -1,4 +1,4 @@
-Shader "MassiveHadronLtd/Unlit/AdditiveParticlesEmissive"
+﻿Shader "MassiveHadronLtd/Unlit/AdditiveParticlesEmissive"
 {
     Properties
     {
@@ -65,21 +65,22 @@ Shader "MassiveHadronLtd/Unlit/AdditiveParticlesEmissive"
             half4 frag(Varyings IN) : SV_Target
             {
                 half4 texColor = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv);
-                half4 baseColor = IN.color * texColor;
-                baseColor.rgb *= IN.color.a; // Vertex alpha fade
-
-                // Determine emission mask
+                half4 baseColor = IN.color * texColor;           // includes vertex color (RGB + A)
+    
+                // Fade both base and emission using vertex alpha
+                baseColor.rgb *= IN.color.a;                     // same as your non-emissive shader
+    
+                // Determine emission mask (unchanged)
                 half emissionMask = 1.0;
 
-                #if defined(_EMISSIONMAP) // Unity defines this only if a texture is assigned
+                #if defined(_EMISSIONMAP)
                     half4 emissionTex = SAMPLE_TEXTURE2D(_EmissionMap, sampler_EmissionMap, TRANSFORM_TEX(IN.uv, _EmissionMap));
-                    emissionMask = dot(emissionTex.rgb, 0.333); // Luminance (or use .a if mask in alpha)
+                    emissionMask = dot(emissionTex.rgb, 0.333);  // or use .a if you prefer
                 #else
-                    // Default: use base texture alpha as mask (perfect for soft particles)
                     emissionMask = texColor.a;
                 #endif
 
-                half3 emission = emissionMask * _EmissionColor.rgb * _EmissionBoost;
+                half3 emission = emissionMask * _EmissionColor.rgb * _EmissionBoost * IN.color.a;  // ← key change: * IN.color.a
 
                 half3 finalColor = baseColor.rgb + emission;
 
