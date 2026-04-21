@@ -346,7 +346,7 @@ namespace ClassicTilestorm
 			else
 			{
 				var skyMat = SkyboxUtility.GetSkyboxMaterialForName(currentClone.skybox);
-				currentClone.SkyVec = EquirectangularCubemapUtility.FindLightDirection(CubemapUtility.GetTintedCubemap(skyMat), scanAboveHorizonOnly: true);
+				currentClone.SkyVec = LinearCubemapUtility.FindLightDirection(CubemapUtility.GetTintedCubemap(skyMat), scanAboveHorizonOnly: true);
 			}
 			currentClone.UpdateLighting();
 			UpdateMapPreview();
@@ -363,15 +363,19 @@ namespace ClassicTilestorm
 			if (null != skyboxPanel)
 			{
 				var skyMat = SkyboxUtility.GetSkyboxMaterialForName(currentClone.skybox);
-				var sourceCubemap = CubemapUtility.GetTintedCubemap(skyMat);
-				var skyboxTexture = null != sourceCubemap ? EquirectangularCubemapUtility.Create(sourceCubemap, width: 512, height: 256) : null;
 
 				var tex_coord = new Vector2(0.5f, 0.75f);
 				if (null != currentClone.skyvec)
 					tex_coord = EquirectangularCubemapUtility.DirectionToUV(-currentClone.SkyVec);
 				else
-					tex_coord = null != skyboxTexture ? ImageProcessing.FindSunUV(skyboxTexture, scanAboveHorizonOnly: true) : new Vector2(0.5f, 0.75f);
+				{
+					//use linear cubemap for automatic detection as it produces better results
+					var lDir = LinearCubemapUtility.FindLightDirection(CubemapUtility.GetTintedCubemap(skyMat), scanAboveHorizonOnly: true);
+					tex_coord = EquirectangularCubemapUtility.DirectionToUV(-lDir);
+				}
 
+				var sourceCubemap = CubemapUtility.GetTintedCubemap(skyMat);
+				var skyboxTexture = null != sourceCubemap ? EquirectangularCubemapUtility.Create(sourceCubemap, width: 512, height: 256) : null;
 				skyboxPanel.SetInitialSkybox(skyboxTexture, tex_coord, onUpdate: normalizedUV =>
 				{
 					currentClone.SkyVec = -EquirectangularCubemapUtility.UVToDirection(normalizedUV);

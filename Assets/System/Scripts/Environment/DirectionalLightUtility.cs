@@ -88,9 +88,7 @@ namespace MassiveHadronLtd
 			}
 			else
 			{
-				//lightDir = AtlasCubemapUtility.FindLightDirection(cubemap);
-				lightDir = EquirectangularCubemapUtility.FindLightDirection(cubemap, scanAboveHorizonOnly: true);
-				//lightDir = LinearCubemapUtility.FindLightDirection(cubemap);
+				lightDir = LinearCubemapUtility.FindLightDirection(cubemap);
 
 				_cachedLightDirection = lightDir;
 				_lastCubemapForDirection = cubemap;
