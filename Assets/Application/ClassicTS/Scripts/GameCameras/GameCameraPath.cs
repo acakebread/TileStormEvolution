@@ -151,7 +151,7 @@ namespace ClassicTilestorm
 				bezierData.P2 += posDelta;
 
 				// Update camera dest position and FOV
-				localOrigin = MathUtil.QuadraticBezierPoint(easedSequenceTimer, bezierData.P0, bezierData.P1, bezierData.P2);
+				localOrigin = GeomUtils.QuadraticBezierPoint(easedSequenceTimer, bezierData.P0, bezierData.P1, bezierData.P2);
 				fieldOfView = Mathf.Lerp(FovMin, currentFovMax, SmoothingUtils.EasePingPong(sequenceTimer / sequenceDuration));
 			}
 			else

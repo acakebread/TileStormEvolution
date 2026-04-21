@@ -443,20 +443,9 @@ namespace ClassicTilestorm
 		public static bool RayToWorld(Ray ray, out Vector3 point)
 		{
 			point = Vector3.zero;
-			if (RayToPlane(ray, new Plane(Vector3.up, Vector3.zero), out Vector3 result))
+			if (GeomUtils.RayToPlane(ray, new Plane(Vector3.up, Vector3.zero), out Vector3 result))
 			{
-				point = result;
-				return true;
-			}
-			return false;
-		}
-
-		public static bool RayToPlane(Ray ray, Plane plane, out Vector3 point)
-		{
-			point = Vector3.zero;
-			if (plane.Raycast(ray, out float d))
-			{
-				point = (ray.GetPoint(d) - ORIGIN).Rounded(2);
+				point = (result - ORIGIN).Rounded(2);
 				return true;
 			}
 			return false;
@@ -465,9 +454,11 @@ namespace ClassicTilestorm
 		public static Vector3 ScreenToWorld(Camera camera, Vector3 screenPos, float offset = 0f)
 		{
 			if (null == camera) return Vector3.negativeInfinity;
-			var plane = new Plane(Vector3.up, Vector3.up * offset);
-			RayToPlane(camera.ScreenPointToRay(screenPos), plane, out Vector3 result);
-			return result;
+
+			if (GeomUtils.RayToPlane(camera.ScreenPointToRay(screenPos), new Plane(Vector3.up, Vector3.up * offset), out Vector3 result))
+				return (result - ORIGIN).Rounded(2);
+
+			return Vector3.negativeInfinity;
 		}
 
 		public static Vector3 CameraToWorld(Camera camera, Vector3 direction = default)

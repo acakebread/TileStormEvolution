@@ -7,6 +7,51 @@ namespace MassiveHadronLtd
 {
 	public static class GeomUtils
 	{
+		public static bool RayToWorld(Ray ray, out Vector3 point)
+		{
+			point = Vector3.zero;
+			if (RayToPlane(ray, new Plane(Vector3.up, Vector3.zero), out Vector3 result))
+			{
+				point = result;
+				return true;
+			}
+			return false;
+		}
+
+		public static bool RayToPlane(Ray ray, Plane plane, out Vector3 point)
+		{
+			point = Vector3.zero;
+			if (plane.Raycast(ray, out float d))
+			{
+				point = ray.GetPoint(d);
+				return true;
+			}
+			return false;
+		}
+
+		public static Vector3 RandomInEllipsoid(Vector3 ellipse)
+		{
+			// Generate a random direction uniformly
+			Vector3 dir = UnityEngine.Random.onUnitSphere;
+
+			// Generate a radius uniformly by volume
+			float r = Mathf.Pow(UnityEngine.Random.value, 1f / 3f);
+
+			// Scale direction by radius to get a point inside a unit sphere
+			Vector3 p = dir * r;
+
+			// Apply the ellipsoidal scaling *after* normalization
+			return Vector3.Scale(p, ellipse);
+		}
+
+		public static Vector3 QuadraticBezierPoint(float t, Vector3 p0, Vector3 p1, Vector3 p2)
+		{
+			var u = 1f - t;
+			var tt = t * t;
+			var uu = u * u;
+			return uu * p0 + 2f * u * t * p1 + tt * p2;
+		}
+
 		/// <summary>
 		/// Triangulates a quad (a,b,c,d) choosing the diagonal that produces 
 		/// the shortest split. Assumes vertices are in order (convex quad).
