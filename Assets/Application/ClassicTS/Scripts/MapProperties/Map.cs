@@ -429,23 +429,15 @@ namespace ClassicTilestorm
 		public static Vector3 FullFloorVec(Vector3 vec) => new(Mathf.FloorToInt(vec.x), vec.y, Mathf.FloorToInt(vec.z));
 		public static Vector3 HalfFloorVec(Vector3 vec) => new(Mathf.FloorToInt(vec.x * 2f) * 0.5f, vec.y, Mathf.FloorToInt(vec.z * 2f) * 0.5f);
 
-		private static readonly Vector3 HALF_TILE = new(0.5f, 0f, 0.5f);
-#if UNITY_EDITOR
-		private static readonly Vector3 OFFSET = HALF_TILE;
-#else
-        private static readonly Vector3 OFFSET = Vector3.zero;
-#endif
-		public static readonly Vector3 ORIGIN = OFFSET - HALF_TILE;
-
-		public static Vector3 WorldToRender(Vector3 value) => value + OFFSET;
-		public static Vector3 RenderToWorld(Vector3 value) => value - OFFSET;
+		public static Vector3 WorldToRender(Vector3 value) => TileOriginShift.WorldToRender(value);
+		public static Vector3 RenderToWorld(Vector3 value) => TileOriginShift.RenderToWorld(value);
 
 		public static bool RayToWorld(Ray ray, out Vector3 point)
 		{
 			point = Vector3.zero;
 			if (GeomUtils.RayToPlane(ray, new Plane(Vector3.up, Vector3.zero), out Vector3 result))
 			{
-				point = (result - ORIGIN).Rounded(2);
+				point = TileOriginShift.AdjustRaycastResult(result);
 				return true;
 			}
 			return false;
@@ -455,8 +447,12 @@ namespace ClassicTilestorm
 		{
 			if (null == camera) return Vector3.negativeInfinity;
 
-			if (GeomUtils.RayToPlane(camera.ScreenPointToRay(screenPos), new Plane(Vector3.up, Vector3.up * offset), out Vector3 result))
-				return (result - ORIGIN).Rounded(2);
+			if (GeomUtils.RayToPlane(camera.ScreenPointToRay(screenPos),
+									 new Plane(Vector3.up, Vector3.up * offset),
+									 out Vector3 result))
+			{
+				return TileOriginShift.AdjustRaycastResult(result);
+			}
 
 			return Vector3.negativeInfinity;
 		}

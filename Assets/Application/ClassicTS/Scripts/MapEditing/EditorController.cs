@@ -93,7 +93,7 @@ namespace ClassicTilestorm
 		{
 			AdjustSelectionOrigin(Vector3.up * (value - editAltitude));
 			editAltitude = value;
-			GridLinesUtil.UpdateOffset(Map.ORIGIN + Vector3.up * editAltitude);
+			GridLinesUtil.UpdateOffset(TileOriginShift.AdjustVisualOffset(Vector3.up * editAltitude));
 		}
 
 		private void AdjustSelectionOrigin(Vector3 delta)
@@ -108,7 +108,7 @@ namespace ClassicTilestorm
 		{
 			ReadyCallbackRegistry.RegisterFor<EditorScreenUI>(ui => ui.Receiver = this);
 			ReadyCallbackRegistry.RegisterFor<TileSelector>(sel => sel.Receiver = this);
-			GridLinesUtil.Initialise(transform, offset : Map.ORIGIN + Vector3.up * editAltitude);
+			GridLinesUtil.Initialise(transform, offset: TileOriginShift.AdjustVisualOffset(Vector3.up * editAltitude));
 			OptionsPanel.onGridlinesToggle += value => GridLinesUtil.Enabled = value & isActiveAndEnabled;
 		}
 
