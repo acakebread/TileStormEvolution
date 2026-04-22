@@ -140,7 +140,7 @@ namespace ClassicTilestorm
 			if (iMap == null)
 				return (new Vector3(0f, 1f, -1f), Vector3.zero);
 
-			var dstPos = new Vector3(iMap.Width, 0f, iMap.Height) * 0.5f;
+			var dstPos = TileOriginShift.AdjustVisualOffset(new Vector3(iMap.Width, 0f, iMap.Height) * 0.5f);
 			var aspect = Camera.main?.aspect ?? Screen.height / (float)Screen.width;
 			var t = 1f / Mathf.Tan(fov * Mathf.Deg2Rad);
 			var distance = Mathf.Max(iMap.Height * t * aspect, iMap.Width * t);
