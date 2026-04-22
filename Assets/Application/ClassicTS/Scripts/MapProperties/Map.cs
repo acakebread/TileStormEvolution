@@ -66,6 +66,7 @@ namespace ClassicTilestorm
 		int CameraHitTile(Camera camera, Vector3 position);
 		Variant CameraHitVariant(Camera camera, Vector3 position);
 		Definition CameraHitDefinition(Camera camera, Vector3 position);
+		bool TryGetHitTile(Camera camera, Vector3 screenPos, out int logicalIndex, out int visualIndex);
 
 		Material SkyboxMaterial { get; }
 	}
@@ -328,6 +329,8 @@ namespace ClassicTilestorm
 		public bool Initialise(Transform parent = null, bool solved = false)
 		{
 			this.parent = parent;
+			EnsureMapRootComponent();
+
 			if (!InitialiseGraph())
 			{
 				Debug.LogWarning("Failed to create runtime tiles — map data invalid.");
@@ -380,6 +383,8 @@ namespace ClassicTilestorm
 				UnityEngine.Object.DestroyImmediate(tintedCubemap);
 
 			state = null;
+
+			RemoveMapRootComponent();
 
 			if (parent != null)
 				parent = null;
@@ -452,5 +457,31 @@ namespace ClassicTilestorm
 			skybox: SkyboxMaterial,
 			ambientProbe: default,
 			subtractiveShadowColor: UnityEngine.RenderSettings.subtractiveShadowColor);
+
+		// Inside public partial class Map
+		private MapRoot _mapRootComponent;
+
+		private void EnsureMapRootComponent()
+		{
+			if (parent == null) return;
+
+			_mapRootComponent = parent.GetComponent<MapRoot>();
+			if (_mapRootComponent == null)
+				_mapRootComponent = parent.gameObject.AddComponent<MapRoot>();
+
+			_mapRootComponent.Initialise(this);
+		}
+
+		private void RemoveMapRootComponent()
+		{
+			if (_mapRootComponent != null)
+			{
+				if (Application.isPlaying)
+					UnityEngine.Object.Destroy(_mapRootComponent);
+				else
+					UnityEngine.Object.DestroyImmediate(_mapRootComponent);
+				_mapRootComponent = null;
+			}
+		}
 	}
 }

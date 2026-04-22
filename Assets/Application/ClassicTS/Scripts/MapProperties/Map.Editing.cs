@@ -33,7 +33,8 @@ namespace ClassicTilestorm
 			tiles[index] = tableIndex;
 			var _graph = graph;
 			_graph[index].Dispose();
-			_graph[index] = CreateTile(variants[tableIndex], parent, TileRenderPosition(index));
+			//_graph[index] = CreateTile(variants[tableIndex], parent, TileRenderPosition(index));
+			_graph[index] = CreateTile(variants[tableIndex], parent, index);
 			RefreshAttachments(GetAttachments(tileIndex: index));
 
 			OnMapEdited?.Invoke(this, false, Vector3.zero);

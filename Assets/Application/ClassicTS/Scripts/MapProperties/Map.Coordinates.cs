@@ -3,6 +3,12 @@ using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
+	public class TileColliderInfo : MonoBehaviour
+	{
+		[HideInInspector] public Map Map;           // strong reference to the owning Map (partial class)
+		[HideInInspector] public int VisualIndex = -1;   // index into _graph[] — this is stable
+	}
+
 	public partial class Map
 	{
 		public static Vector3 FullFloorVec(Vector3 vec) => new(Mathf.FloorToInt(vec.x), vec.y, Mathf.FloorToInt(vec.z));
@@ -71,6 +77,33 @@ namespace ClassicTilestorm
 				return variants[tableIdx].hash;
 
 			return 0;
+		}
+
+		public bool TryGetHitTile(Camera camera, Vector3 screenPos, out int logicalIndex, out int visualIndex)
+		{
+			logicalIndex = visualIndex = -1;
+			if (camera == null) return false;
+
+			Ray ray = camera.ScreenPointToRay(screenPos);
+
+			// Raycast against everything (no layer mask) and check for our component
+			if (Physics.Raycast(ray, out RaycastHit hit, 1000f))
+			{
+				var info = hit.collider.GetComponentInParent<TileColliderInfo>();
+				if (info != null && info.Map == this)
+				{
+					visualIndex = info.VisualIndex;
+					logicalIndex = state != null && visualIndex >= 0 && visualIndex < state.Length
+						? state[visualIndex]
+						: visualIndex;
+					return true;
+				}
+			}
+
+			// Fallback to plane method (your original behaviour for empty space)
+			Vector3 worldPos = ScreenToWorld(camera, screenPos);
+			logicalIndex = VectorToIndex(worldPos);
+			return logicalIndex >= 0;
 		}
 	}
 }
