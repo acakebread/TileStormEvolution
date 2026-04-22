@@ -222,12 +222,12 @@
         "com.unity.modules.imgui": "1.0.0"
       }
     },
-    "jillejr.newtonsoft.json-for-unity": {
-      "version": "https://github.com/jilleJr/Newtonsoft.Json-for-Unity.git#upm",
+    "com.unity.nuget.newtonsoft-json": {
+      "version": "3.2.1",
       "depth": 0,
-      "source": "git",
+      "source": "registry",
       "dependencies": {},
-      "hash": "f2c6cb09817832dccd0600f291053d8d55298ee9"
+      "url": "https://packages.unity.com"
     },
     "com.unity.modules.accessibility": {
       "version": "1.0.0",
