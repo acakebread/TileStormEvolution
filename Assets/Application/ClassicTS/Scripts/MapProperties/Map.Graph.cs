@@ -117,30 +117,48 @@ namespace ClassicTilestorm
 
 			foreach (var meshFilter in root.GetComponentsInChildren<MeshFilter>(true))
 			{
-				if (meshFilter.sharedMesh == null) continue;
-				var meshCollider = meshFilter.GetComponent<MeshCollider>();
-				if (meshCollider == null)
-					meshCollider = meshFilter.gameObject.AddComponent<MeshCollider>();
-
-				meshCollider.sharedMesh = meshFilter.sharedMesh;
-				meshCollider.convex = false;
-				attachedAny = true;
+				attachedAny |= EnsurePickCollider(meshFilter.gameObject, meshFilter.sharedMesh);
 			}
 
 			foreach (var skinnedRenderer in root.GetComponentsInChildren<SkinnedMeshRenderer>(true))
 			{
-				if (skinnedRenderer.sharedMesh == null) continue;
-				var meshCollider = skinnedRenderer.GetComponent<MeshCollider>();
-				if (meshCollider == null)
-					meshCollider = skinnedRenderer.gameObject.AddComponent<MeshCollider>();
-
-				meshCollider.sharedMesh = skinnedRenderer.sharedMesh;
-				meshCollider.convex = false;
-				attachedAny = true;
+				attachedAny |= EnsurePickCollider(skinnedRenderer.gameObject, skinnedRenderer.sharedMesh, skinnedRenderer.localBounds);
 			}
 
 			if (!attachedAny)
 				Debug.LogWarning($"No mesh found on tile at visualIndex {visualIndex} - skipping collider.");
+		}
+
+		private static bool EnsurePickCollider(GameObject target, Mesh mesh, Bounds? fallbackBounds = null)
+		{
+			if (target == null) return false;
+
+			// If the prefab already supplies a collider, keep using it.
+			if (target.GetComponent<Collider>() != null)
+				return true;
+
+			if (mesh != null && mesh.isReadable)
+			{
+				var meshCollider = target.GetComponent<MeshCollider>();
+				if (meshCollider == null)
+					meshCollider = target.AddComponent<MeshCollider>();
+
+				meshCollider.sharedMesh = mesh;
+				meshCollider.convex = false;
+				return true;
+			}
+
+			if (mesh == null && fallbackBounds == null)
+				return false;
+
+			var bounds = fallbackBounds ?? mesh.bounds;
+			var boxCollider = target.GetComponent<BoxCollider>();
+			if (boxCollider == null)
+				boxCollider = target.AddComponent<BoxCollider>();
+
+			boxCollider.center = bounds.center;
+			boxCollider.size = bounds.size;
+			return true;
 		}
 
 		private void RecreateTiles()
