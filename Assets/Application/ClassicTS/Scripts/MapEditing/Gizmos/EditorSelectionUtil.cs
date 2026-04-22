@@ -42,13 +42,17 @@ namespace ClassicTilestorm
 			if (go == null) return null;
 
 			go.name = "HighlightMesh";
-
-			// Remove any colliders
-			foreach (var col in go.GetComponentsInChildren<Collider>())
-				Object.DestroyImmediate(col);
-
-			// Optional: could store variant/def here if needed later, but we avoid it for simplicity
 			return go;
+		}
+
+		public static void SyncPickCollider(IMapEdit map, GameObject highlightMesh, int logicalIndex)
+		{
+			if (highlightMesh == null || logicalIndex < 0) return;
+
+			var concreteMap = map as Map;
+			if (concreteMap == null) return;
+
+			Map.AttachPickColliders(highlightMesh, concreteMap, logicalIndexOverride: logicalIndex);
 		}
 
 		/// <summary>
@@ -90,6 +94,7 @@ namespace ClassicTilestorm
 			Vector3 renderPos = Map.WorldToRender(worldPos);
 
 			Update(highlightMesh, variant, renderPos, outOfBounds, isSelectedOrDragging);
+			SyncPickCollider(map, highlightMesh, mapIndex);
 		}
 
 		public static void Destroy(GameObject highlightMesh)

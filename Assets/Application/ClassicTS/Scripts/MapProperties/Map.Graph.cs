@@ -80,7 +80,7 @@ namespace ClassicTilestorm
 			if (null == go) return;
 			var variant = GetVariantForIndex(index);
 			var def = ResourceManager.GetDefinition(variant.hash);
-			go.name = $"{def?.name ?? "??"} ({go.transform.position.x:F1},{go.transform.position.z:F1})+{variant.delta:F2}@{variant.angle:F1}°";
+			go.name = $"{def?.name ?? "??"} ({go.transform.position.x:F1},{go.transform.position.z:F1})+{variant.delta:F2}@{variant.angle:F1}deg";
 		}
 
 		//private Tile CreateTile(Variant variant, Transform parent, Vector3 renderPosition) => new Tile(variant, parent, renderPosition);
@@ -93,49 +93,54 @@ namespace ClassicTilestorm
 			var tile = new Tile(variant, parent, renderPosition);       // original clean Tile constructor
 
 			if (tile.gameObject != null)
-				AttachColliderInfo(tile.gameObject, visualIndex);
+				AttachPickColliders(tile.gameObject, mapRoot: parent != null ? parent.GetComponent<MapRoot>()?.Map : null, visualIndex);
 
 			return tile;
 		}
 
-		private void AttachColliderInfo(GameObject go, int visualIndex)
+		internal static void AttachPickColliders(GameObject root, Map mapRoot, int visualIndex = -1, int logicalIndexOverride = -1)
 		{
-			if (go == null) return;
-
-			var mapRoot = parent != null ? parent.GetComponent<MapRoot>() : null;
-			if (mapRoot?.Map == null)
+			if (root == null) return;
+			if (mapRoot == null)
 			{
 				Debug.LogWarning("Tile created without MapRoot component on parent.");
 				return;
 			}
 
 			// Add collider info
-			var info = go.GetComponent<TileColliderInfo>() ?? go.AddComponent<TileColliderInfo>();
-			info.Map = mapRoot.Map;
+			var info = root.GetComponent<TileColliderInfo>() ?? root.AddComponent<TileColliderInfo>();
+			info.Map = mapRoot;
 			info.VisualIndex = visualIndex;
+			info.LogicalIndexOverride = logicalIndexOverride;
 
-			// === SAFER MeshCollider setup ===
-			Mesh mesh = GetMainMesh(go);
-			if (mesh == null)
+			var attachedAny = false;
+
+			foreach (var meshFilter in root.GetComponentsInChildren<MeshFilter>(true))
 			{
-				Debug.LogWarning($"No mesh found on tile at visualIndex {visualIndex} — skipping collider.");
-				return;
+				if (meshFilter.sharedMesh == null) continue;
+				var meshCollider = meshFilter.GetComponent<MeshCollider>();
+				if (meshCollider == null)
+					meshCollider = meshFilter.gameObject.AddComponent<MeshCollider>();
+
+				meshCollider.sharedMesh = meshFilter.sharedMesh;
+				meshCollider.convex = false;
+				attachedAny = true;
 			}
 
-			var meshCollider = go.GetComponent<MeshCollider>();
-			if (meshCollider == null)
-				meshCollider = go.AddComponent<MeshCollider>();
+			foreach (var skinnedRenderer in root.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+			{
+				if (skinnedRenderer.sharedMesh == null) continue;
+				var meshCollider = skinnedRenderer.GetComponent<MeshCollider>();
+				if (meshCollider == null)
+					meshCollider = skinnedRenderer.gameObject.AddComponent<MeshCollider>();
 
-			meshCollider.sharedMesh = mesh;
-			meshCollider.convex = false;           // false = accurate shape (good for wedges, etc.)
-												   // meshCollider.convex = true;         // uncomment if you want faster but less accurate collisions
-		}
+				meshCollider.sharedMesh = skinnedRenderer.sharedMesh;
+				meshCollider.convex = false;
+				attachedAny = true;
+			}
 
-		private static Mesh GetMainMesh(GameObject go)
-		{
-			if (go == null) return null;
-			var meshFilter = go.GetComponentInChildren<MeshFilter>(true);
-			return meshFilter != null ? meshFilter.sharedMesh : null;
+			if (!attachedAny)
+				Debug.LogWarning($"No mesh found on tile at visualIndex {visualIndex} - skipping collider.");
 		}
 
 		private void RecreateTiles()
@@ -150,7 +155,7 @@ namespace ClassicTilestorm
 
 			if (graphCount == 0)
 			{
-				Debug.LogError("RefreshGeometry failed — could not recreate tiles.");
+				Debug.LogError("RefreshGeometry failed - could not recreate tiles.");
 				return;
 			}
 
