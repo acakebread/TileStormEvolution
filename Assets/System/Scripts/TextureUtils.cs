@@ -4,6 +4,106 @@ namespace MassiveHadronLtd
 {
 	public static class TextureUtils
 	{
+		public static float ToLuminance(this Color color)
+		{
+			return color.r * 0.2126f + color.g * 0.7152f + color.b * 0.0722f;
+		}
+
+		public static Color ToLuminanceTint(this Color source, Color tint, float brightnessMultiplier = 1f)
+		{
+			float luminance = source.ToLuminance() * brightnessMultiplier;
+			return new Color(
+				tint.r * luminance,
+				tint.g * luminance,
+				tint.b * luminance,
+				source.a * tint.a);
+		}
+
+		public static Texture2D CloneMonochrome(this Texture source, float brightnessMultiplier = 1f)
+		{
+			if (source == null) return null;
+
+			Texture2D readableSource = null;
+
+			if (source is Texture2D tex2D)
+			{
+				if (tex2D.isReadable)
+				{
+					readableSource = tex2D;
+				}
+				else
+				{
+					RenderTexture rt = RenderTexture.GetTemporary(
+						tex2D.width,
+						tex2D.height,
+						0,
+						RenderTextureFormat.Default,
+						RenderTextureReadWrite.sRGB);
+
+					try
+					{
+						Graphics.Blit(tex2D, rt);
+						RenderTexture previous = RenderTexture.active;
+						RenderTexture.active = rt;
+
+						readableSource = new Texture2D(tex2D.width, tex2D.height, TextureFormat.RGBA32, false)
+						{
+							wrapMode = tex2D.wrapMode,
+							filterMode = tex2D.filterMode,
+							anisoLevel = tex2D.anisoLevel,
+							name = tex2D.name + " (Readable)",
+							hideFlags = HideFlags.HideAndDontSave
+						};
+
+						readableSource.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0);
+						readableSource.Apply();
+						RenderTexture.active = previous;
+					}
+					finally
+					{
+						RenderTexture.ReleaseTemporary(rt);
+					}
+				}
+			}
+
+			if (readableSource == null) return null;
+
+			var pixels = readableSource.GetPixels();
+			var monochrome = new Texture2D(readableSource.width, readableSource.height, TextureFormat.RGBA32, false)
+			{
+				wrapMode = readableSource.wrapMode,
+				filterMode = readableSource.filterMode,
+				anisoLevel = readableSource.anisoLevel,
+				name = readableSource.name + " (Monochrome)",
+				hideFlags = HideFlags.HideAndDontSave
+			};
+
+			for (int i = 0; i < pixels.Length; i++)
+			{
+				float luminance = pixels[i].ToLuminance();
+
+				// Remap luminance so mid/dark values aren't crushed
+				// This keeps black = black, white = white, but lifts everything in between
+				luminance = Mathf.Lerp(0.25f, 1f, luminance);
+
+				// Optional perceptual shaping (very mild, keeps behaviour stable)
+				luminance = Mathf.Pow(luminance, 0.9f);
+
+				// Apply brightness multiplier LAST so default (1) is neutral
+				luminance *= brightnessMultiplier;
+
+				pixels[i] = new Color(luminance, luminance, luminance, pixels[i].a);
+			}
+
+			monochrome.SetPixels(pixels);
+			monochrome.Apply();
+
+			if (!ReferenceEquals(readableSource, source))
+				Object.Destroy(readableSource);
+
+			return monochrome;
+		}
+
 		/// <summary>
 		/// Drop-in seamless replacement for GeneratePerlinNoiseTexture.
 		/// Ignores Perlin limitations and produces a tileable noise texture

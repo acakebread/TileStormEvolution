@@ -317,6 +317,60 @@ namespace MassiveHadronLtd
 			}
 		}
 
+		public static void CloneAndTintMaterials(
+			this GameObject root,
+			Color tintMultiplier,
+			bool includeInactive = true,
+			float brightnessMultiplier = 1f)
+		{
+			if (root == null) return;
+
+			var renderers = root.GetComponentsInChildren<Renderer>(includeInactive);
+
+			foreach (var renderer in renderers)
+			{
+				if (renderer == null) continue;
+
+				var original = renderer.sharedMaterials;
+				if (original == null || original.Length == 0) continue;
+
+				var replacementArray = new Material[original.Length];
+
+				for (int i = 0; i < original.Length; i++)
+				{
+					if (original[i] == null)
+					{
+						replacementArray[i] = null;
+						continue;
+					}
+
+					var copy = new Material(original[i]);
+					copy.mainTexture = original[i].mainTexture.CloneMonochrome(brightnessMultiplier);
+					copy.color = new Color(
+						tintMultiplier.r,
+						tintMultiplier.g,
+						tintMultiplier.b,
+						tintMultiplier.a * original[i].color.a);
+					copy.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+
+					if (copy.HasProperty("_Surface"))
+						copy.SetFloat("_Surface", 1f);
+					if (copy.HasProperty("_SrcBlend"))
+						copy.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+					if (copy.HasProperty("_DstBlend"))
+						copy.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+					if (copy.HasProperty("_ZWrite"))
+						copy.SetFloat("_ZWrite", 0f);
+
+					copy.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+					copy.SetOverrideTag("RenderType", "Transparent");
+					replacementArray[i] = copy;
+				}
+
+				renderer.materials = replacementArray;
+			}
+		}
+
 
 		/// <summary>
 		/// Applies a tinted highlight to all renderers under this GameObject by creating copies

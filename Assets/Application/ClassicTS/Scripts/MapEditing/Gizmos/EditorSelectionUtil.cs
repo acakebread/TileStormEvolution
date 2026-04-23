@@ -5,20 +5,71 @@ namespace ClassicTilestorm
 {
 	public static class EditorSelectionUtil
 	{
-		private static Material s_validMaterial;
-		private static Material s_invalidMaterial;
-		private static Material s_selectedMaterial;
+		private static readonly Color HighlightTint = new Color(1.4f, 1.25f, 0.85f, 0.6f);
 
-		private static void EnsureMaterials()
+		private static void DestroyRuntimeMaterials(Renderer renderer)
 		{
-			if (s_validMaterial != null) return;
+			if (renderer == null) return;
 
-			s_validMaterial = MaterialUtils.CreateAlwaysOnTopUnlitMaterial(new Color(1f, 1f, 1f, 0.5f));
-			s_invalidMaterial = MaterialUtils.CreateAlwaysOnTopUnlitMaterial(new Color(1f, 0f, 0f, 0.5f));
-			s_selectedMaterial = MaterialUtils.CreateAlwaysOnTopUnlitMaterial(new Color(1.4f, 1.25f, 0.85f, 0.6f));
+			var runtimeMaterials = renderer.materials;
+			if (runtimeMaterials == null) return;
 
-			if (s_validMaterial == null || s_invalidMaterial == null || s_selectedMaterial == null)
-				Debug.LogError("EditorSelectionUtil: Failed to create ghost materials.");
+			for (int i = 0; i < runtimeMaterials.Length; i++)
+			{
+				if (runtimeMaterials[i] == null) continue;
+
+				if (runtimeMaterials[i].mainTexture != null &&
+					(runtimeMaterials[i].mainTexture.hideFlags & HideFlags.HideAndDontSave) != 0)
+					Object.Destroy(runtimeMaterials[i].mainTexture);
+
+				if ((runtimeMaterials[i].hideFlags & HideFlags.HideAndDontSave) != 0)
+					Object.Destroy(runtimeMaterials[i]);
+			}
+		}
+
+		private static void ApplyClonedTintedMaterials(GameObject highlightMesh, Color tintColor, float brightnessMultiplier = 1f)
+		{
+			var renderers = highlightMesh.GetComponentsInChildren<Renderer>(true);
+			for (int rendererIndex = 0; rendererIndex < renderers.Length; rendererIndex++)
+			{
+				var renderer = renderers[rendererIndex];
+				if (renderer == null) continue;
+
+				var sourceMaterials = renderer.sharedMaterials;
+				if (sourceMaterials == null || sourceMaterials.Length == 0) continue;
+
+				var replacementArray = new Material[sourceMaterials.Length];
+				for (int materialIndex = 0; materialIndex < sourceMaterials.Length; materialIndex++)
+				{
+					var sourceMaterial = sourceMaterials[materialIndex];
+					if (sourceMaterial == null) continue;
+
+					var copy = new Material(sourceMaterial);
+					copy.hideFlags = HideFlags.HideAndDontSave;
+					copy.mainTexture = sourceMaterial.mainTexture.CloneMonochrome(brightnessMultiplier);
+					copy.color = new Color(
+						tintColor.r,
+						tintColor.g,
+						tintColor.b,
+						tintColor.a * sourceMaterial.color.a);
+					copy.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+
+					if (copy.HasProperty("_Surface"))
+						copy.SetFloat("_Surface", 1f);
+					if (copy.HasProperty("_SrcBlend"))
+						copy.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+					if (copy.HasProperty("_DstBlend"))
+						copy.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+					if (copy.HasProperty("_ZWrite"))
+						copy.SetFloat("_ZWrite", 0f);
+
+					copy.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+					copy.SetOverrideTag("RenderType", "Transparent");
+					replacementArray[materialIndex] = copy;
+				}
+
+				renderer.materials = replacementArray;
+			}
 		}
 
 		/// <summary>
@@ -28,20 +79,20 @@ namespace ClassicTilestorm
 		public static GameObject Create(Variant variant, Vector3 renderPosition)
 		{
 			if (variant.hash == 0) return null;
-			EnsureMaterials();
 
 			var definition = ResourceManager.GetDefinition(variant.hash);
 			if (definition == null) return null;
 
-			var go = Assets.ModelAssets.Instantiate(
-				definition.model,
+			var go = DefinitionFactory.InstantiateSimplified(
+				definition,
 				renderPosition,
 				Quaternion.Euler(0f, variant.angle, 0f),
-				parent: MainController.MapRoot);
+				MainController.MapRoot);
 
 			if (go == null) return null;
 
 			go.name = "HighlightMesh";
+			ApplyClonedTintedMaterials(go, HighlightTint);
 			return go;
 		}
 
@@ -67,15 +118,8 @@ namespace ClassicTilestorm
 			bool isSelectedOrDragging = true)
 		{
 			if (highlightMesh == null) return;
-			EnsureMaterials();
 
 			highlightMesh.transform.SetPositionAndRotation(renderPosition, Quaternion.Euler(0f, variant.angle, 0f));
-
-			Material mat = outOfBounds
-				? s_invalidMaterial
-				: (isSelectedOrDragging ? s_selectedMaterial : s_validMaterial);
-
-			highlightMesh.SetAllMaterials(mat);
 			highlightMesh.SetActive(true);
 		}
 
@@ -101,6 +145,10 @@ namespace ClassicTilestorm
 		{
 			if (highlightMesh != null)
 			{
+				var renderers = highlightMesh.GetComponentsInChildren<Renderer>(true);
+				for (int i = 0; i < renderers.Length; i++)
+					DestroyRuntimeMaterials(renderers[i]);
+
 				Object.Destroy(highlightMesh);
 			}
 		}
