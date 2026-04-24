@@ -259,7 +259,7 @@ namespace ClassicTilestorm
 					if (InputX.staticClick)
 					{
 						if (InputX.GetMouseButtonUp(1))
-							iMap.InsertTileAt(currentWorld, new Variant(ResourceManager.DefaultHash));
+							iMap.InsertTileAt(Map.FullFloorVec(currentWorld), new Variant(ResourceManager.DefaultHash));
 					}
 					break;
 
