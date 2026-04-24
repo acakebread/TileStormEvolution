@@ -9,9 +9,24 @@ namespace MassiveHadronLtd
 			return color.r * 0.2126f + color.g * 0.7152f + color.b * 0.0722f;
 		}
 
+		//public static Color ToLuminanceTint(this Color source, Color tint, float brightnessMultiplier = 1f)
+		//{
+		//	float luminance = source.ToLuminance() * brightnessMultiplier;
+		//	return new Color(
+		//		tint.r * luminance,
+		//		tint.g * luminance,
+		//		tint.b * luminance,
+		//		source.a * tint.a);
+		//}
+
 		public static Color ToLuminanceTint(this Color source, Color tint, float brightnessMultiplier = 1f)
 		{
-			float luminance = source.ToLuminance() * brightnessMultiplier;
+			float luminance = source.ToLuminance();
+
+			luminance = Mathf.Lerp(0.25f, 1f, luminance);
+			luminance = Mathf.Pow(luminance, 0.9f);
+			luminance *= brightnessMultiplier;
+
 			return new Color(
 				tint.r * luminance,
 				tint.g * luminance,
@@ -77,6 +92,12 @@ namespace MassiveHadronLtd
 				name = readableSource.name + " (Monochrome)",
 				hideFlags = HideFlags.HideAndDontSave
 			};
+
+			//for (int i = 0; i < pixels.Length; i++)
+			//{
+			//	float luminance = pixels[i].ToLuminance() * brightnessMultiplier;
+			//	pixels[i] = new Color(luminance, luminance, luminance, pixels[i].a);
+			//}
 
 			for (int i = 0; i < pixels.Length; i++)
 			{
