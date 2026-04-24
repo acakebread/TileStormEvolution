@@ -1,0 +1,16 @@
+# Modified by OBJRotate180 (Mesh rotated 180 degrees around Y-axis)
+# Original file: missing.obj
+mtllib missing.mtl
+v 0.300000 0.000000 -0.300000
+v 0.000000 0.000000 0.300000
+v -0.300000 0.000000 -0.300000
+vt 0.995000 0.010000
+vt 0.990000 0.005000
+vt 0.995000 0.005000
+vn 0.000000 1.000000 0.000000
+vn 0.000000 1.000000 0.000000
+vn 0.000000 1.000000 0.000000
+o blocks_tile_default
+o blocks_tile_default
+usemtl material
+f 3/3/3 2/2/2 1/1/1
