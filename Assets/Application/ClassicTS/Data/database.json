@@ -39675,6 +39675,12 @@
       "texture": "Jungle"
     },
     {
+      "id": "CyHA4u",
+      "name": "jun mud pool",
+      "model": "jun_mudpool",
+      "texture": "Mud Pit"
+    },
+    {
       "id": "0iKw85",
       "name": "mud pool ne",
       "model": "jun_mudpool_ne",
