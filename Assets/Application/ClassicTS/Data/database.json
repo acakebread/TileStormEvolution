@@ -39049,15 +39049,8 @@
       "texture": "Jungle"
     },
     {
-      "id": "2XfyDx",
-      "name": "Caustic",
-      "model": "tile_flat",
-      "texture": "Caustic",
-      "material": "toxic"
-    },
-    {
       "id": "2An3fe",
-      "name": "ss tile door start ns",
+      "name": "ind tile door start",
       "model": "ss_tile_door_ns",
       "texture": "Industrial",
       "flags": "Door, Start",
@@ -39065,7 +39058,7 @@
     },
     {
       "id": "75XVj1",
-      "name": "ss tile door end ns",
+      "name": "ind tile door end",
       "model": "ss_tile_door_ns",
       "texture": "Industrial",
       "flags": "Door, End",
@@ -39073,7 +39066,7 @@
     },
     {
       "id": "Cp5F4e",
-      "name": "ss tile console n",
+      "name": "ind tile console",
       "model": "ss_console_n",
       "texture": "Industrial",
       "flags": "Console",
@@ -39081,35 +39074,35 @@
     },
     {
       "id": "2w9vTQ",
-      "name": "ss tile slide",
+      "name": "ind tile slide",
       "model": "ss_tile_slide_plain",
       "texture": "Industrial",
       "flags": "Roll"
     },
     {
       "id": "AaNkrC",
-      "name": "ss tile static nesw",
+      "name": "ind tile static crossroad",
       "model": "ss_tile_nesw_static",
       "texture": "Industrial",
       "connections": "NSEW"
     },
     {
       "id": "0KdnWP",
-      "name": "ss tile static ns",
+      "name": "ind tile static straight",
       "model": "ss_tile_ns_static",
       "texture": "Industrial",
       "connections": "NS"
     },
     {
       "id": "9xfU7Y",
-      "name": "ss tile static ne",
+      "name": "ind tile static bend",
       "model": "ss_tile_ne_corner_static",
       "texture": "Industrial",
       "connections": "NE"
     },
     {
       "id": "D2m8HU",
-      "name": "ss tile nesw",
+      "name": "ind tile crossroad",
       "model": "ss_tile_nesw",
       "texture": "Industrial",
       "flags": "Drag",
@@ -39117,7 +39110,7 @@
     },
     {
       "id": "9hR5pQ",
-      "name": "ss tile ns",
+      "name": "ind tile straight",
       "model": "ss_tile_ns",
       "texture": "Industrial",
       "flags": "Drag",
@@ -39125,93 +39118,98 @@
     },
     {
       "id": "DJNAYq",
-      "name": "ss tile corner ne",
+      "name": "ind tile corner bend",
       "model": "ss_tile_ne_corner",
       "texture": "Industrial",
       "flags": "Drag",
       "connections": "NE"
     },
     {
+      "id": "2XfyDx",
+      "name": "ind caustic",
+      "model": "tile_flat",
+      "texture": "Caustic",
+      "material": "toxic"
+    },
+    {
       "id": "3tNMCV",
-      "name": "toxic pipe join leak ns",
+      "name": "ind toxic pipe join leak ns",
       "model": "ss_tile_pipejoin_leak_ns",
       "texture": "Toxic Pipes"
     },
     {
       "id": "0F0wCU",
-      "name": "ss toxic pipe join ns",
+      "name": "ind toxic pipe join straight",
       "model": "ss_tile_pipejoin_ns",
       "texture": "Industrial"
     },
     {
       "id": "ECUVrk",
-      "name": "ss toxic pipe nesw",
+      "name": "ind toxic pipe cross",
       "model": "ss_tile_pipe_mid",
       "texture": "Industrial"
     },
     {
       "id": "8NpvXp",
-      "name": "ss toxic pipe ns",
+      "name": "ind toxic pipe strsight",
       "model": "ss_tile_pipe_ns",
       "texture": "Industrial"
     },
     {
       "id": "8jtjX2",
-      "name": "ss toxic pipe ne",
+      "name": "ind toxic pipe bend",
       "model": "ss_tile_pipe_corner_ne",
       "texture": "Industrial"
     },
     {
       "id": "ANmNdr",
-      "name": "ss toxic pipe floor n",
+      "name": "ind toxic pipe floor",
       "model": "ss_tile_pipefloor_n",
       "texture": "Industrial"
     },
     {
       "id": "4pdw17",
-      "name": "ss tile boundary",
+      "name": "ind tile boundary",
       "model": "ss_tile_boundary",
       "texture": "Industrial"
     },
     {
       "id": "0TGhTv",
-      "name": "ss tile boundary 1",
+      "name": "ind tile boundary 2",
       "model": "ss_tile_boundary_pitted",
       "texture": "Industrial"
     },
     {
       "id": "4T8R1f",
-      "name": "ss boundary edge n",
+      "name": "ind boundary edge",
       "model": "ss_tile_n_boundary_edge",
       "texture": "Industrial"
     },
     {
       "id": "7x8ynD",
-      "name": "ss boundary corner ne",
+      "name": "ind boundary corner large",
       "model": "ss_tile_ne_boundary_corner",
       "texture": "Industrial"
     },
     {
       "id": "46Hmr0",
-      "name": "ss boundary corner small ne",
+      "name": "ind boundary corner small",
       "model": "ss_tile_ne_boundary_sml_corner",
       "texture": "Industrial"
     },
     {
       "id": "2FMcwa",
-      "name": "ss tile boundary 4",
-      "model": "ss_tile_boundary_plate",
-      "texture": "Industrial"
+      "name": "ind tile boundary 3"
     },
     {
       "id": "3GVJyw",
-      "name": "ss wall n",
+      "name": "ind legacy wall straight",
       "model": "ss_wall_n",
       "texture": "Industrial"
     },
     {
       "id": "5Un9xE",
-      "name": "ss wall ne",
+      "name": "ind legacy wall corner",
       "model": "ss_wall_corner_ne",
       "texture": "Industrial"
     },
