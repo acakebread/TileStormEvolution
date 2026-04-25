@@ -1,6 +1,7 @@
 # OBJClean Brute-Force Test
 # Tolerance: 0.001000
 # Original verts: 288 → after: 42
+mtllib jun_mudpool.mtl
 v -0.000002 0.195000 1.000004
 v -1.000002 0.195000 1.000004
 v -0.000002 -0.200000 1.000004
