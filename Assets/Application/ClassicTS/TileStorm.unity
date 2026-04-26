@@ -691,8 +691,7 @@ MonoBehaviour:
   rippleFrequency: 0.35
   rippleOffset: 0
   reflectionStrength: 0.95
-  frostThreshold: 0.8
-  frostFadeRange: 0.1
+  fresnelSharpness: 12
 --- !u!1 &1555382761
 GameObject:
   m_ObjectHideFlags: 0
@@ -877,6 +876,38 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1868399195
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1868399196}
+  m_Layer: 0
+  m_Name: "# \u2193\u2193\u2193what is this for - it will need to be driven via script
+    \u2193\u2193\u2193 #"
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1868399196
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1868399195}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 17.62401, y: -26.23887, z: -21.40816}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -886,4 +917,5 @@ SceneRoots:
   - {fileID: 1555382763}
   - {fileID: 1027007948}
   - {fileID: 515678838}
+  - {fileID: 1868399196}
   - {fileID: 1829615773}
