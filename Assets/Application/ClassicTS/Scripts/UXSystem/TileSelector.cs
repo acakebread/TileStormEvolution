@@ -176,9 +176,6 @@ namespace ClassicTilestorm
 		{
 			if (_atlas == null) yield break;
 
-			for (var delay = 0; delay < 10; ++delay)
-				yield return null;
-
 			var buildCoroutine = _atlas.BuildIconsCoroutine(iconsPerFrame: 1);
 
 			while (buildCoroutine.MoveNext())

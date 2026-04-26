@@ -29,7 +29,7 @@ namespace ClassicTilestorm
 
 			_rt = new RenderTexture(size, size, 24, RenderTextureFormat.ARGB32)
 			{
-				antiAliasing = 4,           // try lowering to 2 or 1 if still heavy
+				antiAliasing = 1,
 				filterMode = FilterMode.Bilinear,
 				autoGenerateMips = false,
 				name = "IconRT"
