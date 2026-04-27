@@ -6,9 +6,9 @@ namespace ClassicTilestorm
 {
 	public static class EditorCameraMovement
 	{
-		private const float LookSpeedH = 0.25f;
-		private const float LookSpeedV = 0.25f;
-		private const float MoveSpeed = 8f;
+		private const float LookSpeedH = 0.15f;
+		private const float LookSpeedV = 0.15f;
+		private const float MoveSpeed = 6f;
 
 		private static float MoveSpeedModifier = 1f;
 		private static float ModifiedZoomSpeed => MoveSpeed * MoveSpeedModifier;
