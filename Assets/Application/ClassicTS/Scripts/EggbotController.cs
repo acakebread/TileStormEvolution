@@ -27,7 +27,7 @@ namespace ClassicTilestorm
 		private State currentState = State.IDLE;
 		private bool isBlocked = false;
 
-		public event System.Action<int> OnWaypointReached;
+		public event System.Action<int, bool> OnWaypointReached;
 		public event System.Action<int> OnPuzzleSolved;
 		public event System.Action OnLevelCompleted;
 
@@ -134,8 +134,11 @@ namespace ClassicTilestorm
 					if (null == map) return false;
 					if (currentTile == destinationTile)
 					{
-						OnWaypointReached?.Invoke(dstWaypoint);
 						var waypoints = map.GetWaypoints();
+						var next = (null != waypoints) ? waypoints[(dstWaypoint + 1) % waypoints.Length].tile : -1;
+						var enable_gestures = 0 == Navigation.NavToDest(map, destinationTile, next);//path blocked
+
+						OnWaypointReached?.Invoke(dstWaypoint, enable_gestures);
 						if (null != waypoints) dstWaypoint = (dstWaypoint + 1) % waypoints.Length;
 						return false;
 					}

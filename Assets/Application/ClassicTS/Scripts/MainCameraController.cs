@@ -56,6 +56,7 @@ namespace ClassicTilestorm
 		}
 
 		public void OnMapSolved() => GestureControllerEnabled = false;
+		public void OnEnableGestures(bool value) => GestureControllerEnabled = value;
 
 		private bool GestureControllerEnabled { set { gestureControllerEnabled = value; UpdateGestureControllerState(); } }
 
@@ -217,7 +218,7 @@ namespace ClassicTilestorm
 			GameModes.RegisterAllModes(RegisterMode);
 		}
 
-		private void OnWaypointReached(int waypointIndex)
+		private void OnWaypointReached(int waypointIndex, bool enable_gestures = true)
 		{
 			var waypoints = iMap?.GetWaypoints();
 
@@ -227,6 +228,8 @@ namespace ClassicTilestorm
 
 			if (waypointIndex == 0 || waypointIndex == waypoints.Length - 1)
 				return;
+
+			OnWaypointReachedForGestures?.Invoke(enable_gestures);
 
 			var tile = iMap.GetWaypoint(waypointIndex).tile;
 
@@ -246,7 +249,6 @@ namespace ClassicTilestorm
 			presetCam.targetFn = () => view.VDst + iMap.TileRenderPosition(iMap.GetWaypoint(waypointIndex).tile);
 
 			SetCameraSystem(CameraModeRegistry.Preset, true);
-			OnWaypointReachedForGestures?.Invoke(true);
 		}
 
 		private void HandlePuzzleSolved(int waypointIndex)
