@@ -79,7 +79,7 @@ MonoBehaviour:
     Radius: 0.4
     Samples: 1
     BlurQuality: 1
-    Falloff: 10
+    Falloff: 20
     SampleCount: -1
 --- !u!114 &-4538502329368513911
 MonoBehaviour:
