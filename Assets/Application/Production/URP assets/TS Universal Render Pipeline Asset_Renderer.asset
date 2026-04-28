@@ -55,6 +55,32 @@ MonoBehaviour:
       restoreCamera: 1
       offset: {x: 0, y: 0, z: 0, w: 0}
       cameraFieldOfView: 60
+--- !u!114 &-4649103636708992641
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f62c9c65cf3354c93be831c8bc075510, type: 3}
+  m_Name: ScreenSpaceAmbientOcclusion
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.ScreenSpaceAmbientOcclusion
+  m_Active: 1
+  m_Settings:
+    AOMethod: 0
+    Downsample: 0
+    AfterOpaque: 1
+    Source: 0
+    NormalSamples: 1
+    Intensity: 0.2
+    DirectLightingStrength: 0.25
+    Radius: 0.4
+    Samples: 1
+    BlurQuality: 1
+    Falloff: 10
+    SampleCount: -1
 --- !u!114 &-4538502329368513911
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -126,7 +152,8 @@ MonoBehaviour:
   - {fileID: -5887524926960395173}
   - {fileID: -5186205543463430786}
   - {fileID: -4538502329368513911}
-  m_RendererFeatureMap: 0607d4194d42be435b9c44ba454f4bae7e55b33189e506b889f2b46d2d0004c1
+  - {fileID: -4649103636708992641}
+  m_RendererFeatureMap: 0607d4194d42be435b9c44ba454f4bae7e55b33189e506b889f2b46d2d0004c17fd9fbd9df107bbf
   m_UseNativeRenderPass: 0
   xrSystemData: {fileID: 0}
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
