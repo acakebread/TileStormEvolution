@@ -125,19 +125,20 @@ namespace ClassicTilestorm
 
 		private void Start() => RebuildAtlas(); //private IEnumerator Start() { yield return null; RebuildAtlas(); }//needed to prevent black icons//private void Start() => RebuildAtlas();
 
-		private Coroutine _atlasBuildCoroutine;
+		private Coroutine _atlasBuildCoroutine;   // KEEP this field
 
 		public void RebuildAtlas()
 		{
-			// === CRITICAL: Always destroy the old atlas first ===
+			// Stop any previous build (important!)
+			if (_atlasBuildCoroutine != null)
+			{
+				TileSelectorCoroutineRunner.Stop(_atlasBuildCoroutine);
+				_atlasBuildCoroutine = null;
+			}
+
+			// Dispose old atlas
 			if (_atlas != null)
 			{
-				if (_atlasBuildCoroutine != null)
-				{
-					StopCoroutine(_atlasBuildCoroutine);
-					_atlasBuildCoroutine = null;
-				}
-
 				_atlas.Dispose();
 				_atlas = null;
 			}
@@ -152,7 +153,7 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			// Create the new atlas
+			// Create new atlas
 			_atlas = new IconAtlas(
 				ICON_SIZE,
 				COLUMNS,
@@ -164,7 +165,8 @@ namespace ClassicTilestorm
 
 			if (_atlas != null)
 			{
-				_atlasBuildCoroutine = StartCoroutine(BuildAtlasWithUIUpdates());
+				// Start build using the persistent runner
+				_atlasBuildCoroutine = TileSelectorCoroutineRunner.Start(BuildAtlasWithUIUpdates());
 			}
 
 			SelectedHashId = ResourceManager.DefaultHash;
@@ -560,17 +562,44 @@ namespace ClassicTilestorm
 
 		private void OnDestroy()
 		{
+			if (_atlasBuildCoroutine != null)
+			{
+				TileSelectorCoroutineRunner.Stop(_atlasBuildCoroutine);
+				_atlasBuildCoroutine = null;
+			}
+
 			if (_atlas != null)
 			{
 				_atlas.Dispose();
 				_atlas = null;
 			}
+		}
+	}
 
-			if (_atlasBuildCoroutine != null)
+	internal class TileSelectorCoroutineRunner : MonoBehaviour
+	{
+		private static TileSelectorCoroutineRunner _instance;
+
+		[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+		private static void CreateInstance()
+		{
+			if (_instance != null) return;
+
+			var go = new GameObject("[TileSelector Coroutine Runner]")
 			{
-				StopCoroutine(_atlasBuildCoroutine);
-				_atlasBuildCoroutine = null;
-			}
+				hideFlags = HideFlags.HideAndDontSave
+			};
+
+			_instance = go.AddComponent<TileSelectorCoroutineRunner>();
+			DontDestroyOnLoad(go);
+		}
+
+		public static Coroutine Start(IEnumerator routine) => _instance?.StartCoroutine(routine);
+
+		public static void Stop(Coroutine coroutine)
+		{
+			if (_instance != null && coroutine != null)
+				_instance.StopCoroutine(coroutine);
 		}
 	}
 }
