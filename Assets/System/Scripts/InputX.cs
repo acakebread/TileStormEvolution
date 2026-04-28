@@ -1,9 +1,8 @@
-﻿//#define MOBILE   // Comment this out for pure desktop/WebGL builds (no legacy input)
+﻿#define MOBILE   // Comment this out for pure desktop/WebGL builds (no legacy input)
 
 using UnityEngine;
 using System.Linq;
 using System.Collections.Generic;
-using InputSystem = UnityEngine.InputSystem;
 using UnityEngine.InputSystem;
 
 namespace MassiveHadronLtd
@@ -104,9 +103,8 @@ namespace MassiveHadronLtd
 		{
 			var active = new HashSet<int>();
 
-#if MOBILE
-			// Your original mobile hold logic (using Input.touches)
-			foreach (var touch in Input.touches)
+			// Use the same central logic as everywhere else in the class
+			foreach (var touch in touches)        // ← This respects Application.isMobilePlatform
 			{
 				int btn = -1;
 				if (touch.fingerId == 0) btn = 0;
@@ -114,51 +112,32 @@ namespace MassiveHadronLtd
 				if (btn < 0) continue;
 
 				active.Add(btn);
+
 				if (!holdStates.TryGetValue(btn, out var st))
 				{
 					st = new HoldState();
 					holdStates[btn] = st;
 				}
 
-				if (touch.phase == UnityEngine.TouchPhase.Began)
+				switch (touch.phase)
 				{
-					st.isHeld = false;
-					st.startTime = Time.time;
-				}
-				else if (touch.phase == UnityEngine.TouchPhase.Moved || touch.phase == UnityEngine.TouchPhase.Stationary)
-				{
-					if (!st.isHeld && Time.time - st.startTime >= HOLD_THRESHOLD)
-						st.isHeld = true;
-				}
-				else if (touch.phase == UnityEngine.TouchPhase.Ended || touch.phase == UnityEngine.TouchPhase.Canceled)
-				{
-					holdStates.Remove(btn);
+					case UnityEngine.TouchPhase.Began:
+						st.isHeld = false;
+						st.startTime = Time.realtimeSinceStartup;
+						break;
+
+					case UnityEngine.TouchPhase.Moved:
+					case UnityEngine.TouchPhase.Stationary:
+						if (!st.isHeld && (Time.realtimeSinceStartup - st.startTime >= HOLD_THRESHOLD))
+							st.isHeld = true;
+						break;
+
+					case UnityEngine.TouchPhase.Ended:
+					case UnityEngine.TouchPhase.Canceled:
+						holdStates.Remove(btn);
+						break;
 				}
 			}
-#else
-    // Desktop path - use GetMouseButtonDown / GetMouseButton
-    for (int b = 0; b < 3; b++)
-    {
-        if (getMouseButton(b))
-        {
-            active.Add(b);
-            if (!holdStates.TryGetValue(b, out var st))
-            {
-                st = new HoldState();
-                holdStates[b] = st;
-            }
-            if (getMouseButtonDown(b))
-            {
-                st.isHeld = false;
-                st.startTime = Time.time;
-            }
-            else if (!st.isHeld && Time.time - st.startTime >= HOLD_THRESHOLD)
-            {
-                st.isHeld = true;
-            }
-        }
-    }
-#endif
 
 			// Cleanup inactive holds
 			foreach (var kv in holdStates.ToList())
@@ -167,6 +146,7 @@ namespace MassiveHadronLtd
 					holdStates.Remove(kv.Key);
 			}
 
+			// Reset staticClick when nothing is pressed
 			if (!getMouseButton(0) && !getMouseButton(1))
 			{
 				mouseDownPos = mousePosition;
