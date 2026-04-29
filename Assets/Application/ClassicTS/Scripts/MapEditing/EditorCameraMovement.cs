@@ -1,4 +1,4 @@
-﻿//#define MOBILE
+﻿#define MOBILE
 using UnityEngine;
 using MassiveHadronLtd;
 

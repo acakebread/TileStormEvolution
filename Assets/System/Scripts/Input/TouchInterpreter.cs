@@ -37,10 +37,11 @@ namespace MassiveHadronLtd.LegacyTouchInterpreter
 
 		void Update()
 		{
-			if (0 != Input.mouseScrollDelta.y)
-				OnScroll(Input.mouseScrollDelta.y * 1);//delta magnitude
+			float scrollDelta = InputX.GetAxis("Mouse ScrollWheel");
+			if (0 != scrollDelta)
+				OnScroll(scrollDelta);//delta magnitude
 
-			Touch[] touches = (true == Application.isMobilePlatform) ? Input.touches : MultiTouchEmulator.touches;
+			Touch[] touches = InputX.touches;
 
 			if (0 < touches.Length && null == stored)
 			{

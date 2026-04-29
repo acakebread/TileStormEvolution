@@ -4,6 +4,8 @@ using UnityEngine;
 using System.Linq;
 using System.Collections.Generic;
 using UnityEngine.InputSystem;
+using EnhancedTouchSupport = UnityEngine.InputSystem.EnhancedTouch.EnhancedTouchSupport;
+using EnhancedTouch = UnityEngine.InputSystem.EnhancedTouch.Touch;
 
 namespace MassiveHadronLtd
 {
@@ -42,12 +44,10 @@ namespace MassiveHadronLtd
 
 		// Central touch / mouse source
 		public static Touch[] touches => Application.isMobilePlatform || Application.isConsolePlatform
-			? Input.touches
+			? GetMobileTouches()
 			: MultiTouchEmulator.touches;
 
-		public static int touchCount => Application.isMobilePlatform || Application.isConsolePlatform
-			? Input.touchCount
-			: MultiTouchEmulator.touches.Length;
+		public static int touchCount => touches.Length;
 
 		public static Vector3 mousePosition => getMousePosition;
 
@@ -352,6 +352,58 @@ namespace MassiveHadronLtd
 		public const float TOUCH_LOOK_COMPENSATION_SCALAR = 1f;
 		public const float TOUCH_SCROLL_COMPENSATION_SCALAR = 1f;
 #endif
+
+		private static Touch[] GetMobileTouches()
+		{
+			EnsureEnhancedTouchSupport();
+
+			if (Touchscreen.current == null)
+				return System.Array.Empty<Touch>();
+
+			var activeTouches = EnhancedTouch.activeTouches;
+			if (activeTouches.Count == 0)
+				return System.Array.Empty<Touch>();
+
+			var result = new Touch[activeTouches.Count];
+			for (int i = 0; i < activeTouches.Count; i++)
+				result[i] = ConvertTouch(activeTouches[i]);
+
+			return result;
+		}
+
+		private static Touch ConvertTouch(EnhancedTouch touch)
+		{
+			return new Touch
+			{
+				fingerId = touch.finger.index,
+				position = touch.screenPosition,
+				rawPosition = touch.screenPosition,
+				deltaPosition = touch.delta,
+				deltaTime = Time.unscaledDeltaTime,
+				tapCount = touch.tapCount,
+				phase = ConvertPhase(touch.phase),
+				type = TouchType.Direct
+			};
+		}
+
+		private static UnityEngine.TouchPhase ConvertPhase(UnityEngine.InputSystem.TouchPhase phase)
+		{
+			return phase switch
+			{
+				UnityEngine.InputSystem.TouchPhase.Began => UnityEngine.TouchPhase.Began,
+				UnityEngine.InputSystem.TouchPhase.Moved => UnityEngine.TouchPhase.Moved,
+				UnityEngine.InputSystem.TouchPhase.Stationary => UnityEngine.TouchPhase.Stationary,
+				UnityEngine.InputSystem.TouchPhase.Ended => UnityEngine.TouchPhase.Ended,
+				UnityEngine.InputSystem.TouchPhase.Canceled => UnityEngine.TouchPhase.Canceled,
+				_ => UnityEngine.TouchPhase.Canceled
+			};
+		}
+
+		private static void EnsureEnhancedTouchSupport()
+		{
+			if (!EnhancedTouchSupport.enabled)
+				EnhancedTouchSupport.Enable();
+		}
 	}
 
 	internal class InputXController : MonoBehaviour
@@ -371,6 +423,12 @@ namespace MassiveHadronLtd
 		{
 			InputX.UpdateHoldStates();
 			//MultiTouchEmulator.CommitCurrentToMap();
+		}
+
+		private void OnEnable()
+		{
+			if (!EnhancedTouchSupport.enabled)
+				EnhancedTouchSupport.Enable();
 		}
 	}
 }
