@@ -21,7 +21,8 @@ namespace ClassicTilestorm
 		DirMask = 0b1111,  // bits 0–3 only (N=1, S=2, E=4, W=8)
 
 		// ── Gameplay flags – start from bit 8 and never touch 0–7 ─────────────
-		Drag        = 1 << 8,          // (1 <<  8) 0b0000000100000000
+		Move        = 1 << 8,          // (1 <<  8) 0b0000000100000000
+		Drag        = Move,            // legacy alias retained for compatibility
         Roll        = 1 << 9,   // (1 <<  9) 0b0000001000000000
         Dock        = 1 << 10,  // (1 << 10) 0b0000010000000000
         Start       = 1 << 11,  // (1 << 11) 0b0000100000000000
@@ -68,9 +69,10 @@ namespace ClassicTilestorm
         [JsonIgnore] public bool East        { get => (flags & (int)DefinitionFlags.East)        != 0; set => SetFlag(DefinitionFlags.East,        value); }
         [JsonIgnore] public bool West        { get => (flags & (int)DefinitionFlags.West)        != 0; set => SetFlag(DefinitionFlags.West,        value); }
 
-        [JsonIgnore] public bool Drag        { get => (flags & (int)DefinitionFlags.Drag)        != 0; set => SetFlag(DefinitionFlags.Drag,        value); }
-        [JsonIgnore] public bool Roll        { get => (flags & (int)DefinitionFlags.Roll)        != 0; set => SetFlag(DefinitionFlags.Roll,        value); }
-        [JsonIgnore] public bool Dock        { get => (flags & (int)DefinitionFlags.Dock)        != 0; set => SetFlag(DefinitionFlags.Dock,        value); }
+        [JsonIgnore] public bool Move        { get => (flags & (int)DefinitionFlags.Move)        != 0; set => SetFlag(DefinitionFlags.Move,        value); }
+        [JsonIgnore] public bool Drag        { get => Move && HasNavigation();                    set => Move = value; }
+        [JsonIgnore] public bool Roll        { get => Move && !HasNavigation() && HasModel();     set => Move = value; }
+        [JsonIgnore] public bool Dock        { get => Move && !HasNavigation() && !HasModel();    set => Move = value; }
         [JsonIgnore] public bool Door        { get => (flags & (int)DefinitionFlags.Door)        != 0; set => SetFlag(DefinitionFlags.Door,        value); }
         [JsonIgnore] public bool Start       { get => (flags & (int)DefinitionFlags.Start)       != 0; set => SetFlag(DefinitionFlags.Start,       value); }
         [JsonIgnore] public bool End         { get => (flags & (int)DefinitionFlags.End)         != 0; set => SetFlag(DefinitionFlags.End,         value); }
@@ -93,6 +95,10 @@ namespace ClassicTilestorm
             else
                 flags &= ~(int)flag;
         }
+
+        private bool HasNavigation() => (flags & (int)DefinitionFlags.DirMask) != 0;
+
+        private bool HasModel() => !string.IsNullOrWhiteSpace(model);
 
         public static Definition GetDefault()
         {
@@ -118,7 +124,7 @@ namespace ClassicTilestorm
         {
             return string.IsNullOrWhiteSpace(model) &&
                    !North && !East && !South && !West &&
-                   !Drag && !Roll && !Dock &&
+                   !Move &&
 				   !Start && !End && !Door && !Console &&
 				   !PuzzleBlock && !Sway && !Wash;
         }
@@ -126,11 +132,24 @@ namespace ClassicTilestorm
 
     public class DefinitionConverter : JsonConverter
     {
-        private static readonly IReadOnlyDictionary<string, DefinitionFlags> FlagLookup = new Dictionary<string, DefinitionFlags>(StringComparer.OrdinalIgnoreCase)
+        private static readonly IReadOnlyDictionary<string, DefinitionFlags> WriteFlagLookup = new Dictionary<string, DefinitionFlags>(StringComparer.OrdinalIgnoreCase)
         {
-            ["Drag"]        = DefinitionFlags.Drag,
-            ["Roll"]        = DefinitionFlags.Roll,
-            ["Dock"]        = DefinitionFlags.Dock,
+            ["Move"]        = DefinitionFlags.Move,
+            ["Door"]        = DefinitionFlags.Door,
+            ["Start"]       = DefinitionFlags.Start,
+            ["End"]         = DefinitionFlags.End,
+            ["Console"]     = DefinitionFlags.Console,
+            ["PuzzleBlock"] = DefinitionFlags.PuzzleBlock,
+            ["Sway"]        = DefinitionFlags.Sway,
+            ["Wash"]        = DefinitionFlags.Wash,
+        };
+
+        private static readonly IReadOnlyDictionary<string, DefinitionFlags> ReadFlagLookup = new Dictionary<string, DefinitionFlags>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Move"]        = DefinitionFlags.Move,
+            ["Drag"]        = DefinitionFlags.Move,
+            ["Roll"]        = DefinitionFlags.Move,
+            ["Dock"]        = DefinitionFlags.Move,
             ["Door"]        = DefinitionFlags.Door,
             ["Start"]       = DefinitionFlags.Start,
             ["End"]         = DefinitionFlags.End,
@@ -168,7 +187,7 @@ namespace ClassicTilestorm
 
             // Gameplay flags
             var activeFlags = new List<string>();
-            foreach (var kv in FlagLookup)
+            foreach (var kv in WriteFlagLookup)
             {
 				if ((((IFlagAccess)def).Flags & (int)kv.Value) != 0)
                     activeFlags.Add(kv.Key);
@@ -222,7 +241,7 @@ namespace ClassicTilestorm
                     string trimmed = part.Trim();
                     if (string.IsNullOrEmpty(trimmed)) continue;
 
-                    if (FlagLookup.TryGetValue(trimmed, out var flag))
+                    if (ReadFlagLookup.TryGetValue(trimmed, out var flag))
                         ((IFlagAccess)def).Flags |= (int)flag;
                     else
                         Debug.LogWarning($"Unknown flag in JSON: '{trimmed}'");
