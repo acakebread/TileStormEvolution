@@ -38,7 +38,7 @@ namespace ClassicTilestorm
 			{
 				if (string.IsNullOrEmpty(definition?.model))
 				{
-					if (definition != null && definition.Dock)
+					if (definition != null && definition.Fold)
 						return ApplicationSettings.ShowHiddenTiles
 							? GeometryFactory.CreateDebugTile(parent, position, rotation)
 							: null;
@@ -59,7 +59,7 @@ namespace ClassicTilestorm
 		public readonly bool IsEnd => (flags & (int)DefinitionFlags.End) != 0;
 		public readonly bool IsConsole => (flags & (int)DefinitionFlags.Console) != 0;
 		public readonly bool IsDrag => (flags & (int)DefinitionFlags.Move) != 0 && (flags & (int)DefinitionFlags.DirMask) != 0;
-		public readonly bool IsDock => (flags & (int)DefinitionFlags.Move) != 0 && (flags & (int)DefinitionFlags.DirMask) == 0 && !hasModel;
+		public readonly bool IsFold => (flags & (int)DefinitionFlags.Move) != 0 && (flags & (int)DefinitionFlags.DirMask) == 0 && !hasModel;
 		public readonly bool IsRoll => (flags & (int)DefinitionFlags.Move) != 0 && (flags & (int)DefinitionFlags.DirMask) == 0 && hasModel;
 		public readonly int Nav => flags & (int)DefinitionFlags.DirMask;
 

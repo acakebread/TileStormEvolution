@@ -61,18 +61,18 @@ namespace ClassicTilestorm
 			while (true)
 			{
 				tile = map.GetTile(lastIndex + stride);
-				if (!(tile.IsDock | tile.IsRoll)) break;
+				if (!(tile.IsFold | tile.IsRoll)) break;
 				lastIndex += stride;
 			}
 
 			var lastTile = map.GetTile(lastIndex);
-			if (!(lastTile.IsDock | lastTile.IsRoll))
+			if (!(lastTile.IsFold | lastTile.IsRoll))
 				return strip;//return invalid strip as 'fail' condition
 
 			while (true)
 			{
 				tile = map.GetTile(strip.First - stride);
-				if (!(tile.IsDock | tile.IsRoll)) break;
+				if (!(tile.IsFold | tile.IsRoll)) break;
 				strip.First -= stride;
 			}
 
@@ -80,7 +80,7 @@ namespace ClassicTilestorm
 			while (testRoll)
 			{
 				tile = map.GetTile(strip.First - stride);
-				if (!(tile.IsDrag | tile.IsDock | tile.IsRoll)) break;
+				if (!(tile.IsDrag | tile.IsFold | tile.IsRoll)) break;
 				strip.First -= stride;
 			}
 

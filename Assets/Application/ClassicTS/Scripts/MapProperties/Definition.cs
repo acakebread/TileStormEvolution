@@ -24,7 +24,7 @@ namespace ClassicTilestorm
 		Move        = 1 << 8,          // (1 <<  8) 0b0000000100000000
 		Drag        = Move,            // legacy alias retained for compatibility
         Roll        = 1 << 9,   // (1 <<  9) 0b0000001000000000
-        Dock        = 1 << 10,  // (1 << 10) 0b0000010000000000
+        Fold        = 1 << 10,  // (1 << 10) 0b0000010000000000
         Start       = 1 << 11,  // (1 << 11) 0b0000100000000000
         End         = 1 << 12,  // (1 << 12) 0b0001000000000000
         Door        = 1 << 13,  // (1 << 13) 0b0010000000000000
@@ -72,7 +72,7 @@ namespace ClassicTilestorm
         [JsonIgnore] public bool Move        { get => (flags & (int)DefinitionFlags.Move)        != 0; set => SetFlag(DefinitionFlags.Move,        value); }
         [JsonIgnore] public bool Drag        { get => Move && HasNavigation();                    set => Move = value; }
         [JsonIgnore] public bool Roll        { get => Move && !HasNavigation() && HasModel();     set => Move = value; }
-        [JsonIgnore] public bool Dock        { get => Move && !HasNavigation() && !HasModel();    set => Move = value; }
+        [JsonIgnore] public bool Fold        { get => Move && !HasNavigation() && !HasModel();    set => Move = value; }
         [JsonIgnore] public bool Door        { get => (flags & (int)DefinitionFlags.Door)        != 0; set => SetFlag(DefinitionFlags.Door,        value); }
         [JsonIgnore] public bool Start       { get => (flags & (int)DefinitionFlags.Start)       != 0; set => SetFlag(DefinitionFlags.Start,       value); }
         [JsonIgnore] public bool End         { get => (flags & (int)DefinitionFlags.End)         != 0; set => SetFlag(DefinitionFlags.End,         value); }
@@ -149,7 +149,7 @@ namespace ClassicTilestorm
             ["Move"]        = DefinitionFlags.Move,
             ["Drag"]        = DefinitionFlags.Move,
             ["Roll"]        = DefinitionFlags.Move,
-            ["Dock"]        = DefinitionFlags.Move,
+            ["Fold"]        = DefinitionFlags.Move,
             ["Door"]        = DefinitionFlags.Door,
             ["Start"]       = DefinitionFlags.Start,
             ["End"]         = DefinitionFlags.End,
