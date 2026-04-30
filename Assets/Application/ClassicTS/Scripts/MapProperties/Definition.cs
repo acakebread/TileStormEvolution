@@ -22,7 +22,7 @@ namespace ClassicTilestorm
 
 		// ── Gameplay flags – start from bit 8 and never touch 0–7 ─────────────
 		Move        = 1 << 8,          // (1 <<  8) 0b0000000100000000
-		Drag        = Move,            // legacy alias retained for compatibility
+		Drag        = Move,            // runtime alias retained for compatibility
         Roll        = 1 << 9,   // (1 <<  9) 0b0000001000000000
         Fold        = 1 << 10,  // (1 << 10) 0b0000010000000000
         Start       = 1 << 11,  // (1 << 11) 0b0000100000000000
@@ -72,7 +72,7 @@ namespace ClassicTilestorm
         [JsonIgnore] public bool Move        { get => (flags & (int)DefinitionFlags.Move)        != 0; set => SetFlag(DefinitionFlags.Move,        value); }
         [JsonIgnore] public bool Drag        { get => Move && HasNavigation();                    set => Move = value; }
         [JsonIgnore] public bool Roll        { get => Move && !HasNavigation() && HasModel();     set => Move = value; }
-        [JsonIgnore] public bool Fold        { get => Move && !HasNavigation() && !HasModel();    set => Move = value; }
+        [JsonIgnore] public bool Fold        { get => !HasModel() || (Move && !HasNavigation());  set => Move = value; }
         [JsonIgnore] public bool Door        { get => (flags & (int)DefinitionFlags.Door)        != 0; set => SetFlag(DefinitionFlags.Door,        value); }
         [JsonIgnore] public bool Start       { get => (flags & (int)DefinitionFlags.Start)       != 0; set => SetFlag(DefinitionFlags.Start,       value); }
         [JsonIgnore] public bool End         { get => (flags & (int)DefinitionFlags.End)         != 0; set => SetFlag(DefinitionFlags.End,         value); }
@@ -102,10 +102,12 @@ namespace ClassicTilestorm
 
         public static Definition GetDefault()
         {
-            const string legacyName = "tile_empty";
-            int hash32 = RadixHash.GetStableHash32(legacyName);
+			//const string legacyName = "tile_empty";
+			//int hash32 = RadixHash.GetStableHash32(legacyName);
+			const string legacyName = "tile_default";
+			int hash32 = RadixHash.GetStableHash32(legacyName);
 
-            return new Definition
+			return new Definition
             {
                 HashID   = hash32,
                 name     = legacyName,
@@ -147,9 +149,6 @@ namespace ClassicTilestorm
         private static readonly IReadOnlyDictionary<string, DefinitionFlags> ReadFlagLookup = new Dictionary<string, DefinitionFlags>(StringComparer.OrdinalIgnoreCase)
         {
             ["Move"]        = DefinitionFlags.Move,
-            ["Drag"]        = DefinitionFlags.Move,
-            ["Roll"]        = DefinitionFlags.Move,
-            ["Fold"]        = DefinitionFlags.Move,
             ["Door"]        = DefinitionFlags.Door,
             ["Start"]       = DefinitionFlags.Start,
             ["End"]         = DefinitionFlags.End,

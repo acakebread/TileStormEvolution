@@ -46,6 +46,7 @@ namespace ClassicTilestorm
 			var lastIndex = startIndex;
 			while (true)
 			{
+				if (!ValidNextTile(lastIndex, stride)) break;
 				tile = map.GetTile(lastIndex + stride);
 				if (!tile.IsDrag) break;//skip all movable tiles
 				lastIndex += stride;
@@ -53,6 +54,7 @@ namespace ClassicTilestorm
 
 			while (difficult)
 			{
+				if (!ValidNextTile(lastIndex, stride)) break;
 				tile = map.GetTile(lastIndex + stride);
 				if (!(tile.IsDrag | tile.IsRoll)) break;
 				lastIndex += stride;
@@ -60,6 +62,7 @@ namespace ClassicTilestorm
 
 			while (true)
 			{
+				if (!ValidNextTile(lastIndex, stride)) break;
 				tile = map.GetTile(lastIndex + stride);
 				if (!(tile.IsFold | tile.IsRoll)) break;
 				lastIndex += stride;
@@ -71,6 +74,7 @@ namespace ClassicTilestorm
 
 			while (true)
 			{
+				if (!ValidNextTile(strip.First, -stride)) break;
 				tile = map.GetTile(strip.First - stride);
 				if (!(tile.IsFold | tile.IsRoll)) break;
 				strip.First -= stride;
@@ -79,6 +83,7 @@ namespace ClassicTilestorm
 			var testRoll = difficult && map.GetTile(lastIndex).IsRoll;
 			while (testRoll)
 			{
+				if (!ValidNextTile(strip.First, -stride)) break;
 				tile = map.GetTile(strip.First - stride);
 				if (!(tile.IsDrag | tile.IsFold | tile.IsRoll)) break;
 				strip.First -= stride;
@@ -87,6 +92,13 @@ namespace ClassicTilestorm
 			strip.Count = (lastIndex - strip.First) / stride + 1;
 			strip.Stride = stride;
 			return strip;//return draggable strip
+
+			bool ValidNextTile(int index, int delta)
+			{
+				var x = (index % map.Width) + (delta % map.Width);
+				var y = (index / map.Width) + (delta / map.Width);
+				return x >= 0 && x < map.Width && y >= 0 && y < map.Height;
+			}
 		}
 
 		public static void ResetStrip(IMapPlay map, in TileStrip strip)

@@ -59,8 +59,8 @@ namespace ClassicTilestorm
 		public readonly bool IsEnd => (flags & (int)DefinitionFlags.End) != 0;
 		public readonly bool IsConsole => (flags & (int)DefinitionFlags.Console) != 0;
 		public readonly bool IsDrag => (flags & (int)DefinitionFlags.Move) != 0 && (flags & (int)DefinitionFlags.DirMask) != 0;
-		public readonly bool IsFold => (flags & (int)DefinitionFlags.Move) != 0 && (flags & (int)DefinitionFlags.DirMask) == 0 && !hasModel;
-		public readonly bool IsRoll => (flags & (int)DefinitionFlags.Move) != 0 && (flags & (int)DefinitionFlags.DirMask) == 0 && hasModel;
+		public readonly bool IsFold => !hasModel || ((flags & (int)DefinitionFlags.Move) != 0 && (flags & (int)DefinitionFlags.DirMask) == 0);
+		public readonly bool IsRoll => hasModel && (flags & (int)DefinitionFlags.Move) != 0 && (flags & (int)DefinitionFlags.DirMask) == 0;
 		public readonly int Nav => flags & (int)DefinitionFlags.DirMask;
 
 		public Bounds GetGeometryBounds()
