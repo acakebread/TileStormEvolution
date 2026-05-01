@@ -40211,818 +40211,817 @@
       ]
     }
   ],
-  "definitions": [
-    {
-        "id": "9kreKt",
-        "name": "tile_empty",
-        "model": "blocker"
-    },
-    {
-      "id": "7Guyi6",
-      "name": "tile_invisible",
-      "flags": "Move"
-    },
-    {
-      "id": "A8krJn",
-      "name": "med trim tile",
-      "model": "med_trim_tile"
-    },
-    {
-      "id": "4CRGn4",
-      "name": "med well",
-      "model": "med_well"
-    },
-    {
-      "id": "EaHCxc",
-      "name": "med torch",
-      "model": "med_torch"
-    },
-    {
-      "id": "79kM6i",
-      "name": "med cage",
-      "model": "med_cage"
-    },
-    {
-      "id": "Cr4C7J",
-      "name": "med stocks",
-      "model": "med_stocks"
-    },
-    {
-      "id": "Chir6n",
-      "name": "med boundary tile 01",
-      "model": "med_boundary_tile_01"
-    },
-    {
-      "id": "21jdt4",
-      "name": "med trim tile inner corner",
-      "model": "med_trim_tile_inner_corner"
-    },
-    {
-      "id": "2U6rti",
-      "name": "med trim tile outer corner",
-      "model": "med_trim_tile_outer_corner"
-    },
-    {
-      "id": "CNwAWn",
-      "name": "med trim tile wedge",
-      "model": "med_trim_tile_wedge"
-    },
-    {
-      "id": "EPtjqa",
-      "name": "med house 01",
-      "model": "med_house_01"
-    },
-    {
-      "id": "CCcC7e",
-      "name": "med house 02",
-      "model": "med_house_02"
-    },
-    {
-      "id": "Dhxx26",
-      "name": "tutankhamun",
-      "model": "tutankhamun",
-      "texture": "Egypt"
-    },
-    {
-      "id": "038hvM",
-      "name": "sphinx",
-      "model": "egy_sphinx",
-      "texture": "Egypt"
-    },
-    {
-      "id": "2fi9Qe",
-      "name": "anubis",
-      "model": "egy_anubis",
-      "texture": "Egypt"
-    },
-    {
-      "id": "3dhrwu",
-      "name": "temple",
-      "model": "jun_boundary_temple",
-      "texture": "Jungle"
-    },
-    {
-      "id": "2An3fe",
-      "name": "ind tile door start",
-      "model": "ss_tile_door_ns",
-      "texture": "Industrial",
-      "flags": "Door, Start",
-      "connections": "NS"
-    },
-    {
-      "id": "75XVj1",
-      "name": "ind tile door end",
-      "model": "ss_tile_door_ns",
-      "texture": "Industrial",
-      "flags": "Door, End",
-      "connections": "NS"
-    },
-    {
-      "id": "Cp5F4e",
-      "name": "ind tile console",
-      "model": "ss_console_n",
-      "texture": "Industrial",
-      "flags": "Console",
-      "connections": "N"
-    },
-    {
-      "id": "2w9vTQ",
-      "name": "ind tile slide",
-      "model": "ss_tile_slide_plain",
-      "texture": "Industrial",
-      "flags": "Move"
-    },
-    {
-      "id": "AaNkrC",
-      "name": "ind tile static crossroad",
-      "model": "ss_tile_nesw_static",
-      "texture": "Industrial",
-      "connections": "NSEW"
-    },
-    {
-      "id": "0KdnWP",
-      "name": "ind tile static straight",
-      "model": "ss_tile_ns_static",
-      "texture": "Industrial",
-      "connections": "NS"
-    },
-    {
-      "id": "9xfU7Y",
-      "name": "ind tile static bend",
-      "model": "ss_tile_ne_corner_static",
-      "texture": "Industrial",
-      "connections": "NE"
-    },
-    {
-      "id": "D2m8HU",
-      "name": "ind tile crossroad",
-      "model": "ss_tile_nesw",
-      "texture": "Industrial",
-      "flags": "Move",
-      "connections": "NSEW"
-    },
-    {
-      "id": "9hR5pQ",
-      "name": "ind tile straight",
-      "model": "ss_tile_ns",
-      "texture": "Industrial",
-      "flags": "Move",
-      "connections": "NS"
-    },
-    {
-      "id": "DJNAYq",
-      "name": "ind tile corner bend",
-      "model": "ss_tile_ne_corner",
-      "texture": "Industrial",
-      "flags": "Move",
-      "connections": "NE"
-    },
-    {
-      "id": "2XfyDx",
-      "name": "ind caustic",
-      "model": "tile_flat",
-      "texture": "Caustic",
-      "material": "toxic"
-    },
-    {
-      "id": "3tNMCV",
-      "name": "ind toxic pipe join leak ns",
-      "model": "ss_tile_pipejoin_leak_ns",
-      "texture": "Toxic Pipes"
-    },
-    {
-      "id": "0F0wCU",
-      "name": "ind toxic pipe join straight",
-      "model": "ss_tile_pipejoin_ns",
-      "texture": "Industrial"
-    },
-    {
-      "id": "ECUVrk",
-      "name": "ind toxic pipe cross",
-      "model": "ss_tile_pipe_mid",
-      "texture": "Industrial"
-    },
-    {
-      "id": "8NpvXp",
-      "name": "ind toxic pipe strsight",
-      "model": "ss_tile_pipe_ns",
-      "texture": "Industrial"
-    },
-    {
-      "id": "8jtjX2",
-      "name": "ind toxic pipe bend",
-      "model": "ss_tile_pipe_corner_ne",
-      "texture": "Industrial"
-    },
-    {
-      "id": "ANmNdr",
-      "name": "ind toxic pipe floor",
-      "model": "ss_tile_pipefloor_n",
-      "texture": "Industrial"
-    },
-    {
-      "id": "4pdw17",
-      "name": "ind tile boundary",
-      "model": "ss_tile_boundary",
-      "texture": "Industrial"
-    },
-    {
-      "id": "0TGhTv",
-      "name": "ind tile boundary 2",
-      "model": "ss_tile_boundary_pitted",
-      "texture": "Industrial"
-    },
-    {
-      "id": "4T8R1f",
-      "name": "ind boundary edge",
-      "model": "ss_tile_n_boundary_edge",
-      "texture": "Industrial"
-    },
-    {
-      "id": "7x8ynD",
-      "name": "ind boundary corner large",
-      "model": "ss_tile_ne_boundary_corner",
-      "texture": "Industrial"
-    },
-    {
-      "id": "46Hmr0",
-      "name": "ind boundary corner small",
-      "model": "ss_tile_ne_boundary_sml_corner",
-      "texture": "Industrial"
-    },
-    {
-      "id": "2FMcwa",
-      "name": "ind tile boundary 3",
-      "model": "ss_tile_boundary_plate",
-      "texture": "Industrial"
-    },
-    {
-      "id": "3GVJyw",
-      "name": "ind legacy wall straight",
-      "model": "ss_wall_n",
-      "texture": "Industrial"
-    },
-    {
-      "id": "5Un9xE",
-      "name": "ind legacy wall corner",
-      "model": "ss_wall_corner_ne",
-      "texture": "Industrial"
-    },
-    {
-      "id": "DvCe9T",
-      "name": "egy tile door start ns",
-      "model": "egy_tile_ns_door",
-      "texture": "Egypt",
-      "flags": "Door, Start",
-      "connections": "NS"
-    },
-    {
-      "id": "5DnCpM",
-      "name": "egy tile door end ns",
-      "model": "egy_tile_ns_door",
-      "texture": "Egypt",
-      "flags": "Door, End",
-      "connections": "NS"
-    },
-    {
-      "id": "8VWAek",
-      "name": "egy tile console n",
-      "model": "egy_console_n",
-      "texture": "Egypt",
-      "flags": "Console",
-      "connections": "N"
-    },
-    {
-      "id": "6d5t6k",
-      "name": "egy tile boundary",
-      "model": "egy_tile_boundary",
-      "texture": "Egypt"
-    },
-    {
-      "id": "0ACD6e",
-      "name": "egy boundary obelisk",
-      "model": "egy_tile_boundary_oblisk",
-      "texture": "Egypt"
-    },
-    {
-      "id": "52Gwa3",
-      "name": "egy tile pyramid",
-      "model": "egy_tile_boundary_pyramid",
-      "texture": "Egypt"
-    },
-    {
-      "id": "5E4P2K",
-      "name": "egy tile slide",
-      "model": "egy_tile_slide",
-      "texture": "Egypt",
-      "flags": "Move"
-    },
-    {
-      "id": "7J4P6c",
-      "name": "egy tile static nesw",
-      "model": "egy_tile_nsew_static",
-      "texture": "Egypt",
-      "connections": "NSEW"
-    },
-    {
-      "id": "DAUKG9",
-      "name": "egy tile static ns",
-      "model": "egy_tile_ns_static",
-      "texture": "Egypt",
-      "connections": "NS"
-    },
-    {
-      "id": "7kQ4Yu",
-      "name": "egy tile static ne",
-      "model": "egy_tile_ne_corner_static",
-      "texture": "Egypt",
-      "connections": "NE"
-    },
-    {
-      "id": "3m9XNT",
-      "name": "egy tile nesw",
-      "model": "egy_tile_nsew",
-      "texture": "Egypt",
-      "flags": "Move",
-      "connections": "NSEW"
-    },
-    {
-      "id": "APAQMR",
-      "name": "egy tile ns",
-      "model": "egy_tile_ns",
-      "texture": "Egypt",
-      "flags": "Move",
-      "connections": "NS"
-    },
-    {
-      "id": "CNKtmM",
-      "name": "egy tile corner ne",
-      "model": "egy_tile_ne_corner",
-      "texture": "Egypt",
-      "flags": "Move",
-      "connections": "NE"
-    },
-    {
-      "id": "Aa47m9",
-      "name": "egy boundary ne",
-      "model": "egy_tile_ne_boundary_corner",
-      "texture": "Egypt"
-    },
-    {
-      "id": "81m9R9",
-      "name": "egy boundary small ne",
-      "model": "egy_tile_ne_boundary_sml_corner",
-      "texture": "Egypt"
-    },
-    {
-      "id": "23UUn0",
-      "name": "egy boundary n",
-      "model": "egy_tile_n_boundary_edge",
-      "texture": "Egypt"
-    },
-    {
-      "id": "EDQx80",
-      "name": "med tile door start ns",
-      "model": "med_tile_ns_door",
-      "texture": "Medieval",
-      "flags": "Door, Start",
-      "connections": "NS"
-    },
-    {
-      "id": "5rM4du",
-      "name": "med tile door end ns",
-      "model": "med_tile_ns_door",
-      "texture": "Medieval",
-      "flags": "Door, End",
-      "connections": "NS"
-    },
-    {
-      "id": "2KKauy",
-      "name": "med tile console n",
-      "model": "med_console_n",
-      "texture": "Medieval",
-      "flags": "Console",
-      "connections": "N"
-    },
-    {
-      "id": "0trKw7",
-      "name": "med_tile_console",
-      "model": "med_console",
-      "flags": "Console",
-      "connections": "N"
-    },
-    {
-      "id": "7U6WJe",
-      "name": "med tile boundary",
-      "model": "med_tile_boundary",
-      "texture": "Medieval"
-    },
-    {
-      "id": "81d2rQ",
-      "name": "med tile slide",
-      "model": "med_tile_slide",
-      "texture": "Medieval",
-      "flags": "Move"
-    },
-    {
-      "id": "75dq85",
-      "name": "med tile static nesw",
-      "model": "med_tile_nsew_static",
-      "texture": "Medieval",
-      "connections": "NSEW"
-    },
-    {
-      "id": "DWxH1r",
-      "name": "med tile static ns",
-      "model": "med_tile_ns_static",
-      "texture": "Medieval",
-      "connections": "NS"
-    },
-    {
-      "id": "55GMx1",
-      "name": "med tile static ne",
-      "model": "med_tile_ne_corner_static",
-      "texture": "Medieval",
-      "connections": "NE"
-    },
-    {
-      "id": "82jX54",
-      "name": "med tile nesw",
-      "model": "med_tile_nsew",
-      "texture": "Medieval",
-      "flags": "Move",
-      "connections": "NSEW"
-    },
-    {
-      "id": "ACaMdD",
-      "name": "med tile ns",
-      "model": "med_tile_ns",
-      "texture": "Medieval",
-      "flags": "Move",
-      "connections": "NS"
-    },
-    {
-      "id": "78F1P9",
-      "name": "med tile corner ne",
-      "model": "med_tile_ne_corner",
-      "texture": "Medieval",
-      "flags": "Move",
-      "connections": "NE"
-    },
-    {
-      "id": "2qKvhv",
-      "name": "med boundary ne",
-      "model": "med_tile_ne_boundary_corner",
-      "texture": "Medieval"
-    },
-    {
-      "id": "93Xvt6",
-      "name": "med boundary small ne",
-      "model": "med_tile_ne_boundary_sml_corner",
-      "texture": "Medieval"
-    },
-    {
-      "id": "1MC943",
-      "name": "med boundary n",
-      "model": "med_tile_n_boundary_edge",
-      "texture": "Medieval"
-    },
-    {
-      "id": "46VAC4",
-      "name": "med boundary house blue ns",
-      "model": "med_tile_sml_blue_hse_ns",
-      "texture": "Medieval"
-    },
-    {
-      "id": "6iTdwH",
-      "name": "med boundary house red ns",
-      "model": "med_tile_sml_red_hse_ns",
-      "texture": "Medieval"
-    },
-    {
-      "id": "1YGxfJ",
-      "name": "med boundary house big blue ns",
-      "model": "med_tile_big_blue_hse_ns",
-      "texture": "Medieval"
-    },
-    {
-      "id": "9Ep7Dj",
-      "name": "med boundary house big red ns",
-      "model": "med_tile_big_red_hse_ns",
-      "texture": "Medieval"
-    },
-    {
-      "id": "5y92UG",
-      "name": "med boundary cage n",
-      "model": "med_tile_n_boundary_cage",
-      "texture": "Medieval"
-    },
-    {
-      "id": "7WEY7G",
-      "name": "med boundary stocks ns",
-      "model": "med_tile_ns_stocks",
-      "texture": "Medieval"
-    },
-    {
-      "id": "052AE3",
-      "name": "med boundary well ns",
-      "model": "med_tile_ns_well",
-      "texture": "Medieval"
-    },
-    {
-      "id": "DPdUHW",
-      "name": "med boundary tent blue",
-      "model": "med_tile_tent_blue",
-      "texture": "Medieval"
-    },
-    {
-      "id": "AQwcFW",
-      "name": "med boundary tent green",
-      "model": "med_tile_tent_green",
-      "texture": "Medieval"
-    },
-    {
-      "id": "E4WjRD",
-      "name": "jun tile door start ns",
-      "model": "jun_tile_ns_door",
-      "texture": "Jungle",
-      "flags": "Door, Start",
-      "connections": "NS"
-    },
-    {
-      "id": "3fdhha",
-      "name": "jun tile door end ns",
-      "model": "jun_tile_ns_door",
-      "texture": "Jungle",
-      "flags": "Door, End",
-      "connections": "NS"
-    },
-    {
-      "id": "6jquRN",
-      "name": "jun tile console n",
-      "model": "jun_console_n",
-      "texture": "Jungle",
-      "flags": "Console",
-      "connections": "N"
-    },
-    {
-      "id": "6c0yvj",
-      "name": "jun tile boundary",
-      "model": "jun_tile_boundary",
-      "texture": "Jungle"
-    },
-    {
-      "id": "6n29xr",
-      "name": "jun tile slide",
-      "model": "jun_tile_slide",
-      "texture": "Jungle",
-      "flags": "Move"
-    },
-    {
-      "id": "0e2RF9",
-      "name": "jun tile static nesw",
-      "model": "jun_tile_nsew_static",
-      "texture": "Jungle",
-      "connections": "NSEW"
-    },
-    {
-      "id": "D0JQ7D",
-      "name": "jun tile static ns",
-      "model": "jun_tile_ns_static",
-      "texture": "Jungle",
-      "connections": "NS"
-    },
-    {
-      "id": "9uNFv9",
-      "name": "jun tile static ne",
-      "model": "jun_tile_ne_corner_static",
-      "texture": "Jungle",
-      "connections": "NE"
-    },
-    {
-      "id": "44Rdar",
-      "name": "jun tile nesw",
-      "model": "jun_tile_nsew",
-      "texture": "Jungle",
-      "flags": "Move, Wash",
-      "connections": "NSEW"
-    },
-    {
-      "id": "AwcehK",
-      "name": "jun tile ns",
-      "model": "jun_tile_ns",
-      "texture": "Jungle",
-      "flags": "Move, Wash",
-      "connections": "NS"
-    },
-    {
-      "id": "8mNmuv",
-      "name": "jun tile corner ne",
-      "model": "jun_tile_ne_corner",
-      "texture": "Jungle",
-      "flags": "Move, Wash",
-      "connections": "NE"
-    },
-    {
-      "id": "1ePHrc",
-      "name": "jun tile stone nesw",
-      "model": "jun_tile_stone_nsew",
-      "texture": "Jungle",
-      "flags": "Move",
-      "connections": "NSEW"
-    },
-    {
-      "id": "9xfXA2",
-      "name": "jun tile stone ns",
-      "model": "jun_tile_stone_ns",
-      "texture": "Jungle",
-      "flags": "Move",
-      "connections": "NS"
-    },
-    {
-      "id": "61ciV6",
-      "name": "jun tile stone ne",
-      "model": "jun_tile_stone_ne_corner",
-      "texture": "Jungle",
-      "flags": "Move",
-      "connections": "NE"
-    },
-    {
-      "id": "1mPQ2W",
-      "name": "jun boundary earth",
-      "model": "jun_boundary_earth",
-      "texture": "Jungle"
-    },
-    {
-      "id": "1PDtN8",
-      "name": "jun boundary grass",
-      "model": "jun_boundary_grass",
-      "texture": "Jungle"
-    },
-    {
-      "id": "78tUdd",
-      "name": "jun boundary earth grass n",
-      "model": "jun_boundary_grass_earth_n_01",
-      "texture": "Jungle"
-    },
-    {
-      "id": "2jUH3p",
-      "name": "jun boundary earth grass ne",
-      "model": "jun_boundary_earth_grass_corner_ne",
-      "texture": "Jungle"
-    },
-    {
-      "id": "5F4DRj",
-      "name": "jun boundary grass earth n",
-      "model": "jun_boundary_grass_earth_n",
-      "texture": "Jungle"
-    },
-    {
-      "id": "DcW8yq",
-      "name": "jun boundary grass earth ne",
-      "model": "jun_boundary_grass_earth_corner_ne",
-      "texture": "Jungle"
-    },
-    {
-      "id": "1EnmH9",
-      "name": "jun tree single",
-      "model": "jun_boundary_tree_single",
-      "texture": "Jungle",
-      "flags": "Sway"
-    },
-    {
-      "id": "E2Gx89",
-      "name": "jun tree plant",
-      "model": "jun_boundary_tree_plant",
-      "texture": "Jungle",
-      "flags": "Sway"
-    },
-    {
-      "id": "7k7k2n",
-      "name": "jun tree double",
-      "model": "jun_boundary_tree_double",
-      "texture": "Jungle",
-      "flags": "Sway"
-    },
-    {
-      "id": "EQj3fm",
-      "name": "jun plant",
-      "model": "jun_boundary_plant",
-      "texture": "Jungle"
-    },
-    {
-      "id": "6KHVk9",
-      "name": "jun boundary n",
-      "model": "jun_tile_n_boundary_edge",
-      "texture": "Jungle"
-    },
-    {
-      "id": "8KGuUc",
-      "name": "jun boundary ne",
-      "model": "jun_tile_ne_boundary_corner",
-      "texture": "Jungle"
-    },
-    {
-      "id": "5aXJkc",
-      "name": "jun boundary small ne",
-      "model": "jun_tile_ne_boundary_sml_corner",
-      "texture": "Jungle"
-    },
-    {
-      "id": "9Aq8d4",
-      "name": "jun statue n",
-      "model": "jun_boundary_statue_n",
-      "texture": "Jungle"
-    },
-    {
-      "id": "CyHA4u",
-      "name": "jun mud pool",
-      "model": "jun_mudpool",
-      "texture": "Mud Pit"
-    },
-    {
-      "id": "75M6eC",
-      "name": "med tile boundary grass hd",
-      "model": "med_tile_boundary_grass_hd"
-    },
-    {
-      "id": "9aNMhn",
-      "name": "med tile boundary tree 01 hd",
-      "model": "med_tile_boundary_tree_01_hd"
-    },
-    {
-      "id": "AMNtxe",
-      "name": "Eggbot Default",
-      "model": "eggbot_default",
-      "texture": "Eggbot Default"
-    },
-    {
-      "id": "443D4h",
-      "name": "Eggbot Industrial",
-      "model": "eggbot_ind",
-      "texture": "Eggbot Industrial"
-    },
-    {
-      "id": "528y34",
-      "name": "Eggbot Egypt",
-      "model": "eggbot_egy",
-      "texture": "Eggbot Egypt"
-    },
-    {
-      "id": "4tEvrp",
-      "name": "Eggbot Medieval",
-      "model": "eggbot_med",
-      "texture": "Eggbot Medieval"
-    },
-    {
-      "id": "A44yj9",
-      "name": "Eggbot Jungle",
-      "model": "eggbot_jun",
-      "texture": "Eggbot Jungle"
-    },
-    {
-      "id": "836V9t",
-      "name": "Texture Test",
-      "model": "tile_flat",
-      "texture": "Texture Test"
-    },
-    {
-      "id": "42vJcJ",
-      "name": "coin",
-      "model": "coin",
-      "texture": "coin"
-    },
-    {
-      "id": "176q90",
-      "name": "Alpha Test",
-      "model": "editor_quad",
-      "texture": "Alpha Test"
-    },
-    {
-      "id": "4nKU0M",
-      "name": "debug tile",
-      "model": "debug_tile",
-      "texture": "Marker"
-    },
-    {
-      "id": "603Cit",
-      "name": "legacy pyramid",
-      "model": "jun_tile_boundary_pyramid",
-      "texture": "Mud Pit"
-    },
-    {
-      "id": "74Y092",
-      "name": "ss tile boundary 2",
-      "model": "ss_tile_boundary_02",
-      "texture": "Toxic Pipes"
-    },
-    {
-      "id": "1u4HhK",
-      "name": "ss tile boundary 3",
-      "model": "ss_tile_boundary_03",
-      "texture": "coin"
-    }
-  ],
+    "definitions": [
+        {
+            "id": "7Guyi6",
+            "name": "tile_invisible"
+        },
+        {
+            "id": "9kreKt",
+            "name": "tile_empty",
+            "model": "blocker"
+        },
+        {
+            "id": "A8krJn",
+            "name": "med trim tile",
+            "model": "med_trim_tile"
+        },
+        {
+            "id": "4CRGn4",
+            "name": "med well",
+            "model": "med_well"
+        },
+        {
+            "id": "EaHCxc",
+            "name": "med torch",
+            "model": "med_torch"
+        },
+        {
+            "id": "79kM6i",
+            "name": "med cage",
+            "model": "med_cage"
+        },
+        {
+            "id": "Cr4C7J",
+            "name": "med stocks",
+            "model": "med_stocks"
+        },
+        {
+            "id": "Chir6n",
+            "name": "med boundary tile 01",
+            "model": "med_boundary_tile_01"
+        },
+        {
+            "id": "21jdt4",
+            "name": "med trim tile inner corner",
+            "model": "med_trim_tile_inner_corner"
+        },
+        {
+            "id": "2U6rti",
+            "name": "med trim tile outer corner",
+            "model": "med_trim_tile_outer_corner"
+        },
+        {
+            "id": "CNwAWn",
+            "name": "med trim tile wedge",
+            "model": "med_trim_tile_wedge"
+        },
+        {
+            "id": "EPtjqa",
+            "name": "med house 01",
+            "model": "med_house_01"
+        },
+        {
+            "id": "CCcC7e",
+            "name": "med house 02",
+            "model": "med_house_02"
+        },
+        {
+            "id": "Dhxx26",
+            "name": "tutankhamun",
+            "model": "tutankhamun",
+            "texture": "Egypt"
+        },
+        {
+            "id": "038hvM",
+            "name": "sphinx",
+            "model": "egy_sphinx",
+            "texture": "Egypt"
+        },
+        {
+            "id": "2fi9Qe",
+            "name": "anubis",
+            "model": "egy_anubis",
+            "texture": "Egypt"
+        },
+        {
+            "id": "3dhrwu",
+            "name": "temple",
+            "model": "jun_boundary_temple",
+            "texture": "Jungle"
+        },
+        {
+            "id": "2An3fe",
+            "name": "ind tile door start",
+            "model": "ss_tile_door_ns",
+            "texture": "Industrial",
+            "flags": "Door, Start",
+            "connections": "NS"
+        },
+        {
+            "id": "75XVj1",
+            "name": "ind tile door end",
+            "model": "ss_tile_door_ns",
+            "texture": "Industrial",
+            "flags": "Door, End",
+            "connections": "NS"
+        },
+        {
+            "id": "Cp5F4e",
+            "name": "ind tile console",
+            "model": "ss_console_n",
+            "texture": "Industrial",
+            "flags": "Console",
+            "connections": "N"
+        },
+        {
+            "id": "2w9vTQ",
+            "name": "ind tile slide",
+            "model": "ss_tile_slide_plain",
+            "texture": "Industrial",
+            "flags": "Move"
+        },
+        {
+            "id": "AaNkrC",
+            "name": "ind tile static crossroad",
+            "model": "ss_tile_nesw_static",
+            "texture": "Industrial",
+            "connections": "NSEW"
+        },
+        {
+            "id": "0KdnWP",
+            "name": "ind tile static straight",
+            "model": "ss_tile_ns_static",
+            "texture": "Industrial",
+            "connections": "NS"
+        },
+        {
+            "id": "9xfU7Y",
+            "name": "ind tile static bend",
+            "model": "ss_tile_ne_corner_static",
+            "texture": "Industrial",
+            "connections": "NE"
+        },
+        {
+            "id": "D2m8HU",
+            "name": "ind tile crossroad",
+            "model": "ss_tile_nesw",
+            "texture": "Industrial",
+            "flags": "Move",
+            "connections": "NSEW"
+        },
+        {
+            "id": "9hR5pQ",
+            "name": "ind tile straight",
+            "model": "ss_tile_ns",
+            "texture": "Industrial",
+            "flags": "Move",
+            "connections": "NS"
+        },
+        {
+            "id": "DJNAYq",
+            "name": "ind tile corner bend",
+            "model": "ss_tile_ne_corner",
+            "texture": "Industrial",
+            "flags": "Move",
+            "connections": "NE"
+        },
+        {
+            "id": "2XfyDx",
+            "name": "ind caustic",
+            "model": "tile_flat",
+            "texture": "Caustic",
+            "material": "toxic"
+        },
+        {
+            "id": "3tNMCV",
+            "name": "ind toxic pipe join leak ns",
+            "model": "ss_tile_pipejoin_leak_ns",
+            "texture": "Toxic Pipes"
+        },
+        {
+            "id": "0F0wCU",
+            "name": "ind toxic pipe join straight",
+            "model": "ss_tile_pipejoin_ns",
+            "texture": "Industrial"
+        },
+        {
+            "id": "ECUVrk",
+            "name": "ind toxic pipe cross",
+            "model": "ss_tile_pipe_mid",
+            "texture": "Industrial"
+        },
+        {
+            "id": "8NpvXp",
+            "name": "ind toxic pipe strsight",
+            "model": "ss_tile_pipe_ns",
+            "texture": "Industrial"
+        },
+        {
+            "id": "8jtjX2",
+            "name": "ind toxic pipe bend",
+            "model": "ss_tile_pipe_corner_ne",
+            "texture": "Industrial"
+        },
+        {
+            "id": "ANmNdr",
+            "name": "ind toxic pipe floor",
+            "model": "ss_tile_pipefloor_n",
+            "texture": "Industrial"
+        },
+        {
+            "id": "4pdw17",
+            "name": "ind tile boundary",
+            "model": "ss_tile_boundary",
+            "texture": "Industrial"
+        },
+        {
+            "id": "0TGhTv",
+            "name": "ind tile boundary 2",
+            "model": "ss_tile_boundary_pitted",
+            "texture": "Industrial"
+        },
+        {
+            "id": "4T8R1f",
+            "name": "ind boundary edge",
+            "model": "ss_tile_n_boundary_edge",
+            "texture": "Industrial"
+        },
+        {
+            "id": "7x8ynD",
+            "name": "ind boundary corner large",
+            "model": "ss_tile_ne_boundary_corner",
+            "texture": "Industrial"
+        },
+        {
+            "id": "46Hmr0",
+            "name": "ind boundary corner small",
+            "model": "ss_tile_ne_boundary_sml_corner",
+            "texture": "Industrial"
+        },
+        {
+            "id": "2FMcwa",
+            "name": "ind tile boundary 3",
+            "model": "ss_tile_boundary_plate",
+            "texture": "Industrial"
+        },
+        {
+            "id": "3GVJyw",
+            "name": "ind legacy wall straight",
+            "model": "ss_wall_n",
+            "texture": "Industrial"
+        },
+        {
+            "id": "5Un9xE",
+            "name": "ind legacy wall corner",
+            "model": "ss_wall_corner_ne",
+            "texture": "Industrial"
+        },
+        {
+            "id": "DvCe9T",
+            "name": "egy tile door start ns",
+            "model": "egy_tile_ns_door",
+            "texture": "Egypt",
+            "flags": "Door, Start",
+            "connections": "NS"
+        },
+        {
+            "id": "5DnCpM",
+            "name": "egy tile door end ns",
+            "model": "egy_tile_ns_door",
+            "texture": "Egypt",
+            "flags": "Door, End",
+            "connections": "NS"
+        },
+        {
+            "id": "8VWAek",
+            "name": "egy tile console n",
+            "model": "egy_console_n",
+            "texture": "Egypt",
+            "flags": "Console",
+            "connections": "N"
+        },
+        {
+            "id": "6d5t6k",
+            "name": "egy tile boundary",
+            "model": "egy_tile_boundary",
+            "texture": "Egypt"
+        },
+        {
+            "id": "0ACD6e",
+            "name": "egy boundary obelisk",
+            "model": "egy_tile_boundary_oblisk",
+            "texture": "Egypt"
+        },
+        {
+            "id": "52Gwa3",
+            "name": "egy tile pyramid",
+            "model": "egy_tile_boundary_pyramid",
+            "texture": "Egypt"
+        },
+        {
+            "id": "5E4P2K",
+            "name": "egy tile slide",
+            "model": "egy_tile_slide",
+            "texture": "Egypt",
+            "flags": "Move"
+        },
+        {
+            "id": "7J4P6c",
+            "name": "egy tile static nesw",
+            "model": "egy_tile_nsew_static",
+            "texture": "Egypt",
+            "connections": "NSEW"
+        },
+        {
+            "id": "DAUKG9",
+            "name": "egy tile static ns",
+            "model": "egy_tile_ns_static",
+            "texture": "Egypt",
+            "connections": "NS"
+        },
+        {
+            "id": "7kQ4Yu",
+            "name": "egy tile static ne",
+            "model": "egy_tile_ne_corner_static",
+            "texture": "Egypt",
+            "connections": "NE"
+        },
+        {
+            "id": "3m9XNT",
+            "name": "egy tile nesw",
+            "model": "egy_tile_nsew",
+            "texture": "Egypt",
+            "flags": "Move",
+            "connections": "NSEW"
+        },
+        {
+            "id": "APAQMR",
+            "name": "egy tile ns",
+            "model": "egy_tile_ns",
+            "texture": "Egypt",
+            "flags": "Move",
+            "connections": "NS"
+        },
+        {
+            "id": "CNKtmM",
+            "name": "egy tile corner ne",
+            "model": "egy_tile_ne_corner",
+            "texture": "Egypt",
+            "flags": "Move",
+            "connections": "NE"
+        },
+        {
+            "id": "Aa47m9",
+            "name": "egy boundary ne",
+            "model": "egy_tile_ne_boundary_corner",
+            "texture": "Egypt"
+        },
+        {
+            "id": "81m9R9",
+            "name": "egy boundary small ne",
+            "model": "egy_tile_ne_boundary_sml_corner",
+            "texture": "Egypt"
+        },
+        {
+            "id": "23UUn0",
+            "name": "egy boundary n",
+            "model": "egy_tile_n_boundary_edge",
+            "texture": "Egypt"
+        },
+        {
+            "id": "EDQx80",
+            "name": "med tile door start ns",
+            "model": "med_tile_ns_door",
+            "texture": "Medieval",
+            "flags": "Door, Start",
+            "connections": "NS"
+        },
+        {
+            "id": "5rM4du",
+            "name": "med tile door end ns",
+            "model": "med_tile_ns_door",
+            "texture": "Medieval",
+            "flags": "Door, End",
+            "connections": "NS"
+        },
+        {
+            "id": "2KKauy",
+            "name": "med tile console n",
+            "model": "med_console_n",
+            "texture": "Medieval",
+            "flags": "Console",
+            "connections": "N"
+        },
+        {
+            "id": "0trKw7",
+            "name": "med_tile_console",
+            "model": "med_console",
+            "flags": "Console",
+            "connections": "N"
+        },
+        {
+            "id": "7U6WJe",
+            "name": "med tile boundary",
+            "model": "med_tile_boundary",
+            "texture": "Medieval"
+        },
+        {
+            "id": "81d2rQ",
+            "name": "med tile slide",
+            "model": "med_tile_slide",
+            "texture": "Medieval",
+            "flags": "Move"
+        },
+        {
+            "id": "75dq85",
+            "name": "med tile static nesw",
+            "model": "med_tile_nsew_static",
+            "texture": "Medieval",
+            "connections": "NSEW"
+        },
+        {
+            "id": "DWxH1r",
+            "name": "med tile static ns",
+            "model": "med_tile_ns_static",
+            "texture": "Medieval",
+            "connections": "NS"
+        },
+        {
+            "id": "55GMx1",
+            "name": "med tile static ne",
+            "model": "med_tile_ne_corner_static",
+            "texture": "Medieval",
+            "connections": "NE"
+        },
+        {
+            "id": "82jX54",
+            "name": "med tile nesw",
+            "model": "med_tile_nsew",
+            "texture": "Medieval",
+            "flags": "Move",
+            "connections": "NSEW"
+        },
+        {
+            "id": "ACaMdD",
+            "name": "med tile ns",
+            "model": "med_tile_ns",
+            "texture": "Medieval",
+            "flags": "Move",
+            "connections": "NS"
+        },
+        {
+            "id": "78F1P9",
+            "name": "med tile corner ne",
+            "model": "med_tile_ne_corner",
+            "texture": "Medieval",
+            "flags": "Move",
+            "connections": "NE"
+        },
+        {
+            "id": "2qKvhv",
+            "name": "med boundary ne",
+            "model": "med_tile_ne_boundary_corner",
+            "texture": "Medieval"
+        },
+        {
+            "id": "93Xvt6",
+            "name": "med boundary small ne",
+            "model": "med_tile_ne_boundary_sml_corner",
+            "texture": "Medieval"
+        },
+        {
+            "id": "1MC943",
+            "name": "med boundary n",
+            "model": "med_tile_n_boundary_edge",
+            "texture": "Medieval"
+        },
+        {
+            "id": "46VAC4",
+            "name": "med boundary house blue ns",
+            "model": "med_tile_sml_blue_hse_ns",
+            "texture": "Medieval"
+        },
+        {
+            "id": "6iTdwH",
+            "name": "med boundary house red ns",
+            "model": "med_tile_sml_red_hse_ns",
+            "texture": "Medieval"
+        },
+        {
+            "id": "1YGxfJ",
+            "name": "med boundary house big blue ns",
+            "model": "med_tile_big_blue_hse_ns",
+            "texture": "Medieval"
+        },
+        {
+            "id": "9Ep7Dj",
+            "name": "med boundary house big red ns",
+            "model": "med_tile_big_red_hse_ns",
+            "texture": "Medieval"
+        },
+        {
+            "id": "5y92UG",
+            "name": "med boundary cage n",
+            "model": "med_tile_n_boundary_cage",
+            "texture": "Medieval"
+        },
+        {
+            "id": "7WEY7G",
+            "name": "med boundary stocks ns",
+            "model": "med_tile_ns_stocks",
+            "texture": "Medieval"
+        },
+        {
+            "id": "052AE3",
+            "name": "med boundary well ns",
+            "model": "med_tile_ns_well",
+            "texture": "Medieval"
+        },
+        {
+            "id": "DPdUHW",
+            "name": "med boundary tent blue",
+            "model": "med_tile_tent_blue",
+            "texture": "Medieval"
+        },
+        {
+            "id": "AQwcFW",
+            "name": "med boundary tent green",
+            "model": "med_tile_tent_green",
+            "texture": "Medieval"
+        },
+        {
+            "id": "E4WjRD",
+            "name": "jun tile door start ns",
+            "model": "jun_tile_ns_door",
+            "texture": "Jungle",
+            "flags": "Door, Start",
+            "connections": "NS"
+        },
+        {
+            "id": "3fdhha",
+            "name": "jun tile door end ns",
+            "model": "jun_tile_ns_door",
+            "texture": "Jungle",
+            "flags": "Door, End",
+            "connections": "NS"
+        },
+        {
+            "id": "6jquRN",
+            "name": "jun tile console n",
+            "model": "jun_console_n",
+            "texture": "Jungle",
+            "flags": "Console",
+            "connections": "N"
+        },
+        {
+            "id": "6c0yvj",
+            "name": "jun tile boundary",
+            "model": "jun_tile_boundary",
+            "texture": "Jungle"
+        },
+        {
+            "id": "6n29xr",
+            "name": "jun tile slide",
+            "model": "jun_tile_slide",
+            "texture": "Jungle",
+            "flags": "Move"
+        },
+        {
+            "id": "0e2RF9",
+            "name": "jun tile static nesw",
+            "model": "jun_tile_nsew_static",
+            "texture": "Jungle",
+            "connections": "NSEW"
+        },
+        {
+            "id": "D0JQ7D",
+            "name": "jun tile static ns",
+            "model": "jun_tile_ns_static",
+            "texture": "Jungle",
+            "connections": "NS"
+        },
+        {
+            "id": "9uNFv9",
+            "name": "jun tile static ne",
+            "model": "jun_tile_ne_corner_static",
+            "texture": "Jungle",
+            "connections": "NE"
+        },
+        {
+            "id": "44Rdar",
+            "name": "jun tile nesw",
+            "model": "jun_tile_nsew",
+            "texture": "Jungle",
+            "flags": "Move, Wash",
+            "connections": "NSEW"
+        },
+        {
+            "id": "AwcehK",
+            "name": "jun tile ns",
+            "model": "jun_tile_ns",
+            "texture": "Jungle",
+            "flags": "Move, Wash",
+            "connections": "NS"
+        },
+        {
+            "id": "8mNmuv",
+            "name": "jun tile corner ne",
+            "model": "jun_tile_ne_corner",
+            "texture": "Jungle",
+            "flags": "Move, Wash",
+            "connections": "NE"
+        },
+        {
+            "id": "1ePHrc",
+            "name": "jun tile stone nesw",
+            "model": "jun_tile_stone_nsew",
+            "texture": "Jungle",
+            "flags": "Move",
+            "connections": "NSEW"
+        },
+        {
+            "id": "9xfXA2",
+            "name": "jun tile stone ns",
+            "model": "jun_tile_stone_ns",
+            "texture": "Jungle",
+            "flags": "Move",
+            "connections": "NS"
+        },
+        {
+            "id": "61ciV6",
+            "name": "jun tile stone ne",
+            "model": "jun_tile_stone_ne_corner",
+            "texture": "Jungle",
+            "flags": "Move",
+            "connections": "NE"
+        },
+        {
+            "id": "1mPQ2W",
+            "name": "jun boundary earth",
+            "model": "jun_boundary_earth",
+            "texture": "Jungle"
+        },
+        {
+            "id": "1PDtN8",
+            "name": "jun boundary grass",
+            "model": "jun_boundary_grass",
+            "texture": "Jungle"
+        },
+        {
+            "id": "78tUdd",
+            "name": "jun boundary earth grass n",
+            "model": "jun_boundary_grass_earth_n_01",
+            "texture": "Jungle"
+        },
+        {
+            "id": "2jUH3p",
+            "name": "jun boundary earth grass ne",
+            "model": "jun_boundary_earth_grass_corner_ne",
+            "texture": "Jungle"
+        },
+        {
+            "id": "5F4DRj",
+            "name": "jun boundary grass earth n",
+            "model": "jun_boundary_grass_earth_n",
+            "texture": "Jungle"
+        },
+        {
+            "id": "DcW8yq",
+            "name": "jun boundary grass earth ne",
+            "model": "jun_boundary_grass_earth_corner_ne",
+            "texture": "Jungle"
+        },
+        {
+            "id": "1EnmH9",
+            "name": "jun tree single",
+            "model": "jun_boundary_tree_single",
+            "texture": "Jungle",
+            "flags": "Sway"
+        },
+        {
+            "id": "E2Gx89",
+            "name": "jun tree plant",
+            "model": "jun_boundary_tree_plant",
+            "texture": "Jungle",
+            "flags": "Sway"
+        },
+        {
+            "id": "7k7k2n",
+            "name": "jun tree double",
+            "model": "jun_boundary_tree_double",
+            "texture": "Jungle",
+            "flags": "Sway"
+        },
+        {
+            "id": "EQj3fm",
+            "name": "jun plant",
+            "model": "jun_boundary_plant",
+            "texture": "Jungle"
+        },
+        {
+            "id": "6KHVk9",
+            "name": "jun boundary n",
+            "model": "jun_tile_n_boundary_edge",
+            "texture": "Jungle"
+        },
+        {
+            "id": "8KGuUc",
+            "name": "jun boundary ne",
+            "model": "jun_tile_ne_boundary_corner",
+            "texture": "Jungle"
+        },
+        {
+            "id": "5aXJkc",
+            "name": "jun boundary small ne",
+            "model": "jun_tile_ne_boundary_sml_corner",
+            "texture": "Jungle"
+        },
+        {
+            "id": "9Aq8d4",
+            "name": "jun statue n",
+            "model": "jun_boundary_statue_n",
+            "texture": "Jungle"
+        },
+        {
+            "id": "CyHA4u",
+            "name": "jun mud pool",
+            "model": "jun_mudpool",
+            "texture": "Mud Pit"
+        },
+        {
+            "id": "75M6eC",
+            "name": "med tile boundary grass hd",
+            "model": "med_tile_boundary_grass_hd"
+        },
+        {
+            "id": "9aNMhn",
+            "name": "med tile boundary tree 01 hd",
+            "model": "med_tile_boundary_tree_01_hd"
+        },
+        {
+            "id": "AMNtxe",
+            "name": "Eggbot Default",
+            "model": "eggbot_default",
+            "texture": "Eggbot Default"
+        },
+        {
+            "id": "443D4h",
+            "name": "Eggbot Industrial",
+            "model": "eggbot_ind",
+            "texture": "Eggbot Industrial"
+        },
+        {
+            "id": "528y34",
+            "name": "Eggbot Egypt",
+            "model": "eggbot_egy",
+            "texture": "Eggbot Egypt"
+        },
+        {
+            "id": "4tEvrp",
+            "name": "Eggbot Medieval",
+            "model": "eggbot_med",
+            "texture": "Eggbot Medieval"
+        },
+        {
+            "id": "A44yj9",
+            "name": "Eggbot Jungle",
+            "model": "eggbot_jun",
+            "texture": "Eggbot Jungle"
+        },
+        {
+            "id": "836V9t",
+            "name": "Texture Test",
+            "model": "tile_flat",
+            "texture": "Texture Test"
+        },
+        {
+            "id": "42vJcJ",
+            "name": "coin",
+            "model": "coin",
+            "texture": "coin"
+        },
+        {
+            "id": "176q90",
+            "name": "Alpha Test",
+            "model": "editor_quad",
+            "texture": "Alpha Test"
+        },
+        {
+            "id": "4nKU0M",
+            "name": "debug tile",
+            "model": "debug_tile",
+            "texture": "Marker"
+        },
+        {
+            "id": "603Cit",
+            "name": "legacy pyramid",
+            "model": "jun_tile_boundary_pyramid",
+            "texture": "Mud Pit"
+        },
+        {
+            "id": "74Y092",
+            "name": "ss tile boundary 2",
+            "model": "ss_tile_boundary_02",
+            "texture": "Toxic Pipes"
+        },
+        {
+            "id": "1u4HhK",
+            "name": "ss tile boundary 3",
+            "model": "ss_tile_boundary_03",
+            "texture": "coin"
+        }
+    ],
   "textures": [
     {
       "id": "Default",

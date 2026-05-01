@@ -44,7 +44,7 @@ namespace ClassicTilestorm
 
 		public static Definition FindOrCreateDefaultDefinition()
 		{
-			var prototype = Definition.GetDefault();
+			var prototype = Definition.Default;//.GetDefault();
 			int expectedHash = prototype.HashID;
 
 			// Only hashid matters from now on
@@ -255,8 +255,8 @@ namespace ClassicTilestorm
 
 			if (0 == hashId)
 			{
-				hadError = true;
-				Debug.LogError("Attempted to resolve null or empty tile definition hash.");
+				//hadError = true;
+				//Debug.LogError("Attempted to resolve null or empty tile definition hash.");
 				return FindOrCreateDefaultDefinition();
 			}
 

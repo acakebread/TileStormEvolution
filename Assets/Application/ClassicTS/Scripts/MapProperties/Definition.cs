@@ -72,7 +72,7 @@ namespace ClassicTilestorm
         [JsonIgnore] public bool Move        { get => (flags & (int)DefinitionFlags.Move)        != 0; set => SetFlag(DefinitionFlags.Move,        value); }
         [JsonIgnore] public bool Drag        { get => Move && HasNavigation();                    set => Move = value; }
         [JsonIgnore] public bool Roll        { get => Move && !HasNavigation() && HasModel();     set => Move = value; }
-        [JsonIgnore] public bool Fold        { get => !HasModel() || (Move && !HasNavigation());  set => Move = value; }
+        [JsonIgnore] public bool Fold        { get => (Move && !HasNavigation()) || !HasModel();  set => Move = value; }
         [JsonIgnore] public bool Door        { get => (flags & (int)DefinitionFlags.Door)        != 0; set => SetFlag(DefinitionFlags.Door,        value); }
         [JsonIgnore] public bool Start       { get => (flags & (int)DefinitionFlags.Start)       != 0; set => SetFlag(DefinitionFlags.Start,       value); }
         [JsonIgnore] public bool End         { get => (flags & (int)DefinitionFlags.End)         != 0; set => SetFlag(DefinitionFlags.End,         value); }
@@ -98,39 +98,66 @@ namespace ClassicTilestorm
 
         private bool HasNavigation() => (flags & (int)DefinitionFlags.DirMask) != 0;
 
-        private bool HasModel() => !string.IsNullOrWhiteSpace(model);
+		private bool HasModel() => !string.IsNullOrWhiteSpace(model);
 
-        public static Definition GetDefault()
-        {
-			//const string legacyName = "tile_empty";
-			//int hash32 = RadixHash.GetStableHash32(legacyName);
-			const string legacyName = "tile_default";
-			int hash32 = RadixHash.GetStableHash32(legacyName);
+		//public static Definition GetDefault()
+		//      {
+		//	const string legacyName = "tile_empty";
+		//	int hash32 = RadixHash.GetStableHash32(legacyName);
 
-			return new Definition
-            {
-                HashID   = hash32,
-                name     = legacyName,
-                model    = null,
-                texture  = null,
-                material = null,
-                // flags == 0 implicitly
-            };
-        }
+		//	return new Definition
+		//          {
+		//              HashID   = hash32,
+		//              name     = legacyName,
+		//              model    = null,
+		//              texture  = null,
+		//              material = null,
+		//              // flags == 0 implicitly
+		//          };
+		//      }
 
-        public static Definition Default => GetDefault();
+		//public static Definition GetDefault() => new ()
+		//{
+		//	HashID = 0,
+		//	name = "tile_default",
+		//	model = null,
+		//	texture = null,
+		//	material = null,
+		//	// flags == 0 implicitly
+		//};
 
-        public bool IsDefault() => HashID == GetDefault().HashID;
+		//public static Definition Default => GetDefault();
 
-        public bool IsDefaultEquivalent()
-        {
-            return string.IsNullOrWhiteSpace(model) &&
-                   !North && !East && !South && !West &&
-                   !Move &&
-				   !Start && !End && !Door && !Console &&
-				   !PuzzleBlock && !Sway && !Wash;
-        }
-    }
+		public static Definition Default => new()
+		{
+			HashID = 0,
+			name = "default",
+			model = null,
+			texture = null,
+			material = null,
+			// flags == 0 implicitly
+		};
+
+		//public static Definition Default => GetDefault();
+
+		//public bool IsDefault() => HashID == GetDefault().HashID;
+		public bool IsDefault() => HashID == Default.HashID;
+
+        //public bool IsDefaultEquivalent()
+        //      {
+        //          return string.IsNullOrWhiteSpace(model) &&
+        //                 !North && !East && !South && !West &&
+        //                 !Move &&
+        //		   !Start && !End && !Door && !Console &&
+        //		   !PuzzleBlock && !Sway && !Wash;
+        //      }
+
+        public bool IsDefaultEquivalent() =>
+            0 == flags && 
+            string.IsNullOrWhiteSpace(model) &&
+			string.IsNullOrWhiteSpace(texture) &&
+			string.IsNullOrWhiteSpace(material);
+	}
 
     public class DefinitionConverter : JsonConverter
     {
