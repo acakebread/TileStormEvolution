@@ -67,9 +67,6 @@ namespace ClassicTilestorm
         [JsonIgnore] public bool West        { get => (flags & (int)DefinitionFlags.West)        != 0; set => SetFlag(DefinitionFlags.West,        value); }
 
 		[JsonIgnore] public bool Bake        { get => (flags & (int)DefinitionFlags.Bake)        != 0; set => SetFlag(DefinitionFlags.Bake,        value); }
-		[JsonIgnore] public bool Drag        { get => !Bake && HasNavigation();                        set => Bake = !value; }
-        [JsonIgnore] public bool Roll        { get => !Bake && !HasNavigation() && HasModel();         set => Bake = !value; }
-        [JsonIgnore] public bool Fold        { get => !Bake && !HasNavigation() && !HasModel();        set => Bake = !value; }
         [JsonIgnore] public bool Door        { get => (flags & (int)DefinitionFlags.Door)        != 0; set => SetFlag(DefinitionFlags.Door,        value); }
         [JsonIgnore] public bool Start       { get => (flags & (int)DefinitionFlags.Start)       != 0; set => SetFlag(DefinitionFlags.Start,       value); }
         [JsonIgnore] public bool End         { get => (flags & (int)DefinitionFlags.End)         != 0; set => SetFlag(DefinitionFlags.End,         value); }
@@ -93,38 +90,6 @@ namespace ClassicTilestorm
                 flags &= ~(int)flag;
         }
 
-        private bool HasNavigation() => (flags & (int)DefinitionFlags.DirMask) != 0;
-
-		private bool HasModel() => !string.IsNullOrWhiteSpace(model);
-
-		//public static Definition GetDefault()
-		//      {
-		//	const string legacyName = "tile_empty";
-		//	int hash32 = RadixHash.GetStableHash32(legacyName);
-
-		//	return new Definition
-		//          {
-		//              HashID   = hash32,
-		//              name     = legacyName,
-		//              model    = null,
-		//              texture  = null,
-		//              material = null,
-		//              // flags == 0 implicitly
-		//          };
-		//      }
-
-		//public static Definition GetDefault() => new ()
-		//{
-		//	HashID = 0,
-		//	name = "tile_default",
-		//	model = null,
-		//	texture = null,
-		//	material = null,
-		//	// flags == 0 implicitly
-		//};
-
-		//public static Definition Default => GetDefault();
-
 		public static Definition Default => new()
 		{
 			HashID = 0,
@@ -135,19 +100,7 @@ namespace ClassicTilestorm
 			// flags == 0 implicitly
 		};
 
-		//public static Definition Default => GetDefault();
-
-		//public bool IsDefault() => HashID == GetDefault().HashID;
 		public bool IsDefault() => HashID == Default.HashID;
-
-        //public bool IsDefaultEquivalent()
-        //      {
-        //          return string.IsNullOrWhiteSpace(model) &&
-        //                 !North && !East && !South && !West &&
-        //                 !Move &&
-        //		   !Start && !End && !Door && !Console &&
-        //		   !PuzzleBlock && !Sway && !Wash;
-        //      }
 
         public bool IsDefaultEquivalent() =>
             0 == flags && 
@@ -158,30 +111,6 @@ namespace ClassicTilestorm
 
     public class DefinitionConverter : JsonConverter
     {
-        //private static readonly IReadOnlyDictionary<string, DefinitionFlags> WriteFlagLookup = new Dictionary<string, DefinitionFlags>(StringComparer.OrdinalIgnoreCase)
-        //{
-        //    ["Move"] = DefinitionFlags.Move,
-        //    ["Door"] = DefinitionFlags.Door,
-        //    ["Start"] = DefinitionFlags.Start,
-        //    ["End"] = DefinitionFlags.End,
-        //    ["Console"] = DefinitionFlags.Console,
-        //    ["PuzzleBlock"] = DefinitionFlags.PuzzleBlock,
-        //    ["Sway"] = DefinitionFlags.Sway,
-        //    ["Wash"] = DefinitionFlags.Wash,
-        //};
-
-        //private static readonly IReadOnlyDictionary<string, DefinitionFlags> ReadFlagLookup = new Dictionary<string, DefinitionFlags>(StringComparer.OrdinalIgnoreCase)
-        //{
-        //    ["Move"] = DefinitionFlags.Move,
-        //    ["Door"] = DefinitionFlags.Door,
-        //    ["Start"] = DefinitionFlags.Start,
-        //    ["End"] = DefinitionFlags.End,
-        //    ["Console"] = DefinitionFlags.Console,
-        //    ["PuzzleBlock"] = DefinitionFlags.PuzzleBlock,
-        //    ["Sway"] = DefinitionFlags.Sway,
-        //    ["Wash"] = DefinitionFlags.Wash,
-        //};
-
         private static readonly IReadOnlyDictionary<string, DefinitionFlags> FlagLookup = new Dictionary<string, DefinitionFlags>(StringComparer.OrdinalIgnoreCase)
 		{
 			["Move"] = DefinitionFlags.Bake,
@@ -222,7 +151,7 @@ namespace ClassicTilestorm
 
             // Gameplay flags
             var activeFlags = new List<string>();
-            foreach (var kv in FlagLookup)//WriteFlagLookup
+            foreach (var kv in FlagLookup)
 			{
 				if (string.Equals(kv.Key, "Move", StringComparison.OrdinalIgnoreCase))
 				{
@@ -284,7 +213,7 @@ namespace ClassicTilestorm
                     string trimmed = part.Trim();
                     if (string.IsNullOrEmpty(trimmed)) continue;
 
-                    if (FlagLookup.TryGetValue(trimmed, out var flag))//ReadFlagLookup
+                    if (FlagLookup.TryGetValue(trimmed, out var flag))
 					{
 						if (flag == DefinitionFlags.Bake)
 							((IFlagAccess)def).Flags &= ~(int)DefinitionFlags.Bake;
