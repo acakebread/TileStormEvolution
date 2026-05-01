@@ -29,7 +29,6 @@ namespace ClassicTilestorm
 
 				for (var visualIndex = 0; visualIndex < _graph.Length; visualIndex++)
 				{
-					//_graph[visualIndex] = CreateTile(variants[tiles[visualIndex]], parent, TileRenderPosition(visualIndex));
 					_graph[visualIndex] = CreateTile(variants[tiles[visualIndex]], parent, visualIndex);
 #if DEBUG
 					UpdateGraphTileInfo(visualIndex);
@@ -83,14 +82,11 @@ namespace ClassicTilestorm
 			go.name = $"{def?.name ?? "??"} ({go.transform.position.x:F1},{go.transform.position.z:F1})+{variant.delta:F2}@{variant.angle:F1}deg";
 		}
 
-		//private Tile CreateTile(Variant variant, Transform parent, Vector3 renderPosition) => new Tile(variant, parent, renderPosition);
-
-		// Clean signature - only needs variant, parent, and visualIndex
 		private Tile CreateTile(Variant variant, Transform parent, int visualIndex)
 		{
-			Vector3 renderPosition = TileRenderPosition(visualIndex);   // resolved internally
+			Vector3 renderPosition = TileRenderPosition(visualIndex);
 
-			var tile = new Tile(variant, parent, renderPosition);       // original clean Tile constructor
+			var tile = new Tile(variant, parent, renderPosition);
 
 			if (tile.gameObject != null)
 				AttachPickColliders(tile.gameObject, mapRoot: parent != null ? parent.GetComponent<MapRoot>()?.Map : null, visualIndex);

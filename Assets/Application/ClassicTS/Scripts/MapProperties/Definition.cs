@@ -21,9 +21,7 @@ namespace ClassicTilestorm
 		DirMask = 0b1111,  // bits 0–3 only (N=1, S=2, E=4, W=8)
 
 		// ── Gameplay flags – start from bit 8 and never touch 0–7 ─────────────
-		Drag        = 1 << 8,          // (1 <<  8) 0b0000000100000000
-        Roll        = 1 << 9,   // (1 <<  9) 0b0000001000000000
-        Dock        = 1 << 10,  // (1 << 10) 0b0000010000000000
+		Bake        = 1 << 8,   // internal inverse of serialized "Move"
         Start       = 1 << 11,  // (1 << 11) 0b0000100000000000
         End         = 1 << 12,  // (1 << 12) 0b0001000000000000
         Door        = 1 << 13,  // (1 << 13) 0b0010000000000000
@@ -68,9 +66,7 @@ namespace ClassicTilestorm
         [JsonIgnore] public bool East        { get => (flags & (int)DefinitionFlags.East)        != 0; set => SetFlag(DefinitionFlags.East,        value); }
         [JsonIgnore] public bool West        { get => (flags & (int)DefinitionFlags.West)        != 0; set => SetFlag(DefinitionFlags.West,        value); }
 
-        [JsonIgnore] public bool Drag        { get => (flags & (int)DefinitionFlags.Drag)        != 0; set => SetFlag(DefinitionFlags.Drag,        value); }
-        [JsonIgnore] public bool Roll        { get => (flags & (int)DefinitionFlags.Roll)        != 0; set => SetFlag(DefinitionFlags.Roll,        value); }
-        [JsonIgnore] public bool Dock        { get => (flags & (int)DefinitionFlags.Dock)        != 0; set => SetFlag(DefinitionFlags.Dock,        value); }
+		[JsonIgnore] public bool Bake        { get => (flags & (int)DefinitionFlags.Bake)        != 0; set => SetFlag(DefinitionFlags.Bake,        value); }
         [JsonIgnore] public bool Door        { get => (flags & (int)DefinitionFlags.Door)        != 0; set => SetFlag(DefinitionFlags.Door,        value); }
         [JsonIgnore] public bool Start       { get => (flags & (int)DefinitionFlags.Start)       != 0; set => SetFlag(DefinitionFlags.Start,       value); }
         [JsonIgnore] public bool End         { get => (flags & (int)DefinitionFlags.End)         != 0; set => SetFlag(DefinitionFlags.End,         value); }
@@ -94,53 +90,60 @@ namespace ClassicTilestorm
                 flags &= ~(int)flag;
         }
 
-        public static Definition GetDefault()
-        {
-            const string legacyName = "tile_empty";
-            int hash32 = RadixHash.GetStableHash32(legacyName);
+		public bool IsDrag() => IsDrag(flags);
 
-            return new Definition
-            {
-                HashID   = hash32,
-                name     = legacyName,
-                model    = null,
-                texture  = null,
-                material = null,
-                // flags == 0 implicitly
-            };
-        }
+		public bool IsDrag(int flagsValue) =>
+			(flagsValue & (int)DefinitionFlags.Bake) == 0 &&
+			(flagsValue & (int)DefinitionFlags.DirMask) != 0;
 
-        public static Definition Default => GetDefault();
+		public bool IsRoll() => IsRoll(flags);
 
-        public bool IsDefault() => HashID == GetDefault().HashID;
+		public bool IsRoll(int flagsValue) =>
+			(flagsValue & (int)DefinitionFlags.Bake) == 0 &&
+			(flagsValue & (int)DefinitionFlags.DirMask) == 0 &&
+			!string.IsNullOrWhiteSpace(model);
 
-        public bool IsDefaultEquivalent()
-        {
-            return string.IsNullOrWhiteSpace(model) &&
-                   !North && !East && !South && !West &&
-                   !Drag && !Roll && !Dock &&
-				   !Start && !End && !Door && !Console &&
-				   !PuzzleBlock && !Sway && !Wash;
-        }
-    }
+		public bool IsFold() => IsFold(flags);
+
+		public bool IsFold(int flagsValue) =>
+			(flagsValue & (int)DefinitionFlags.Bake) == 0 &&
+			(flagsValue & (int)DefinitionFlags.DirMask) == 0 &&
+			string.IsNullOrWhiteSpace(model);
+
+		public static Definition Default => new()
+		{
+			HashID = 0,
+			name = "default",
+			model = null,
+			texture = null,
+			material = null,
+			// flags == 0 implicitly
+		};
+
+		public bool IsDefault() => HashID == Default.HashID;
+
+        public bool IsDefaultEquivalent() =>
+            0 == flags && 
+            string.IsNullOrWhiteSpace(model) &&
+			string.IsNullOrWhiteSpace(texture) &&
+			string.IsNullOrWhiteSpace(material);
+	}
 
     public class DefinitionConverter : JsonConverter
     {
         private static readonly IReadOnlyDictionary<string, DefinitionFlags> FlagLookup = new Dictionary<string, DefinitionFlags>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["Drag"]        = DefinitionFlags.Drag,
-            ["Roll"]        = DefinitionFlags.Roll,
-            ["Dock"]        = DefinitionFlags.Dock,
-            ["Door"]        = DefinitionFlags.Door,
-            ["Start"]       = DefinitionFlags.Start,
-            ["End"]         = DefinitionFlags.End,
-            ["Console"]     = DefinitionFlags.Console,
-            ["PuzzleBlock"] = DefinitionFlags.PuzzleBlock,
-            ["Sway"]        = DefinitionFlags.Sway,
-            ["Wash"]        = DefinitionFlags.Wash,
-        };
+		{
+			["Move"] = DefinitionFlags.Bake,
+			["Door"] = DefinitionFlags.Door,
+			["Start"] = DefinitionFlags.Start,
+			["End"] = DefinitionFlags.End,
+			["Console"] = DefinitionFlags.Console,
+			["PuzzleBlock"] = DefinitionFlags.PuzzleBlock,
+			["Sway"] = DefinitionFlags.Sway,
+			["Wash"] = DefinitionFlags.Wash,
+		};
 
-        private static readonly IReadOnlyDictionary<string, DefinitionFlags> ConnectionLookup = new Dictionary<string, DefinitionFlags>(StringComparer.OrdinalIgnoreCase)
+		private static readonly IReadOnlyDictionary<string, DefinitionFlags> ConnectionLookup = new Dictionary<string, DefinitionFlags>(StringComparer.OrdinalIgnoreCase)
         {
             ["N"] = DefinitionFlags.North,
             ["S"] = DefinitionFlags.South,
@@ -169,7 +172,14 @@ namespace ClassicTilestorm
             // Gameplay flags
             var activeFlags = new List<string>();
             foreach (var kv in FlagLookup)
-            {
+			{
+				if (string.Equals(kv.Key, "Move", StringComparison.OrdinalIgnoreCase))
+				{
+					if (!def.Bake)
+						activeFlags.Add(kv.Key);
+					continue;
+				}
+
 				if ((((IFlagAccess)def).Flags & (int)kv.Value) != 0)
                     activeFlags.Add(kv.Key);
             }
@@ -203,6 +213,7 @@ namespace ClassicTilestorm
             if (reader.TokenType == JsonToken.Null) return null;
 
             var def = existingValue as Definition ?? new Definition();
+			((IFlagAccess)def).Flags = (int)DefinitionFlags.Bake;
             var jo = JObject.Load(reader);
 
             if (jo["id"]?.Value<string>() is { } idStr && !string.IsNullOrEmpty(idStr))
@@ -223,7 +234,12 @@ namespace ClassicTilestorm
                     if (string.IsNullOrEmpty(trimmed)) continue;
 
                     if (FlagLookup.TryGetValue(trimmed, out var flag))
-                        ((IFlagAccess)def).Flags |= (int)flag;
+					{
+						if (flag == DefinitionFlags.Bake)
+							((IFlagAccess)def).Flags &= ~(int)DefinitionFlags.Bake;
+						else
+							((IFlagAccess)def).Flags |= (int)flag;
+					}
                     else
                         Debug.LogWarning($"Unknown flag in JSON: '{trimmed}'");
                 }

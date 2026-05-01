@@ -1,0 +1,21 @@
+# Invisible empty tile - degenerate quad at Y=0
+# Extents: X/Z -0.5..0.5, Y=0 (zero height, fully degenerate area)
+# Renders nothing, but provides valid bounds for editor / collider / culling systems.
+
+o empty_tile
+
+# Four vertices forming a 1x1 square on the XZ plane at Y=0
+v -0.5  0.0 -0.5
+v  0.5  0.0 -0.5
+v  0.5  0.0  0.5
+v -0.5  0.0  0.5
+
+# One normal (direction doesn't matter much since area=0)
+vn 0 1 0
+
+# Four degenerate triangles around the perimeter (all have zero area)
+# This forces the bounding box to be correct while rendering nothing.
+f 1//1 2//1 2//1
+f 2//1 3//1 3//1
+f 3//1 4//1 4//1
+f 4//1 1//1 1//1

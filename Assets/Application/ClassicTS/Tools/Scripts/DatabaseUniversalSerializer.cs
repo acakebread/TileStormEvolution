@@ -78,7 +78,7 @@ namespace ClassicTilestorm
 			public string szGeom;
 			public bool bSlide;
 			public bool bRoll;
-			public bool bDock;
+			public bool bFold;
 			public bool bConsole;
 			public bool bDoor;
 			public bool bStart;
