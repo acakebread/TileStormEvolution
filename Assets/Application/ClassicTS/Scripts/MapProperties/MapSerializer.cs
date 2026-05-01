@@ -268,11 +268,12 @@ namespace ClassicTilestorm
 
 			foreach (var v in variants)
 			{
-				if (v.hash == 0)
-				{
-					writer.WriteValue("unknown");
-					continue;
-				}
+				//no longer needed - default tile is hashid zero so this is valid
+				//if (v.hash == 0)
+				//{
+				//	writer.WriteValue("unknown");
+				//	continue;
+				//}
 
 				var parts = new List<string> { HTB50Settings.ToString(v.hash) };
 

@@ -161,31 +161,43 @@ namespace ClassicTilestorm
 
     public class DefinitionConverter : JsonConverter
     {
-        private static readonly IReadOnlyDictionary<string, DefinitionFlags> WriteFlagLookup = new Dictionary<string, DefinitionFlags>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["Move"]        = DefinitionFlags.Move,
-            ["Door"]        = DefinitionFlags.Door,
-            ["Start"]       = DefinitionFlags.Start,
-            ["End"]         = DefinitionFlags.End,
-            ["Console"]     = DefinitionFlags.Console,
-            ["PuzzleBlock"] = DefinitionFlags.PuzzleBlock,
-            ["Sway"]        = DefinitionFlags.Sway,
-            ["Wash"]        = DefinitionFlags.Wash,
-        };
+        //private static readonly IReadOnlyDictionary<string, DefinitionFlags> WriteFlagLookup = new Dictionary<string, DefinitionFlags>(StringComparer.OrdinalIgnoreCase)
+        //{
+        //    ["Move"] = DefinitionFlags.Move,
+        //    ["Door"] = DefinitionFlags.Door,
+        //    ["Start"] = DefinitionFlags.Start,
+        //    ["End"] = DefinitionFlags.End,
+        //    ["Console"] = DefinitionFlags.Console,
+        //    ["PuzzleBlock"] = DefinitionFlags.PuzzleBlock,
+        //    ["Sway"] = DefinitionFlags.Sway,
+        //    ["Wash"] = DefinitionFlags.Wash,
+        //};
 
-        private static readonly IReadOnlyDictionary<string, DefinitionFlags> ReadFlagLookup = new Dictionary<string, DefinitionFlags>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["Move"]        = DefinitionFlags.Move,
-            ["Door"]        = DefinitionFlags.Door,
-            ["Start"]       = DefinitionFlags.Start,
-            ["End"]         = DefinitionFlags.End,
-            ["Console"]     = DefinitionFlags.Console,
-            ["PuzzleBlock"] = DefinitionFlags.PuzzleBlock,
-            ["Sway"]        = DefinitionFlags.Sway,
-            ["Wash"]        = DefinitionFlags.Wash,
-        };
+        //private static readonly IReadOnlyDictionary<string, DefinitionFlags> ReadFlagLookup = new Dictionary<string, DefinitionFlags>(StringComparer.OrdinalIgnoreCase)
+        //{
+        //    ["Move"] = DefinitionFlags.Move,
+        //    ["Door"] = DefinitionFlags.Door,
+        //    ["Start"] = DefinitionFlags.Start,
+        //    ["End"] = DefinitionFlags.End,
+        //    ["Console"] = DefinitionFlags.Console,
+        //    ["PuzzleBlock"] = DefinitionFlags.PuzzleBlock,
+        //    ["Sway"] = DefinitionFlags.Sway,
+        //    ["Wash"] = DefinitionFlags.Wash,
+        //};
 
-        private static readonly IReadOnlyDictionary<string, DefinitionFlags> ConnectionLookup = new Dictionary<string, DefinitionFlags>(StringComparer.OrdinalIgnoreCase)
+        private static readonly IReadOnlyDictionary<string, DefinitionFlags> FlagLookup = new Dictionary<string, DefinitionFlags>(StringComparer.OrdinalIgnoreCase)
+		{
+			["Move"] = DefinitionFlags.Move,
+			["Door"] = DefinitionFlags.Door,
+			["Start"] = DefinitionFlags.Start,
+			["End"] = DefinitionFlags.End,
+			["Console"] = DefinitionFlags.Console,
+			["PuzzleBlock"] = DefinitionFlags.PuzzleBlock,
+			["Sway"] = DefinitionFlags.Sway,
+			["Wash"] = DefinitionFlags.Wash,
+		};
+
+		private static readonly IReadOnlyDictionary<string, DefinitionFlags> ConnectionLookup = new Dictionary<string, DefinitionFlags>(StringComparer.OrdinalIgnoreCase)
         {
             ["N"] = DefinitionFlags.North,
             ["S"] = DefinitionFlags.South,
@@ -213,8 +225,8 @@ namespace ClassicTilestorm
 
             // Gameplay flags
             var activeFlags = new List<string>();
-            foreach (var kv in WriteFlagLookup)
-            {
+            foreach (var kv in FlagLookup)//WriteFlagLookup
+			{
 				if ((((IFlagAccess)def).Flags & (int)kv.Value) != 0)
                     activeFlags.Add(kv.Key);
             }
@@ -267,8 +279,8 @@ namespace ClassicTilestorm
                     string trimmed = part.Trim();
                     if (string.IsNullOrEmpty(trimmed)) continue;
 
-                    if (ReadFlagLookup.TryGetValue(trimmed, out var flag))
-                        ((IFlagAccess)def).Flags |= (int)flag;
+                    if (FlagLookup.TryGetValue(trimmed, out var flag))//ReadFlagLookup
+						((IFlagAccess)def).Flags |= (int)flag;
                     else
                         Debug.LogWarning($"Unknown flag in JSON: '{trimmed}'");
                 }
