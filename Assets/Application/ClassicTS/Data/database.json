@@ -40214,12 +40214,12 @@
   "definitions": [
     {
       "id": "000000",
-      "name": "default"
+      "name": "default",
+      "flags": "Move"
     },
     {
       "id": "000001",
-      "name": "blocker",
-      "model": "blocker"
+      "name": "blocker"
     },
     {
       "id": "A8krJn",

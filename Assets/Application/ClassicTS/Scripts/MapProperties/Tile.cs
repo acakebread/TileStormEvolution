@@ -38,7 +38,8 @@ namespace ClassicTilestorm
 			{
 				if (string.IsNullOrEmpty(definition?.model))
 				{
-					if (definition != null && definition.Fold)
+					//if (definition != null && definition.Fold)
+					if (definition != null && definition.Fixed)
 						return ApplicationSettings.ShowHiddenTiles
 							? GeometryFactory.CreateDebugTile(parent, position, rotation)
 							: null;
@@ -58,9 +59,9 @@ namespace ClassicTilestorm
 		public readonly bool IsStart => (flags & (int)DefinitionFlags.Start) != 0;
 		public readonly bool IsEnd => (flags & (int)DefinitionFlags.End) != 0;
 		public readonly bool IsConsole => (flags & (int)DefinitionFlags.Console) != 0;
-		public readonly bool IsDrag => (flags & (int)DefinitionFlags.Move) != 0 && (flags & (int)DefinitionFlags.DirMask) != 0;
-		public readonly bool IsFold => !hasModel || ((flags & (int)DefinitionFlags.Move) != 0 && (flags & (int)DefinitionFlags.DirMask) == 0);
-		public readonly bool IsRoll => hasModel && (flags & (int)DefinitionFlags.Move) != 0 && (flags & (int)DefinitionFlags.DirMask) == 0;
+		public readonly bool IsDrag => (flags & (int)DefinitionFlags.Fixed) == 0 && (flags & (int)DefinitionFlags.DirMask) != 0;
+		public readonly bool IsFold => !hasModel && (flags & (int)DefinitionFlags.Fixed) == 0 && (flags & (int)DefinitionFlags.DirMask) == 0;
+		public readonly bool IsRoll => hasModel && (flags & (int)DefinitionFlags.Fixed) == 0 && (flags & (int)DefinitionFlags.DirMask) == 0;
 		public readonly int Nav => flags & (int)DefinitionFlags.DirMask;
 
 		public Bounds GetGeometryBounds()
