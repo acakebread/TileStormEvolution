@@ -90,6 +90,26 @@ namespace ClassicTilestorm
                 flags &= ~(int)flag;
         }
 
+		public bool IsDrag() => IsDrag(flags);
+
+		public bool IsDrag(int flagsValue) =>
+			(flagsValue & (int)DefinitionFlags.Bake) == 0 &&
+			(flagsValue & (int)DefinitionFlags.DirMask) != 0;
+
+		public bool IsRoll() => IsRoll(flags);
+
+		public bool IsRoll(int flagsValue) =>
+			(flagsValue & (int)DefinitionFlags.Bake) == 0 &&
+			(flagsValue & (int)DefinitionFlags.DirMask) == 0 &&
+			!string.IsNullOrWhiteSpace(model);
+
+		public bool IsFold() => IsFold(flags);
+
+		public bool IsFold(int flagsValue) =>
+			(flagsValue & (int)DefinitionFlags.Bake) == 0 &&
+			(flagsValue & (int)DefinitionFlags.DirMask) == 0 &&
+			string.IsNullOrWhiteSpace(model);
+
 		public static Definition Default => new()
 		{
 			HashID = 0,

@@ -42,7 +42,7 @@ namespace ClassicTilestorm
 				LightFactory.AddPointLight(gameObject, replacement.GetColor("_EmissionColor"));
 
 			// Add collider for interactive tiles
-			if (!definition.Bake && definition.Nav != 0)
+			if (definition.IsDrag())
 				TileStormGeneric.AddDefaultTileCollider(gameObject);
 
 			// Add sway component for wind controller

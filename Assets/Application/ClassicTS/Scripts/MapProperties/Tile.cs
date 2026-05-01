@@ -5,13 +5,14 @@ namespace ClassicTilestorm
 {
 	public readonly struct Tile : IDisposable
 	{
+		private readonly Definition definition;
 		private readonly int flags;
-		private readonly bool hasModel;
 		public readonly GameObject gameObject;
 
 		public Tile(Variant variant, Transform parent, Vector3 renderPosition)
 		{
 			var def = ResourceManager.ResolveDefinition(variant.hash, out bool hadError);
+			definition = def;
 			if (hadError)
 				Debug.LogWarning($"Failed to resolve tile definition at tile ({renderPosition.x:F1},{renderPosition.z:F1}) (hash: {variant.hash}) — using default");
 
@@ -25,7 +26,6 @@ namespace ClassicTilestorm
 			);
 
 			flags = (baseFlags & ~(int)DefinitionFlags.DirMask) | rotatedNav;
-			hasModel = !string.IsNullOrWhiteSpace(def?.model);
 
 			Vector3 finalPosition = renderPosition + variant.delta;
 			Quaternion finalRotation = Quaternion.Euler(0f, variant.angle, 0f);
@@ -38,7 +38,6 @@ namespace ClassicTilestorm
 			{
 				if (string.IsNullOrEmpty(definition?.model))
 				{
-					//if (definition != null && definition.Fold)
 					if (definition != null && definition.Bake)
 						return ApplicationSettings.ShowHiddenTiles
 							? GeometryFactory.CreateDebugTile(parent, position, rotation)
@@ -59,9 +58,9 @@ namespace ClassicTilestorm
 		public readonly bool IsStart => (flags & (int)DefinitionFlags.Start) != 0;
 		public readonly bool IsEnd => (flags & (int)DefinitionFlags.End) != 0;
 		public readonly bool IsConsole => (flags & (int)DefinitionFlags.Console) != 0;
-		public readonly bool IsDrag => (flags & (int)DefinitionFlags.Bake) == 0 && (flags & (int)DefinitionFlags.DirMask) != 0;
-		public readonly bool IsFold => !hasModel && (flags & (int)DefinitionFlags.Bake) == 0 && (flags & (int)DefinitionFlags.DirMask) == 0;
-		public readonly bool IsRoll => hasModel && (flags & (int)DefinitionFlags.Bake) == 0 && (flags & (int)DefinitionFlags.DirMask) == 0;
+		public readonly bool IsDrag => definition?.IsDrag(flags) ?? false;
+		public readonly bool IsFold => definition?.IsFold(flags) ?? false;
+		public readonly bool IsRoll => definition?.IsRoll(flags) ?? false;
 		public readonly int Nav => flags & (int)DefinitionFlags.DirMask;
 
 		public Bounds GetGeometryBounds()
