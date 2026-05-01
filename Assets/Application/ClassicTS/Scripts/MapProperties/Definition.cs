@@ -21,11 +21,7 @@ namespace ClassicTilestorm
 		DirMask = 0b1111,  // bits 0–3 only (N=1, S=2, E=4, W=8)
 
 		// ── Gameplay flags – start from bit 8 and never touch 0–7 ─────────────
-		Fixed       = 1 << 8,          // internal inverse of serialized "Move"
-		Move        = Fixed,           // serialized/runtime alias retained for compatibility
-		Drag        = Move,            // runtime alias retained for compatibility
-        Roll        = 1 << 9,   // (1 <<  9) 0b0000001000000000
-        Fold        = 1 << 10,  // (1 << 10) 0b0000010000000000
+		Bake        = 1 << 8,   // internal inverse of serialized "Move"
         Start       = 1 << 11,  // (1 << 11) 0b0000100000000000
         End         = 1 << 12,  // (1 << 12) 0b0001000000000000
         Door        = 1 << 13,  // (1 << 13) 0b0010000000000000
@@ -70,12 +66,10 @@ namespace ClassicTilestorm
         [JsonIgnore] public bool East        { get => (flags & (int)DefinitionFlags.East)        != 0; set => SetFlag(DefinitionFlags.East,        value); }
         [JsonIgnore] public bool West        { get => (flags & (int)DefinitionFlags.West)        != 0; set => SetFlag(DefinitionFlags.West,        value); }
 
-		[JsonIgnore] public bool Move { get => (flags & (int)DefinitionFlags.Fixed)              == 0; set => SetFlag(DefinitionFlags.Fixed,       !value); }//todo make this a 'virtual property' only for serialisation
-
-		[JsonIgnore] public bool Fixed       { get => (flags & (int)DefinitionFlags.Fixed)       != 0; set => SetFlag(DefinitionFlags.Fixed,       value); }
-		[JsonIgnore] public bool Drag        { get => !Fixed && HasNavigation();                       set => Fixed = !value; }
-        [JsonIgnore] public bool Roll        { get => !Fixed && !HasNavigation() && HasModel();        set => Fixed = !value; }
-        [JsonIgnore] public bool Fold        { get => !Fixed && !HasNavigation() && !HasModel();       set => Fixed = !value; }
+		[JsonIgnore] public bool Bake        { get => (flags & (int)DefinitionFlags.Bake)        != 0; set => SetFlag(DefinitionFlags.Bake,        value); }
+		[JsonIgnore] public bool Drag        { get => !Bake && HasNavigation();                        set => Bake = !value; }
+        [JsonIgnore] public bool Roll        { get => !Bake && !HasNavigation() && HasModel();         set => Bake = !value; }
+        [JsonIgnore] public bool Fold        { get => !Bake && !HasNavigation() && !HasModel();        set => Bake = !value; }
         [JsonIgnore] public bool Door        { get => (flags & (int)DefinitionFlags.Door)        != 0; set => SetFlag(DefinitionFlags.Door,        value); }
         [JsonIgnore] public bool Start       { get => (flags & (int)DefinitionFlags.Start)       != 0; set => SetFlag(DefinitionFlags.Start,       value); }
         [JsonIgnore] public bool End         { get => (flags & (int)DefinitionFlags.End)         != 0; set => SetFlag(DefinitionFlags.End,         value); }
@@ -190,7 +184,7 @@ namespace ClassicTilestorm
 
         private static readonly IReadOnlyDictionary<string, DefinitionFlags> FlagLookup = new Dictionary<string, DefinitionFlags>(StringComparer.OrdinalIgnoreCase)
 		{
-			["Move"] = DefinitionFlags.Fixed,
+			["Move"] = DefinitionFlags.Bake,
 			["Door"] = DefinitionFlags.Door,
 			["Start"] = DefinitionFlags.Start,
 			["End"] = DefinitionFlags.End,
@@ -232,7 +226,7 @@ namespace ClassicTilestorm
 			{
 				if (string.Equals(kv.Key, "Move", StringComparison.OrdinalIgnoreCase))
 				{
-					if (def.Move)
+					if (!def.Bake)
 						activeFlags.Add(kv.Key);
 					continue;
 				}
@@ -270,7 +264,7 @@ namespace ClassicTilestorm
             if (reader.TokenType == JsonToken.Null) return null;
 
             var def = existingValue as Definition ?? new Definition();
-			((IFlagAccess)def).Flags = (int)DefinitionFlags.Fixed;
+			((IFlagAccess)def).Flags = (int)DefinitionFlags.Bake;
             var jo = JObject.Load(reader);
 
             if (jo["id"]?.Value<string>() is { } idStr && !string.IsNullOrEmpty(idStr))
@@ -292,8 +286,8 @@ namespace ClassicTilestorm
 
                     if (FlagLookup.TryGetValue(trimmed, out var flag))//ReadFlagLookup
 					{
-						if (flag == DefinitionFlags.Fixed)
-							((IFlagAccess)def).Flags &= ~(int)DefinitionFlags.Fixed;
+						if (flag == DefinitionFlags.Bake)
+							((IFlagAccess)def).Flags &= ~(int)DefinitionFlags.Bake;
 						else
 							((IFlagAccess)def).Flags |= (int)flag;
 					}
