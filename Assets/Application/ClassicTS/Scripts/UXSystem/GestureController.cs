@@ -32,7 +32,7 @@ namespace ClassicTilestorm
 		}
 
 		private void OnEnable() => gameObject.GetComponent<GestureSystem>().enabled = true;
-		private void OnDisable() { EndDrag(Vector3.zero); gameObject.GetComponent<GestureSystem>().enabled = false; }
+		private void OnDisable() { delta = Vector3.zero; EndDrag(Vector3.zero); gameObject.GetComponent<GestureSystem>().enabled = false; }
 
 		private void OnDestroy()
 		{

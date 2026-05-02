@@ -51,7 +51,7 @@ namespace ClassicTilestorm
 			// Main drag loop
 			while (map.TryGetNextTile(lastIndex, stride, out tile))
 			{
-				if (!tile.IsDrag) break;
+				if (!tile.IsDrag || (!difficult && tile.IsRoll)) break;
 				lastIndex += stride;
 			}
 
@@ -82,12 +82,12 @@ namespace ClassicTilestorm
 				strip.First -= stride;
 			}
 
-			// Extra backward roll extension when difficult
-			var testRoll = difficult && map.GetTile(lastIndex).IsRoll;
-			while (testRoll)
+			// Extend backwards from the start when difficult
+			var testHard = difficult && !lastTile.IsFold;
+			while (testHard)
 			{
 				if (!map.TryGetNextTile(strip.First, -stride, out tile)) break;
-				if (!(tile.IsDrag | tile.IsFold | tile.IsRoll)) break;
+				if (tile.IsBake) break;
 				strip.First -= stride;
 			}
 

@@ -51,13 +51,11 @@ namespace ClassicTilestorm
 			}
 		}
 
-		//// Backward compatibility
-		//public Tile(HashId hashId, Transform parent, Vector3 worldPosition) : this(new Variant(hashId), parent, worldPosition) { }
-
 		// Forwarded properties
 		public readonly bool IsStart => (flags & (int)DefinitionFlags.Start) != 0;
 		public readonly bool IsEnd => (flags & (int)DefinitionFlags.End) != 0;
 		public readonly bool IsConsole => (flags & (int)DefinitionFlags.Console) != 0;
+		public readonly bool IsBake => (flags & (int)DefinitionFlags.Bake) != 0;
 		public readonly bool IsDrag => definition?.IsDrag(flags) ?? false;
 		public readonly bool IsFold => definition?.IsFold(flags) ?? false;
 		public readonly bool IsRoll => definition?.IsRoll(flags) ?? false;
@@ -65,7 +63,7 @@ namespace ClassicTilestorm
 
 		public Bounds GetGeometryBounds()
 		{
-			if (gameObject == null) return default;//return new Bounds(gameObject.transform.position, Vector3.zero);//// return default;
+			if (gameObject == null) return default;
 
 			var renderers = gameObject.GetComponentsInChildren<Renderer>(true);
 
