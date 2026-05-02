@@ -27,6 +27,12 @@ namespace ClassicTilestorm
 		Tile GetTile(int _, bool active = true);
 		Tile GetTile(Vector3 _, bool active = true);
 
+		/// <summary>
+		/// Attempts to move from currentIndex by the given delta (can be stride, -stride, 1, Width, etc.).
+		/// Returns false if the resulting position is outside map bounds.
+		/// </summary>
+		bool TryGetNextTile(int currentIndex, int delta, out Tile tile);
+
 		int GetStartTile();
 		int GetEndTile();
 		int FindAdjacentConsole(int _);

@@ -206,5 +206,24 @@ namespace ClassicTilestorm
 
 		public Tile GetTile(Vector3 pos, bool logicalIndex = true) => GetTile(VectorToIndex(pos), logicalIndex);
 		public Tile GetTile(int index, bool logicalIndex = true) => state == null || index < 0 || index >= state.Length ? default : GetGraphTile(logicalIndex ? state[index] : index);
+
+		/// <summary>
+		/// Returns the tile at currentIndex + delta if the move stays inside map bounds.
+		/// Otherwise returns default(Tile) and false.
+		/// </summary>
+		public bool TryGetNextTile(int index, int delta, out Tile tile)
+		{
+			int x = (index % Width) + (delta % Width);
+			int y = (index / Width) + (delta / Width);
+
+			if (x < 0 || x >= Width || y < 0 || y >= Height)
+			{
+				tile = default;
+				return false;
+			}
+
+			tile = GetTile(index + delta);
+			return true;
+		}
 	}
 }

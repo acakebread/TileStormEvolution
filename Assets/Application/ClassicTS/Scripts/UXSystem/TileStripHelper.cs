@@ -35,70 +35,65 @@ namespace ClassicTilestorm
 		public static TileStrip GetTileStrip(IMapPlay map, int startIndex, int stride, bool difficult = false)
 		{
 			var strip = new TileStrip { First = -1, Count = 0, Stride = 0 };
+
 			var tile = map.GetTile(startIndex);
-			if (!tile.IsDrag) return strip;
+			if (!tile.IsDrag)
+				return strip;
+
 			strip.First = startIndex;
 			strip.Count = 1;
 
-			if (0 == stride)
-				return strip;//return invalid strip as 'fail' condition
+			if (stride == 0)
+				return strip; // invalid strip as 'fail' condition
 
-			var lastIndex = startIndex;
-			while (true)
+			int lastIndex = startIndex;
+
+			// Main drag loop
+			while (map.TryGetNextTile(lastIndex, stride, out tile))
 			{
-				if (!ValidNextTile(lastIndex, stride)) break;
-				tile = map.GetTile(lastIndex + stride);
-				if (!tile.IsDrag) break;//skip all movable tiles
+				if (!tile.IsDrag) break;
 				lastIndex += stride;
 			}
 
+			// Difficult (Roll) extension
 			while (difficult)
 			{
-				if (!ValidNextTile(lastIndex, stride)) break;
-				tile = map.GetTile(lastIndex + stride);
+				if (!map.TryGetNextTile(lastIndex, stride, out tile)) break;
 				if (!(tile.IsDrag | tile.IsRoll)) break;
 				lastIndex += stride;
 			}
 
-			while (true)
+			// Fold / Roll extension
+			while (map.TryGetNextTile(lastIndex, stride, out tile))
 			{
-				if (!ValidNextTile(lastIndex, stride)) break;
-				tile = map.GetTile(lastIndex + stride);
 				if (!(tile.IsFold | tile.IsRoll)) break;
 				lastIndex += stride;
 			}
 
+			// Validate ending condition
 			var lastTile = map.GetTile(lastIndex);
 			if (!(lastTile.IsFold | lastTile.IsRoll))
-				return strip;//return invalid strip as 'fail' condition
+				return strip; // return invalid strip as 'fail' condition
 
-			while (true)
+			// Extend backwards from the start
+			while (map.TryGetNextTile(strip.First, -stride, out tile))
 			{
-				if (!ValidNextTile(strip.First, -stride)) break;
-				tile = map.GetTile(strip.First - stride);
 				if (!(tile.IsFold | tile.IsRoll)) break;
 				strip.First -= stride;
 			}
 
+			// Extra backward roll extension when difficult
 			var testRoll = difficult && map.GetTile(lastIndex).IsRoll;
 			while (testRoll)
 			{
-				if (!ValidNextTile(strip.First, -stride)) break;
-				tile = map.GetTile(strip.First - stride);
+				if (!map.TryGetNextTile(strip.First, -stride, out tile)) break;
 				if (!(tile.IsDrag | tile.IsFold | tile.IsRoll)) break;
 				strip.First -= stride;
 			}
 
 			strip.Count = (lastIndex - strip.First) / stride + 1;
 			strip.Stride = stride;
-			return strip;//return draggable strip
-
-			bool ValidNextTile(int index, int delta)
-			{
-				var x = (index % map.Width) + (delta % map.Width);
-				var y = (index / map.Width) + (delta / map.Width);
-				return x >= 0 && x < map.Width && y >= 0 && y < map.Height;
-			}
+			return strip; // return draggable strip
 		}
 
 		public static void ResetStrip(IMapPlay map, in TileStrip strip)
