@@ -116,6 +116,7 @@ namespace ClassicTilestorm
 			new("East",        "Nav East",    d => d.East,        (d, v) => d.East = v),
 			new("South",       "Nav South",   d => d.South,       (d, v) => d.South = v),
 			new("West",        "Nav West",    d => d.West,        (d, v) => d.West = v),
+			new("Drag",        "Can Drag",    d => d.Drag,        (d, v) => d.Drag = v),
 			new("Bake",        "Is Static",   d => d.Bake,        (d, v) => d.Bake = v),
 			new("Door",        "Is Door",     d => d.Door,        (d, v) => d.Door = v),
 			new("Start",       "Start Point", d => d.Start,       (d, v) => d.Start = v),
