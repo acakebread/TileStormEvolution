@@ -102,7 +102,6 @@ namespace ClassicTilestorm
 		public bool IsRoll() => IsRoll(flags);
 
 		public bool IsRoll(int flagsValue) =>
-			//(flagsValue & (int)DefinitionFlags.Drag) == 0 &&
 			(flagsValue & (int)DefinitionFlags.Bake) == 0 &&
 			(flagsValue & (int)DefinitionFlags.DirMask) == 0 &&
 			!string.IsNullOrWhiteSpace(model);
@@ -110,7 +109,6 @@ namespace ClassicTilestorm
 		public bool IsFold() => IsFold(flags);
 
 		public bool IsFold(int flagsValue) =>
-			//(flagsValue & (int)DefinitionFlags.Drag) == 0 &&
 			(flagsValue & (int)DefinitionFlags.Bake) == 0 &&
 			(flagsValue & (int)DefinitionFlags.DirMask) == 0 &&
 			string.IsNullOrWhiteSpace(model);
