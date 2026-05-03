@@ -22,7 +22,7 @@ namespace ClassicTilestorm
 
 		// ── Gameplay flags – start from bit 8 and never touch 0–7 ─────────────
 		Bake        = 1 << 8,   // internal inverse of serialized "Move"
-		Drag        = 1 << 9,   // explicit drag override for non-nav tiles
+		//Drag        = 1 << 9,   // explicit drag override for non-nav tiles
         Start       = 1 << 11,  // (1 << 11) 0b0000100000000000
         End         = 1 << 12,  // (1 << 12) 0b0001000000000000
         Door        = 1 << 13,  // (1 << 13) 0b0010000000000000
@@ -68,7 +68,7 @@ namespace ClassicTilestorm
         [JsonIgnore] public bool West        { get => (flags & (int)DefinitionFlags.West)        != 0; set => SetFlag(DefinitionFlags.West,        value); }
 
 		[JsonIgnore] public bool Bake        { get => (flags & (int)DefinitionFlags.Bake)        != 0; set => SetFlag(DefinitionFlags.Bake,        value); }
-		[JsonIgnore] public bool Drag        { get => (flags & (int)DefinitionFlags.Drag)        != 0; set => SetFlag(DefinitionFlags.Drag,        value); }
+		//[JsonIgnore] public bool Drag        { get => (flags & (int)DefinitionFlags.Drag)        != 0; set => SetFlag(DefinitionFlags.Drag,        value); }
         [JsonIgnore] public bool Door        { get => (flags & (int)DefinitionFlags.Door)        != 0; set => SetFlag(DefinitionFlags.Door,        value); }
         [JsonIgnore] public bool Start       { get => (flags & (int)DefinitionFlags.Start)       != 0; set => SetFlag(DefinitionFlags.Start,       value); }
         [JsonIgnore] public bool End         { get => (flags & (int)DefinitionFlags.End)         != 0; set => SetFlag(DefinitionFlags.End,         value); }
@@ -94,10 +94,14 @@ namespace ClassicTilestorm
 
 		public bool IsDrag() => IsDrag(flags);
 
-		public bool IsDrag(int flagsValue) =>
-			(flagsValue & (int)DefinitionFlags.Drag) != 0 ||
-			((flagsValue & (int)DefinitionFlags.Bake) == 0 &&
-			(flagsValue & (int)DefinitionFlags.DirMask) != 0);
+        //public bool IsDrag(int flagsValue) =>
+        //	(flagsValue & (int)DefinitionFlags.Drag) != 0 ||
+        //	((flagsValue & (int)DefinitionFlags.Bake) == 0 &&
+        //	(flagsValue & (int)DefinitionFlags.DirMask) != 0);
+
+        public bool IsDrag(int flagsValue) =>
+            (flagsValue & (int)DefinitionFlags.Bake) == 0 &&
+			!string.IsNullOrWhiteSpace(model);
 
 		public bool IsRoll() => IsRoll(flags);
 
@@ -137,7 +141,7 @@ namespace ClassicTilestorm
         private static readonly IReadOnlyDictionary<string, DefinitionFlags> FlagLookup = new Dictionary<string, DefinitionFlags>(StringComparer.OrdinalIgnoreCase)
 		{
 			["Move"] = DefinitionFlags.Bake,
-			["Drag"] = DefinitionFlags.Drag,
+			//["Drag"] = DefinitionFlags.Drag,
 			["Door"] = DefinitionFlags.Door,
 			["Start"] = DefinitionFlags.Start,
 			["End"] = DefinitionFlags.End,

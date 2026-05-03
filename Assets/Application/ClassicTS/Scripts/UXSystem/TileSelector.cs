@@ -500,7 +500,7 @@ namespace ClassicTilestorm
 				}
 
 				var flagsList = new List<string>();
-				if (def.Drag) flagsList.Add("Drag");
+				//if (def.Drag) flagsList.Add("Drag");
 				if (def.Bake) flagsList.Add("Static");
 				if (def.Door) flagsList.Add("Door");
 				if (def.Start) flagsList.Add("Start");
@@ -539,7 +539,7 @@ namespace ClassicTilestorm
 				if (!string.IsNullOrEmpty(directions)) directions = $" <color=#AACCFF>({directions})</color>";
 
 				var flagsList = new List<string>();
-				if (def?.Drag ?? false) flagsList.Add("Drag");
+				//if (def?.Drag ?? false) flagsList.Add("Drag");
 				if (def?.Bake ?? false) flagsList.Add("Static");
 				if (def?.Door ?? false) flagsList.Add("Door");
 				if (def?.Start ?? false) flagsList.Add("Start");

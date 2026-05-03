@@ -40314,7 +40314,7 @@
       "name": "ind tile slide",
       "model": "ss_tile_slide_plain",
       "texture": "Industrial",
-      "flags": "Drag, Move"
+      "flags": "Move"
     },
     {
       "id": "AaNkrC",
@@ -40499,7 +40499,7 @@
       "name": "egy tile slide",
       "model": "egy_tile_slide",
       "texture": "Egypt",
-      "flags": "Drag, Move"
+      "flags": "Move"
     },
     {
       "id": "7J4P6c",
@@ -40606,7 +40606,7 @@
       "name": "med tile slide",
       "model": "med_tile_slide",
       "texture": "Medieval",
-      "flags": "Drag, Move"
+      "flags": "Move"
     },
     {
       "id": "75dq85",
@@ -40760,7 +40760,7 @@
       "name": "jun tile slide",
       "model": "jun_tile_slide",
       "texture": "Jungle",
-      "flags": "Drag, Move"
+      "flags": "Move"
     },
     {
       "id": "0e2RF9",
