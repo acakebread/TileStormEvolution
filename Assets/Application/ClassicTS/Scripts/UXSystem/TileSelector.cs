@@ -40,10 +40,8 @@ namespace ClassicTilestorm
 		private bool panelWasShownByValidHover;
 
 #if UNITY_WEBGL && !UNITY_EDITOR
-		//private const int ICON_SIZE = 48;
-		//private const int MAXIMUM_RENDER_TEXTURE_SIZE = 2048;
-		private const int ICON_SIZE = 96;
-		private const int MAXIMUM_RENDER_TEXTURE_SIZE = 4096;
+        private const int ICON_SIZE = 96;
+        private const int MAXIMUM_RENDER_TEXTURE_SIZE = 4096;
 #else
 		private const int ICON_SIZE = 192;
 		private const int MAXIMUM_RENDER_TEXTURE_SIZE = 8192;
@@ -123,20 +121,18 @@ namespace ClassicTilestorm
 			ReadyCallbackRegistry.Raise(this);
 		}
 
-		private void Start() => RebuildAtlas(); //private IEnumerator Start() { yield return null; RebuildAtlas(); }//needed to prevent black icons//private void Start() => RebuildAtlas();
+		private void Start() => RebuildAtlas();
 
-		private Coroutine _atlasBuildCoroutine;   // KEEP this field
+		private Coroutine _atlasBuildCoroutine;
 
 		public void RebuildAtlas()
 		{
-			// Stop any previous build (important!)
 			if (_atlasBuildCoroutine != null)
 			{
 				TileSelectorCoroutineRunner.Stop(_atlasBuildCoroutine);
 				_atlasBuildCoroutine = null;
 			}
 
-			// Dispose old atlas
 			if (_atlas != null)
 			{
 				_atlas.Dispose();
@@ -153,7 +149,6 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			// Create new atlas
 			_atlas = new IconAtlas(
 				ICON_SIZE,
 				COLUMNS,
@@ -165,7 +160,6 @@ namespace ClassicTilestorm
 
 			if (_atlas != null)
 			{
-				// Start build using the persistent runner
 				_atlasBuildCoroutine = TileSelectorCoroutineRunner.Start(BuildAtlasWithUIUpdates());
 			}
 
@@ -202,7 +196,6 @@ namespace ClassicTilestorm
 			var justEnteredCleanly = false;
 			var mousePos = InputX.mousePosition;
 
-			// Start attempt on entry OR if no attempt active
 			if (!triggerAttemptActive && mouseInTrigger)
 			{
 				triggerAttemptActive = true;
@@ -210,31 +203,25 @@ namespace ClassicTilestorm
 				triggerEnterPos = mousePos;
 			}
 
-			// Cancel if left zone
 			if (!mouseInTrigger)
 			{
 				triggerAttemptActive = false;
 			}
 
-			// If attempting
 			if (triggerAttemptActive)
 			{
 				var moveDist = Vector2.Distance(mousePos, triggerEnterPos);
 
-				// Cancel if moved too much
 				if (moveDist > triggerMoveTolerance)
 				{
 					triggerAttemptActive = false;
 				}
-				// Fire if time reached
 				else if (Time.time - triggerEnterTime >= triggerDwellTime &&
 						 !InputX.GetMouseButton(0) &&
 						 !InputX.GetMouseButton(1) &&
 						 !InputX.GetMouseButton(2))
 				{
 					justEnteredCleanly = true;
-
-					// Reset attempt so a new dwell can begin
 					triggerAttemptActive = false;
 				}
 			}
@@ -267,12 +254,12 @@ namespace ClassicTilestorm
 
 			UpdatePanelVisuals();
 
-			if (false == mouseOverPanel) 
+			if (false == mouseOverPanel)
 				return;
 
 			// ─── Wobble trigger on mouse DOWN ────────────────────────────────────
 			var mouseOverGrid = gridScreenRect.Contains(InputX.mousePosition);
-			if (InputX.GetMouseButtonDown(0) && mouseOverGrid && wobbleStartTime < 0f) // ← only start if no wobble active
+			if (InputX.GetMouseButtonDown(0) && mouseOverGrid && wobbleStartTime < 0f)
 			{
 				Vector2 uv = gridScreenRect.NormalisedPoint(InputX.mousePosition);
 				if (_atlas.TryGetIndex(uv, out int idx) && idx >= 0 && idx < filteredDefs.Count)
@@ -282,10 +269,8 @@ namespace ClassicTilestorm
 				}
 			}
 
-			// ─── Apply wobble to focus overlay (scale-based) ─────────────────────
 			ApplyFocusWobble();
 
-			// ─── Selection only on mouse UP over SAME tile ───────────────────────
 			if (InputX.GetMouseButtonUp(0) && pressedIndex >= 0)
 			{
 				var resetWobble = false;
@@ -313,7 +298,6 @@ namespace ClassicTilestorm
 
 			var elapsed = Time.time - wobbleStartTime;
 
-			// Stop exactly after wobbleDecayTime
 			if (elapsed >= wobbleDecayTime)
 			{
 				wobbleStartTime = -1f;
@@ -321,13 +305,8 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			// Normalized progress (0 → 1 over wobbleDecayTime)
 			var t = elapsed / wobbleDecayTime;
-
-			// Simple linear decay of amplitude (optional)
-			var amplitude = wobbleMaxAmplitude * (1f - t); // optional, or just wobbleMaxAmplitude
-
-			// Sine wobble
+			var amplitude = wobbleMaxAmplitude * (1f - t);
 			var wobble = Mathf.Sin(elapsed * wobbleFrequency * Mathf.PI * 2f) * amplitude;
 
 			var scale = 1f + wobble;
@@ -342,8 +321,7 @@ namespace ClassicTilestorm
 			if (newHash != default)
 			{
 				allowHideDespiteMouseOverPanel = true;
-				// Start delayed hide
-				StopCoroutine(nameof(AutoHideAfterDelay)); // prevent stacking
+				StopCoroutine(nameof(AutoHideAfterDelay));
 				StartCoroutine(AutoHideAfterDelay(newHash));
 				return true;
 			}
@@ -392,7 +370,7 @@ namespace ClassicTilestorm
 
 		private void UpdatePanelVisuals()
 		{
-			if (Rows <= 0 || _panelImage == null) return;//if (allowHideDespiteMouseOverPanel || Rows <= 0 || _panelImage == null) return;
+			if (Rows <= 0 || _panelImage == null) return;
 
 			var uiScale = 1f;
 			if (_scaler && _scaler.uiScaleMode == CanvasScaler.ScaleMode.ScaleWithScreenSize)
@@ -444,11 +422,10 @@ namespace ClassicTilestorm
 			var rt = target.rectTransform;
 			rt.anchorMin = rt.anchorMax = new Vector2(0, 0);
 
-			// Grid stays bottom-left
 			if (target == _gridOverlay)
 				rt.pivot = new Vector2(0, 0);
 			else
-				rt.pivot = new Vector2(0.5f, 0.5f); // focus overlay scales from center
+				rt.pivot = new Vector2(0.5f, 0.5f);
 
 			if (info.IsValid)
 			{
@@ -456,7 +433,6 @@ namespace ClassicTilestorm
 					rt.anchoredPosition = new Vector2(info.ScreenRect.x * inv, info.ScreenRect.y * inv);
 				else
 				{
-					// Center position for focus
 					var cx = info.ScreenRect.x + info.ScreenRect.width * 0.5f;
 					var cy = info.ScreenRect.y + info.ScreenRect.height * 0.5f;
 					rt.anchoredPosition = new Vector2(cx * inv, cy * inv);
@@ -486,74 +462,84 @@ namespace ClassicTilestorm
 			if (mouseOverGrid && _atlas != null && _atlas.TryGetIndex(uv, out int idx) && idx >= 0 && idx < filteredDefs.Count)
 			{
 				var def = filteredDefs[idx];
-				var name = def.name ?? "Unnamed Tile";
-
-				var directions = "";
-				if (def.North || def.South || def.East || def.West)
-				{
-					var dirs = new List<string>();
-					if (def.North) dirs.Add("N");
-					if (def.South) dirs.Add("S");
-					if (def.East) dirs.Add("E");
-					if (def.West) dirs.Add("W");
-					directions = $" <color=#AACCFF>({string.Join("-", dirs)})</color>";
-				}
-
-				var flagsList = new List<string>();
-				if (def.Bake) flagsList.Add("Static");
-				if (def.Door) flagsList.Add("Door");
-				if (def.Start) flagsList.Add("Start");
-				if (def.End) flagsList.Add("End");
-				if (def.Console) flagsList.Add("Console");
-				if (def.PuzzleBlock) flagsList.Add("Puzzle");
-				if (def.Sway) flagsList.Add("Sway");
-				if (def.Wash) flagsList.Add("Wash");
-
-				var flagsStr = flagsList.Count > 0 ? $"<color=#88FFAA> • {string.Join(", ", flagsList)}</color>" : "";
-
-				var message = $"<b><color=#FFD700>{name}</color></b>{directions}{flagsStr}";
-
-				var secondary = new List<string>();
-				if (!string.IsNullOrEmpty(def.model)) secondary.Add($"M:{def.model}");
-				if (!string.IsNullOrEmpty(def.texture)) secondary.Add($"T:{def.texture}");
-				if (!string.IsNullOrEmpty(def.material)) secondary.Add($"Mat:{def.material}");
-
-				if (secondary.Count > 0)
-					message += $"<color=#BBBBBB>  {string.Join("  ", secondary)}</color>";
-
-				return message;
+				return BuildTileInfo(def, isSelected: false);
 			}
 
 			// Case 2: Mouse inside palette rect but NOT over any tile → show current selection
 			if (gridScreenRect.Contains(InputX.mousePosition) && SelectedHashId != ResourceManager.DefaultHash)
 			{
 				var def = ResourceManager.GetDefinition(SelectedHashId);
-				var selName = def?.name ?? "Unknown";
-
-				var directions = "";
-				if (def?.North ?? false) directions += "N";
-				if (def?.South ?? false) directions += (directions.Length > 0 ? "-" : "") + "S";
-				if (def?.East ?? false) directions += (directions.Length > 0 ? "-" : "") + "E";
-				if (def?.West ?? false) directions += (directions.Length > 0 ? "-" : "") + "W";
-				if (!string.IsNullOrEmpty(directions)) directions = $" <color=#AACCFF>({directions})</color>";
-
-				var flagsList = new List<string>();
-				if (def?.Bake ?? false) flagsList.Add("Static");
-				if (def?.Door ?? false) flagsList.Add("Door");
-				if (def?.Start ?? false) flagsList.Add("Start");
-				if (def?.End ?? false) flagsList.Add("End");
-				if (def?.Console ?? false) flagsList.Add("Console");
-				if (def?.PuzzleBlock ?? false) flagsList.Add("Puzzle");
-				if (def?.Sway ?? false) flagsList.Add("Sway");
-				if (def?.Wash ?? false) flagsList.Add("Wash");
-
-				var flagsStr = flagsList.Count > 0 ? $"<color=#88FFAA> • {string.Join(", ", flagsList)}</color>" : "";
-
-				return $"<color=#88FF88>Selected:</color> <b><color=#FFD700>{selName}</color></b>{directions}{flagsStr}";
+				return BuildTileInfo(def, isSelected: true);
 			}
 
 			// Case 3: Mouse outside grid (or no selection) → default prompt
 			return "Hover over a tile";
+		}
+
+		private string BuildTileInfo(Definition def, bool isSelected)
+		{
+			if (def == null)
+				return isSelected ? "Selected: Unknown" : "Unknown";
+
+			var name = def.name ?? (isSelected ? "Unknown" : "Unnamed Tile");
+			var prefix = isSelected ? "<color=#88FF88>Selected:</color> " : "";
+
+			var directions = BuildDirections(def);
+			var flags = BuildFlags(def);
+			var secondary = BuildSecondaryInfo(def);
+
+			var message = $"{prefix}<b><color=#FFD700>{name}</color></b>{directions}{flags}";
+
+			if (!string.IsNullOrEmpty(secondary))
+				message += $"<color=#BBBBBB>  {secondary}</color>";
+
+			return message;
+		}
+
+		private string BuildDirections(Definition def)
+		{
+			if (def == null) return "";
+
+			var dirs = new List<string>();
+			if (def.North) dirs.Add("N");
+			if (def.South) dirs.Add("S");
+			if (def.East) dirs.Add("E");
+			if (def.West) dirs.Add("W");
+
+			return dirs.Count > 0
+				? $" <color=#AACCFF>({string.Join("-", dirs)})</color>"
+				: "";
+		}
+
+		private string BuildFlags(Definition def)
+		{
+			if (def == null) return "";
+
+			var flagsList = new List<string>();
+			if (def.Bake) flagsList.Add("Static");
+			if (def.Door) flagsList.Add("Door");
+			if (def.Start) flagsList.Add("Start");
+			if (def.End) flagsList.Add("End");
+			if (def.Console) flagsList.Add("Console");
+			if (def.PuzzleBlock) flagsList.Add("Puzzle");
+			if (def.Sway) flagsList.Add("Sway");
+			if (def.Wash) flagsList.Add("Wash");
+
+			return flagsList.Count > 0
+				? $"<color=#88FFAA> • {string.Join(", ", flagsList)}</color>"
+				: "";
+		}
+
+		private string BuildSecondaryInfo(Definition def)
+		{
+			if (def == null) return "";
+
+			var secondary = new List<string>();
+			if (!string.IsNullOrEmpty(def.model)) secondary.Add($"M:{def.model}");
+			if (!string.IsNullOrEmpty(def.texture)) secondary.Add($"T:{def.texture}");
+			if (!string.IsNullOrEmpty(def.material)) secondary.Add($"Mat:{def.material}");
+
+			return secondary.Count > 0 ? string.Join("  ", secondary) : "";
 		}
 
 		private void OnDestroy()
