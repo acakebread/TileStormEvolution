@@ -16,7 +16,8 @@ namespace ClassicTilestorm
 			if (hadError)
 				Debug.LogWarning($"Failed to resolve tile definition at tile ({renderPosition.x:F1},{renderPosition.z:F1}) (hash: {variant.hash}) — using default");
 
-			// Directly take flags from definition (no recompute needed)
+			// Carry the full definition bitfield through unchanged and only rotate Nav.
+			// The other bits are stable, so Tile can forward them directly from Definition.
 			int baseFlags = ((IFlagAccess)def)?.Flags ?? 0;
 
 			// Rotate navigation bits **before** final assignment (safe in readonly struct)
@@ -51,14 +52,14 @@ namespace ClassicTilestorm
 			}
 		}
 
-		// Forwarded properties
-		public readonly bool IsStart => (flags & (int)DefinitionFlags.Start) != 0;
-		public readonly bool IsEnd => (flags & (int)DefinitionFlags.End) != 0;
-		public readonly bool IsConsole => (flags & (int)DefinitionFlags.Console) != 0;
-		public readonly bool IsBake => (flags & (int)DefinitionFlags.Bake) != 0;
-		public readonly bool IsDrag => definition?.IsDrag(flags) ?? false;
-		public readonly bool IsFold => definition?.IsFold(flags) ?? false;
-		public readonly bool IsRoll => definition?.IsRoll(flags) ?? false;
+		// Forwarded properties. Only Nav is tile-local because the direction bits can rotate.
+		public readonly bool IsStart => definition?.Start ?? false;
+		public readonly bool IsEnd => definition?.End ?? false;
+		public readonly bool IsConsole => definition?.Console ?? false;
+		public readonly bool IsBake => definition?.Bake ?? false;
+		public readonly bool IsDrag => definition?.IsDrag() ?? false;
+		public readonly bool IsFold => definition?.IsFold() ?? false;
+		public readonly bool IsRoll => definition?.IsRoll() ?? false;
 		public readonly int Nav => flags & (int)DefinitionFlags.DirMask;
 
 		public Bounds GetGeometryBounds()
