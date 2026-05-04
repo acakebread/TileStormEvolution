@@ -27,10 +27,10 @@ namespace ClassicTilestorm
         Door        = 1 << 13,  // (1 << 13) 0b0010000000000000
         Console     = 1 << 14,  // (1 << 14) 0b0100000000000000
 
-        // Newer gameplay flags (continuing sequentially)
-        PuzzleBlock = 1 << 15,  // (1 << 15) 0b1000000000000000
-        Sway        = 1 << 16,  // (1 << 16) 0b1 0000000000000000   (bit 16)
-        Wash        = 1 << 17,  // (1 << 17) 0b10 0000000000000000  (bit 17)
+		// Newer gameplay flags (continuing sequentially)
+		Wash        = 1 << 15,  // (1 << 15) 0b1000000000000000
+        Sway        = 1 << 16,  // (1 << 16) 0b10000000000000000   (bit 16)
+		PuzzleBlock = 1 << 17,  // (1 << 17) 0b100000000000000000  (bit 17)
 
         // ────────────────────────────────────────────────────────────────
         // Reserved for future gameplay flags (bits 18+)
@@ -67,15 +67,24 @@ namespace ClassicTilestorm
         [JsonIgnore] public bool West        { get => (flags & (int)DefinitionFlags.West)        != 0; set => SetFlag(DefinitionFlags.West,        value); }
 
 		[JsonIgnore] public bool Bake        { get => (flags & (int)DefinitionFlags.Bake)        != 0; set => SetFlag(DefinitionFlags.Bake,        value); }
-        [JsonIgnore] public bool Door        { get => (flags & (int)DefinitionFlags.Door)        != 0; set => SetFlag(DefinitionFlags.Door,        value); }
-        [JsonIgnore] public bool Start       { get => (flags & (int)DefinitionFlags.Start)       != 0; set => SetFlag(DefinitionFlags.Start,       value); }
-        [JsonIgnore] public bool End         { get => (flags & (int)DefinitionFlags.End)         != 0; set => SetFlag(DefinitionFlags.End,         value); }
-        [JsonIgnore] public bool Console     { get => (flags & (int)DefinitionFlags.Console)     != 0; set => SetFlag(DefinitionFlags.Console,     value); }
-        [JsonIgnore] public bool PuzzleBlock { get => (flags & (int)DefinitionFlags.PuzzleBlock) != 0; set => SetFlag(DefinitionFlags.PuzzleBlock, value); }
+        [JsonIgnore] public bool Start       { get => (flags & (int)DefinitionFlags.Start)       != 0; set => SetFlag(DefinitionFlags.Start,       value); }//duplicate of waypoint data so may remove
+		[JsonIgnore] public bool End         { get => (flags & (int)DefinitionFlags.End)         != 0; set => SetFlag(DefinitionFlags.End,         value); }//duplicate of waypoint data so may remove
+        [JsonIgnore] public bool Door        { get => (flags & (int)DefinitionFlags.Door)        != 0; set => SetFlag(DefinitionFlags.Door,        value); }//no longer needed
+		[JsonIgnore] public bool Console     { get => (flags & (int)DefinitionFlags.Console)     != 0; set => SetFlag(DefinitionFlags.Console,     value); }
         [JsonIgnore] public bool Sway        { get => (flags & (int)DefinitionFlags.Sway)        != 0; set => SetFlag(DefinitionFlags.Sway,        value); }
         [JsonIgnore] public bool Wash        { get => (flags & (int)DefinitionFlags.Wash)        != 0; set => SetFlag(DefinitionFlags.Wash,        value); }
+        [JsonIgnore] public bool PuzzleBlock { get => (flags & (int)DefinitionFlags.PuzzleBlock) != 0; set => SetFlag(DefinitionFlags.PuzzleBlock, value); }//potentially replace with Quiz
 
-        [JsonIgnore]
+        //for a tile to be moveable at all it needs to be non static or not baked, so Drag, Fold and Roll all have this in common
+		public bool Drag => !Bake && !string.IsNullOrWhiteSpace(model);
+
+        //for tiles to be able to fold they currently must have no model - I may enhance this restriction
+		public bool Fold => !Bake && string.IsNullOrWhiteSpace(model);
+
+		//the issue with this is that all tiles that are not static and have a model but no nav are rollable but I want to be able to have a tile that can move but not roll with no nav
+		public bool Roll => !Bake && !string.IsNullOrWhiteSpace(model) && Nav == 0;
+
+		[JsonIgnore]
         public int Nav
         {
             get => flags & (int)(DefinitionFlags.DirMask);
@@ -89,20 +98,6 @@ namespace ClassicTilestorm
             else
                 flags &= ~(int)flag;
         }
-
-		public bool IsDrag() =>
-			!Bake &&
-			!string.IsNullOrWhiteSpace(model);
-
-		public bool IsRoll() =>
-			!Bake &&
-			Nav == 0 &&
-			!string.IsNullOrWhiteSpace(model);
-
-		public bool IsFold() =>
-			!Bake &&
-			Nav == 0 &&
-			string.IsNullOrWhiteSpace(model);
 
 		public static Definition Default => new()
 		{
@@ -158,9 +153,9 @@ namespace ClassicTilestorm
             writer.WritePropertyName("id");
             writer.WriteValue(HTB50Settings.ToString(def.HashID));
 
-            if (!string.IsNullOrEmpty(def.name))    { writer.WritePropertyName("name");    serializer.Serialize(writer, def.name); }
-            if (!string.IsNullOrEmpty(def.model))   { writer.WritePropertyName("model");   serializer.Serialize(writer, def.model); }
-            if (!string.IsNullOrEmpty(def.texture)) { writer.WritePropertyName("texture"); serializer.Serialize(writer, def.texture); }
+            if (!string.IsNullOrEmpty(def.name))    { writer.WritePropertyName("name");     serializer.Serialize(writer, def.name); }
+            if (!string.IsNullOrEmpty(def.model))   { writer.WritePropertyName("model");    serializer.Serialize(writer, def.model); }
+            if (!string.IsNullOrEmpty(def.texture)) { writer.WritePropertyName("texture");  serializer.Serialize(writer, def.texture); }
             if (!string.IsNullOrEmpty(def.material)){ writer.WritePropertyName("material"); serializer.Serialize(writer, def.material); }
 
             // Gameplay flags

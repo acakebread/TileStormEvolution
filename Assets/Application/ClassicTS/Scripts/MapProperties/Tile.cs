@@ -57,9 +57,9 @@ namespace ClassicTilestorm
 		public readonly bool IsEnd => definition?.End ?? false;
 		public readonly bool IsConsole => definition?.Console ?? false;
 		public readonly bool IsBake => definition?.Bake ?? false;
-		public readonly bool IsDrag => definition?.IsDrag() ?? false;
-		public readonly bool IsFold => definition?.IsFold() ?? false;
-		public readonly bool IsRoll => definition?.IsRoll() ?? false;
+		public readonly bool IsDrag => definition?.Drag ?? false;
+		public readonly bool IsRoll => definition?.Roll ?? false;
+		public readonly bool IsFold => definition?.Fold ?? false;
 		public readonly int Nav => flags & (int)DefinitionFlags.DirMask;
 
 		public Bounds GetGeometryBounds()
