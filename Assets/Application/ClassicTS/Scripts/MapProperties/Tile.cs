@@ -31,24 +31,25 @@ namespace ClassicTilestorm
 			Vector3 finalPosition = renderPosition + variant.delta;
 			Quaternion finalRotation = Quaternion.Euler(0f, variant.angle, 0f);
 
-			gameObject = def != null && !def.IsDefault()
-				? InstantiateTile(def, parent, finalPosition, finalRotation)
-				: null;
+			gameObject = InstantiateTile(def, parent, finalPosition, finalRotation);
 
 			static GameObject InstantiateTile(Definition definition, Transform parent, Vector3 position, Quaternion rotation)
 			{
 				if (string.IsNullOrEmpty(definition?.model))
 				{
-					if (definition != null && definition.Bake)
-						return ApplicationSettings.ShowHiddenTiles
-							? GeometryFactory.CreateDebugTile(parent, position, rotation)
-							: null;
-
-					Debug.LogWarning($"Invalid Definition or model for {definition?.name ?? "null"}");
-					return GeometryFactory.CreateFallbackTile(parent, position, rotation);
+					return ApplicationSettings.ShowHiddenTiles
+						? GeometryFactory.CreateDebugTile(parent, position, rotation)
+						: null;
 				}
 
-				return DefinitionFactory.Instantiate(definition, position, rotation, parent);
+				var result = DefinitionFactory.Instantiate(definition, position, rotation, parent);
+				if (null == result)
+				{
+					Debug.LogWarning($"Invalid Definition or model for {definition?.name ?? "null"}");
+					result = GeometryFactory.CreateFallbackTile(parent, position, rotation);
+				}
+
+				return result;
 			}
 		}
 
