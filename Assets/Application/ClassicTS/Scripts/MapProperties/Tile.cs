@@ -54,9 +54,9 @@ namespace ClassicTilestorm
 		}
 
 		// Forwarded properties. Only Nav is tile-local because the direction bits can rotate.
-		public readonly bool IsStart => definition?.Start ?? false;
-		public readonly bool IsEnd => definition?.End ?? false;
-		public readonly bool IsConsole => definition?.Console ?? false;
+		public readonly bool IsStart => definition?.Home ?? false;
+		public readonly bool IsEnd => definition?.Exit ?? false;
+		public readonly bool IsConsole => definition?.Unit ?? false;
 		public readonly bool IsBake => definition?.Bake ?? false;
 		public readonly bool IsDrag => definition?.Drag ?? false;
 		public readonly bool IsRoll => definition?.Roll ?? false;

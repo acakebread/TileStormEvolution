@@ -79,12 +79,12 @@ namespace ClassicTilestorm
 			public bool bSlide;
 			public bool bRoll;
 			public bool bFold;
-			public bool bConsole;
+			public bool bUnit;
 			public bool bDoor;
 			public bool bStart;
 			public bool bEnd;
 			public int nPickup;
-			public bool bPuzzleBlock;
+			public bool bPlan;
 			public bool bNorth;
 			public bool bSouth;
 			public bool bEast;

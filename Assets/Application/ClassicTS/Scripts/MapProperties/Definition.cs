@@ -22,15 +22,16 @@ namespace ClassicTilestorm
 
 		// ── Gameplay flags – start from bit 8 and never touch 0–7 ─────────────
 		Bake        = 1 << 8,   // internal inverse of serialized "Move"
-        Start       = 1 << 11,  // (1 << 11) 0b0000100000000000
-        End         = 1 << 12,  // (1 << 12) 0b0001000000000000
+		Roll        = 1 << 9,   // explicit opt-in for roll behaviour
+        Home        = 1 << 11,  // (1 << 11) 0b0000100000000000
+        Exit        = 1 << 12,  // (1 << 12) 0b0001000000000000
         Door        = 1 << 13,  // (1 << 13) 0b0010000000000000
-        Console     = 1 << 14,  // (1 << 14) 0b0100000000000000
+        Unit        = 1 << 14,  // (1 << 14) 0b0100000000000000
 
 		// Newer gameplay flags (continuing sequentially)
 		Wash        = 1 << 15,  // (1 << 15) 0b1000000000000000
         Sway        = 1 << 16,  // (1 << 16) 0b10000000000000000   (bit 16)
-		PuzzleBlock = 1 << 17,  // (1 << 17) 0b100000000000000000  (bit 17)
+		Plan        = 1 << 17,  // (1 << 17) 0b100000000000000000  (bit 17)
 
         // ────────────────────────────────────────────────────────────────
         // Reserved for future gameplay flags (bits 18+)
@@ -67,22 +68,20 @@ namespace ClassicTilestorm
         [JsonIgnore] public bool West        { get => (flags & (int)DefinitionFlags.West)        != 0; set => SetFlag(DefinitionFlags.West,        value); }
 
 		[JsonIgnore] public bool Bake        { get => (flags & (int)DefinitionFlags.Bake)        != 0; set => SetFlag(DefinitionFlags.Bake,        value); }
-        [JsonIgnore] public bool Start       { get => (flags & (int)DefinitionFlags.Start)       != 0; set => SetFlag(DefinitionFlags.Start,       value); }//duplicate of waypoint data so may remove
-		[JsonIgnore] public bool End         { get => (flags & (int)DefinitionFlags.End)         != 0; set => SetFlag(DefinitionFlags.End,         value); }//duplicate of waypoint data so may remove
+        [JsonIgnore] public bool Roll        { get => (flags & (int)DefinitionFlags.Roll)        != 0; set => SetFlag(DefinitionFlags.Roll,        value); }
+        [JsonIgnore] public bool Home        { get => (flags & (int)DefinitionFlags.Home)        != 0; set => SetFlag(DefinitionFlags.Home,        value); }//duplicate of waypoint data so may remove
+		[JsonIgnore] public bool Exit        { get => (flags & (int)DefinitionFlags.Exit)        != 0; set => SetFlag(DefinitionFlags.Exit,        value); }//duplicate of waypoint data so may remove
         [JsonIgnore] public bool Door        { get => (flags & (int)DefinitionFlags.Door)        != 0; set => SetFlag(DefinitionFlags.Door,        value); }//no longer needed
-		[JsonIgnore] public bool Console     { get => (flags & (int)DefinitionFlags.Console)     != 0; set => SetFlag(DefinitionFlags.Console,     value); }
+		[JsonIgnore] public bool Unit        { get => (flags & (int)DefinitionFlags.Unit)        != 0; set => SetFlag(DefinitionFlags.Unit,        value); }
         [JsonIgnore] public bool Sway        { get => (flags & (int)DefinitionFlags.Sway)        != 0; set => SetFlag(DefinitionFlags.Sway,        value); }
         [JsonIgnore] public bool Wash        { get => (flags & (int)DefinitionFlags.Wash)        != 0; set => SetFlag(DefinitionFlags.Wash,        value); }
-        [JsonIgnore] public bool PuzzleBlock { get => (flags & (int)DefinitionFlags.PuzzleBlock) != 0; set => SetFlag(DefinitionFlags.PuzzleBlock, value); }//potentially replace with Quiz
+        [JsonIgnore] public bool Plan        { get => (flags & (int)DefinitionFlags.Plan)        != 0; set => SetFlag(DefinitionFlags.Plan,        value); }
 
         //for a tile to be moveable at all it needs to be non static or not baked, so Drag, Fold and Roll all have this in common
 		public bool Drag => !Bake && !string.IsNullOrWhiteSpace(model);
 
-        //for tiles to be able to fold they currently must have no model - I may enhance this restriction
+		//for tiles to be able to fold they currently must have no model - I may enhance this restriction
 		public bool Fold => !Bake && string.IsNullOrWhiteSpace(model);
-
-		//the issue with this is that all tiles that are not static and have a model but no nav are rollable but I want to be able to have a tile that can move but not roll with no nav
-		public bool Roll => !Bake && !string.IsNullOrWhiteSpace(model) && Nav == 0;
 
 		[JsonIgnore]
         public int Nav
@@ -123,11 +122,12 @@ namespace ClassicTilestorm
         private static readonly IReadOnlyDictionary<string, DefinitionFlags> FlagLookup = new Dictionary<string, DefinitionFlags>(StringComparer.OrdinalIgnoreCase)
 		{
 			["Move"] = DefinitionFlags.Bake,
+			["Roll"] = DefinitionFlags.Roll,
+			["Home"] = DefinitionFlags.Home,
+			["Exit"] = DefinitionFlags.Exit,
 			["Door"] = DefinitionFlags.Door,
-			["Start"] = DefinitionFlags.Start,
-			["End"] = DefinitionFlags.End,
-			["Console"] = DefinitionFlags.Console,
-			["PuzzleBlock"] = DefinitionFlags.PuzzleBlock,
+			["Unit"] = DefinitionFlags.Unit,
+			["Plan"] = DefinitionFlags.Plan,
 			["Sway"] = DefinitionFlags.Sway,
 			["Wash"] = DefinitionFlags.Wash,
 		};

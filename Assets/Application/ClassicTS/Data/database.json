@@ -1581,6 +1581,101 @@
       ]
     },
     {
+      "name": "puzzle test",
+      "skybox": "sky-4",
+      "width": 9,
+      "height": 6,
+      "tiles": [
+        1,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        1,
+        0,
+        2,
+        2,
+        2,
+        3,
+        0,
+        1,
+        1,
+        1,
+        0,
+        2,
+        3,
+        2,
+        2,
+        0,
+        1,
+        1,
+        5,
+        0,
+        2,
+        2,
+        3,
+        2,
+        0,
+        1,
+        4,
+        6,
+        0,
+        3,
+        2,
+        2,
+        2,
+        0,
+        4,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1
+      ],
+      "solve": [
+        0,
+        54
+      ],
+      "table": [
+        "4pdw17",
+        "000000",
+        "2w9vTQ",
+        "AEDTuj",
+        "75XVj1|angle:90.0",
+        "Cp5F4e",
+        "0KdnWP|angle:90.0"
+      ],
+      "waypoints": [
+        36,
+        37,
+        44
+      ],
+      "attachments": [
+        {
+          "type": "View",
+          "tile": 37,
+          "data": [
+            2.56920862,
+            9.689591,
+            -8.805053,
+            0.4481,
+            -0.008194,
+            0.004108,
+            12.09
+          ]
+        }
+      ]
+    },
+    {
       "name": "Mike Test 01",
       "character": "Eggbot Medieval",
       "music": "Medieval",
@@ -40290,7 +40385,7 @@
       "name": "ind tile door start",
       "model": "ss_tile_door_ns",
       "texture": "Industrial",
-      "flags": "Door, Start",
+      "flags": "Door, Home",
       "connections": "NS"
     },
     {
@@ -40298,7 +40393,7 @@
       "name": "ind tile door end",
       "model": "ss_tile_door_ns",
       "texture": "Industrial",
-      "flags": "Door, End",
+      "flags": "Door, Exit",
       "connections": "NS"
     },
     {
@@ -40306,7 +40401,7 @@
       "name": "ind tile console",
       "model": "ss_console_n",
       "texture": "Industrial",
-      "flags": "Console",
+      "flags": "Unit",
       "connections": "N"
     },
     {
@@ -40314,7 +40409,7 @@
       "name": "ind tile slide",
       "model": "ss_tile_slide_plain",
       "texture": "Industrial",
-      "flags": "Move"
+      "flags": "Roll, Move"
     },
     {
       "id": "AaNkrC",
@@ -40457,7 +40552,7 @@
       "name": "egy tile door start ns",
       "model": "egy_tile_ns_door",
       "texture": "Egypt",
-      "flags": "Door, Start",
+      "flags": "Door, Home",
       "connections": "NS"
     },
     {
@@ -40465,7 +40560,7 @@
       "name": "egy tile door end ns",
       "model": "egy_tile_ns_door",
       "texture": "Egypt",
-      "flags": "Door, End",
+      "flags": "Door, Exit",
       "connections": "NS"
     },
     {
@@ -40473,7 +40568,7 @@
       "name": "egy tile console n",
       "model": "egy_console_n",
       "texture": "Egypt",
-      "flags": "Console",
+      "flags": "Unit",
       "connections": "N"
     },
     {
@@ -40499,7 +40594,7 @@
       "name": "egy tile slide",
       "model": "egy_tile_slide",
       "texture": "Egypt",
-      "flags": "Move"
+      "flags": "Roll, Move"
     },
     {
       "id": "7J4P6c",
@@ -40569,7 +40664,7 @@
       "name": "med tile door start ns",
       "model": "med_tile_ns_door",
       "texture": "Medieval",
-      "flags": "Door, Start",
+      "flags": "Door, Home",
       "connections": "NS"
     },
     {
@@ -40577,7 +40672,7 @@
       "name": "med tile door end ns",
       "model": "med_tile_ns_door",
       "texture": "Medieval",
-      "flags": "Door, End",
+      "flags": "Door, Exit",
       "connections": "NS"
     },
     {
@@ -40585,14 +40680,14 @@
       "name": "med tile console n",
       "model": "med_console_n",
       "texture": "Medieval",
-      "flags": "Console",
+      "flags": "Unit",
       "connections": "N"
     },
     {
       "id": "0trKw7",
       "name": "med_tile_console",
       "model": "med_console",
-      "flags": "Console",
+      "flags": "Unit",
       "connections": "N"
     },
     {
@@ -40606,7 +40701,7 @@
       "name": "med tile slide",
       "model": "med_tile_slide",
       "texture": "Medieval",
-      "flags": "Move"
+      "flags": "Roll, Move"
     },
     {
       "id": "75dq85",
@@ -40730,7 +40825,7 @@
       "name": "jun tile door start ns",
       "model": "jun_tile_ns_door",
       "texture": "Jungle",
-      "flags": "Door, Start",
+      "flags": "Door, Home",
       "connections": "NS"
     },
     {
@@ -40738,7 +40833,7 @@
       "name": "jun tile door end ns",
       "model": "jun_tile_ns_door",
       "texture": "Jungle",
-      "flags": "Door, End",
+      "flags": "Door, Exit",
       "connections": "NS"
     },
     {
@@ -40746,7 +40841,7 @@
       "name": "jun tile console n",
       "model": "jun_console_n",
       "texture": "Jungle",
-      "flags": "Console",
+      "flags": "Unit",
       "connections": "N"
     },
     {
@@ -40760,7 +40855,7 @@
       "name": "jun tile slide",
       "model": "jun_tile_slide",
       "texture": "Jungle",
-      "flags": "Move"
+      "flags": "Roll, Move"
     },
     {
       "id": "0e2RF9",
@@ -41005,6 +41100,13 @@
       "name": "ss tile boundary 3",
       "model": "ss_tile_boundary_03",
       "texture": "coin"
+    },
+    {
+      "id": "AEDTuj",
+      "name": "test no nav slide",
+      "model": "tile_trans",
+      "texture": "Marker",
+      "flags": "Move"
     }
   ],
   "textures": [

@@ -517,11 +517,12 @@ namespace ClassicTilestorm
 
 			var flagsList = new List<string>();
 			if (def.Bake) flagsList.Add("Static");
+			if (def.Roll) flagsList.Add("Roll");
+			if (def.Home) flagsList.Add("Home");
+			if (def.Exit) flagsList.Add("Exit");
 			if (def.Door) flagsList.Add("Door");
-			if (def.Start) flagsList.Add("Start");
-			if (def.End) flagsList.Add("End");
-			if (def.Console) flagsList.Add("Console");
-			if (def.PuzzleBlock) flagsList.Add("Puzzle");
+			if (def.Unit) flagsList.Add("Console");//the 'unit' flag
+			if (def.Plan) flagsList.Add("Plan");
 			if (def.Sway) flagsList.Add("Sway");
 			if (def.Wash) flagsList.Add("Wash");
 
