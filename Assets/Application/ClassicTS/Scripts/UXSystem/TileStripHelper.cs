@@ -48,6 +48,14 @@ namespace ClassicTilestorm
 
 			int lastIndex = startIndex;
 
+			// In easy mode, if the strip starts on a roll tile we first absorb any
+			// consecutive roll tiles, then include the first plain drag tile if present.
+			if (!difficult && tile.IsRoll)
+			{
+				while (map.TryGetNextTile(lastIndex, stride, out var nextTile) && nextTile.IsRoll)
+					lastIndex += stride;
+			}
+
 			// Main drag loop
 			while (map.TryGetNextTile(lastIndex, stride, out tile))
 			{
