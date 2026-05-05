@@ -1601,36 +1601,36 @@
         2,
         2,
         2,
-        3,
-        0,
-        1,
-        1,
-        1,
-        0,
-        2,
-        3,
-        2,
-        2,
-        0,
-        1,
-        1,
-        5,
-        0,
-        2,
-        2,
-        3,
-        2,
-        0,
-        1,
         4,
+        0,
+        1,
+        1,
+        1,
+        0,
+        2,
+        4,
+        2,
+        2,
+        0,
+        1,
+        1,
         6,
         0,
+        2,
+        2,
+        5,
+        2,
+        0,
+        1,
         3,
+        7,
+        0,
+        5,
         2,
         2,
         2,
         0,
-        4,
+        3,
         1,
         1,
         0,
@@ -1648,9 +1648,10 @@
       "table": [
         "4pdw17",
         "000000",
-        "2w9vTQ",
-        "AEDTuj",
+        "3ExQpJ",
         "75XVj1|angle:90.0",
+        "AEDTuj",
+        "D2m8HU",
         "Cp5F4e",
         "0KdnWP|angle:90.0"
       ],
@@ -40302,6 +40303,13 @@
       "name": "blocker"
     },
     {
+      "id": "3ExQpJ",
+      "name": "slide and roll",
+      "model": "ss_tile_slide_plain",
+      "texture": "Mud Pit",
+      "flags": "Move, Roll"
+    },
+    {
       "id": "A8krJn",
       "name": "med trim tile",
       "model": "med_trim_tile"
@@ -40409,7 +40417,7 @@
       "name": "ind tile slide",
       "model": "ss_tile_slide_plain",
       "texture": "Industrial",
-      "flags": "Roll, Move"
+      "flags": "Move, Roll"
     },
     {
       "id": "AaNkrC",
@@ -40594,7 +40602,7 @@
       "name": "egy tile slide",
       "model": "egy_tile_slide",
       "texture": "Egypt",
-      "flags": "Roll, Move"
+      "flags": "Move, Roll"
     },
     {
       "id": "7J4P6c",
@@ -40701,7 +40709,7 @@
       "name": "med tile slide",
       "model": "med_tile_slide",
       "texture": "Medieval",
-      "flags": "Roll, Move"
+      "flags": "Move, Roll"
     },
     {
       "id": "75dq85",
@@ -40855,7 +40863,7 @@
       "name": "jun tile slide",
       "model": "jun_tile_slide",
       "texture": "Jungle",
-      "flags": "Roll, Move"
+      "flags": "Move, Roll"
     },
     {
       "id": "0e2RF9",
