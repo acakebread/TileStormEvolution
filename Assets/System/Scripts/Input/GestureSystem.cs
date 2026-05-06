@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 namespace MassiveHadronLtd
 {
@@ -11,6 +12,8 @@ namespace MassiveHadronLtd
 
 		private void Update()
 		{
+			if (EventSystem.current && EventSystem.current.IsPointerOverGameObject())
+				return;
 			if (InputX.GetMouseButtonDown(0))
 				OnBeginDrag?.Invoke(InputX.mousePosition);
 			else if (InputX.GetMouseButton(0))
