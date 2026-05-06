@@ -82,6 +82,38 @@ namespace ClassicTilestorm
 			if (!(lastTile.IsFold | lastTile.IsRoll))
 				return strip; // return invalid strip as 'fail' condition
 
+			// If easy mode and the resolved strip is entirely roll tiles,
+			// include the first plain drag tile behind that roll run.
+			if (!difficult)
+			{
+				var allRoll = true;
+				for (var index = strip.First; allRoll; index += stride)
+				{
+					if (!map.GetTile(index).IsRoll)
+						allRoll = false;
+
+					if (index == lastIndex)
+						break;
+				}
+
+				if (allRoll)
+				{
+					while (map.TryGetNextTile(strip.First, -stride, out tile))
+					{
+						if (tile.IsRoll)
+						{
+							strip.First -= stride;
+							continue;
+						}
+
+						if (tile.IsDrag)
+							strip.First -= stride;
+
+						break;
+					}
+				}
+			}
+
 			// Extend backwards from the start
 			while (map.TryGetNextTile(strip.First, -stride, out tile))
 			{
@@ -97,8 +129,6 @@ namespace ClassicTilestorm
 				if (tile.IsBake) break;
 				strip.First -= stride;
 			}
-
-			// if  easy mode and last tile is a roll tile extend backwards until a drag tile is found and add it
 
 			strip.Count = (lastIndex - strip.First) / stride + 1;
 			strip.Stride = stride;
