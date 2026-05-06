@@ -25,7 +25,7 @@ namespace ClassicTilestorm
 		Roll        = 1 << 9,   // explicit opt-in for roll behaviour
         // Bits 11-12 intentionally left unused to preserve legacy flag spacing.
         Door        = 1 << 13,  // (1 << 13) 0b0010000000000000
-        Unit        = 1 << 14,  // (1 << 14) 0b0100000000000000
+        Desk        = 1 << 14,  // (1 << 14) 0b0100000000000000
 
 		// Newer gameplay flags (continuing sequentially)
 		Wash        = 1 << 15,  // (1 << 15) 0b1000000000000000
@@ -69,7 +69,7 @@ namespace ClassicTilestorm
 		[JsonIgnore] public bool Bake        { get => (flags & (int)DefinitionFlags.Bake)        != 0; set => SetFlag(DefinitionFlags.Bake,        value); }
         [JsonIgnore] public bool Roll        { get => (flags & (int)DefinitionFlags.Roll)        != 0; set => SetFlag(DefinitionFlags.Roll,        value); }
         [JsonIgnore] public bool Door        { get => (flags & (int)DefinitionFlags.Door)        != 0; set => SetFlag(DefinitionFlags.Door,        value); }
-		[JsonIgnore] public bool Unit        { get => (flags & (int)DefinitionFlags.Unit)        != 0; set => SetFlag(DefinitionFlags.Unit,        value); }
+		[JsonIgnore] public bool Desk        { get => (flags & (int)DefinitionFlags.Desk)        != 0; set => SetFlag(DefinitionFlags.Desk,        value); }
         [JsonIgnore] public bool Sway        { get => (flags & (int)DefinitionFlags.Sway)        != 0; set => SetFlag(DefinitionFlags.Sway,        value); }
         [JsonIgnore] public bool Wash        { get => (flags & (int)DefinitionFlags.Wash)        != 0; set => SetFlag(DefinitionFlags.Wash,        value); }
         [JsonIgnore] public bool Plan        { get => (flags & (int)DefinitionFlags.Plan)        != 0; set => SetFlag(DefinitionFlags.Plan,        value); }
@@ -121,7 +121,7 @@ namespace ClassicTilestorm
 			["Move"] = DefinitionFlags.Bake,
 			["Roll"] = DefinitionFlags.Roll,
 			["Door"] = DefinitionFlags.Door,
-			["Unit"] = DefinitionFlags.Unit,
+			["Desk"] = DefinitionFlags.Desk,
 			["Plan"] = DefinitionFlags.Plan,
 			["Sway"] = DefinitionFlags.Sway,
 			["Wash"] = DefinitionFlags.Wash,

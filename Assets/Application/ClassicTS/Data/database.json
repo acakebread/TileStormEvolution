@@ -40329,7 +40329,7 @@
       "name": "ind tile console",
       "model": "ss_console_n",
       "texture": "Industrial",
-      "flags": "Unit",
+      "flags": "Desk",
       "connections": "N"
     },
     {
@@ -40488,7 +40488,7 @@
       "name": "egy tile console n",
       "model": "egy_console_n",
       "texture": "Egypt",
-      "flags": "Unit",
+      "flags": "Desk",
       "connections": "N"
     },
     {
@@ -40592,14 +40592,14 @@
       "name": "med tile console n",
       "model": "med_console_n",
       "texture": "Medieval",
-      "flags": "Unit",
+      "flags": "Desk",
       "connections": "N"
     },
     {
       "id": "0trKw7",
       "name": "med_tile_console",
       "model": "med_console",
-      "flags": "Unit",
+      "flags": "Desk",
       "connections": "N"
     },
     {
@@ -40745,7 +40745,7 @@
       "name": "jun tile console n",
       "model": "jun_console_n",
       "texture": "Jungle",
-      "flags": "Unit",
+      "flags": "Desk",
       "connections": "N"
     },
     {

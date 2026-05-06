@@ -269,7 +269,7 @@ namespace ClassicTilestorm
 				if (consoleIndex == -1) continue;
 
 				var consoleTile = GetTile(consoleIndex);
-				if (consoleTile.IsConsole && dirBit == Navigation.GetOppositeDirection(consoleTile.Nav))
+				if (consoleTile.IsDesk && dirBit == Navigation.GetOppositeDirection(consoleTile.Nav))
 					return consoleIndex;
 			}
 			return -1;
