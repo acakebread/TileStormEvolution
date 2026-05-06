@@ -40403,7 +40403,7 @@
       "name": "ind tile door start",
       "model": "ss_tile_door_ns",
       "texture": "Industrial",
-      "flags": "Door, Home",
+      "flags": "Door",
       "connections": "NS"
     },
     {
@@ -40411,7 +40411,7 @@
       "name": "ind tile door end",
       "model": "ss_tile_door_ns",
       "texture": "Industrial",
-      "flags": "Door, Exit",
+      "flags": "Door",
       "connections": "NS"
     },
     {
@@ -40570,7 +40570,7 @@
       "name": "egy tile door start ns",
       "model": "egy_tile_ns_door",
       "texture": "Egypt",
-      "flags": "Door, Home",
+      "flags": "Door",
       "connections": "NS"
     },
     {
@@ -40578,7 +40578,7 @@
       "name": "egy tile door end ns",
       "model": "egy_tile_ns_door",
       "texture": "Egypt",
-      "flags": "Door, Exit",
+      "flags": "Door",
       "connections": "NS"
     },
     {
@@ -40682,7 +40682,7 @@
       "name": "med tile door start ns",
       "model": "med_tile_ns_door",
       "texture": "Medieval",
-      "flags": "Door, Home",
+      "flags": "Door",
       "connections": "NS"
     },
     {
@@ -40690,7 +40690,7 @@
       "name": "med tile door end ns",
       "model": "med_tile_ns_door",
       "texture": "Medieval",
-      "flags": "Door, Exit",
+      "flags": "Door",
       "connections": "NS"
     },
     {
@@ -40843,7 +40843,7 @@
       "name": "jun tile door start ns",
       "model": "jun_tile_ns_door",
       "texture": "Jungle",
-      "flags": "Door, Home",
+      "flags": "Door",
       "connections": "NS"
     },
     {
@@ -40851,7 +40851,7 @@
       "name": "jun tile door end ns",
       "model": "jun_tile_ns_door",
       "texture": "Jungle",
-      "flags": "Door, Exit",
+      "flags": "Door",
       "connections": "NS"
     },
     {

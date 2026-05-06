@@ -23,8 +23,7 @@ namespace ClassicTilestorm
 		// ── Gameplay flags – start from bit 8 and never touch 0–7 ─────────────
 		Bake        = 1 << 8,   // internal inverse of serialized "Move"
 		Roll        = 1 << 9,   // explicit opt-in for roll behaviour
-        Home        = 1 << 11,  // (1 << 11) 0b0000100000000000
-        Exit        = 1 << 12,  // (1 << 12) 0b0001000000000000
+        // Bits 11-12 intentionally left unused to preserve legacy flag spacing.
         Door        = 1 << 13,  // (1 << 13) 0b0010000000000000
         Unit        = 1 << 14,  // (1 << 14) 0b0100000000000000
 
@@ -69,9 +68,7 @@ namespace ClassicTilestorm
 
 		[JsonIgnore] public bool Bake        { get => (flags & (int)DefinitionFlags.Bake)        != 0; set => SetFlag(DefinitionFlags.Bake,        value); }
         [JsonIgnore] public bool Roll        { get => (flags & (int)DefinitionFlags.Roll)        != 0; set => SetFlag(DefinitionFlags.Roll,        value); }
-        [JsonIgnore] public bool Home        { get => (flags & (int)DefinitionFlags.Home)        != 0; set => SetFlag(DefinitionFlags.Home,        value); }//duplicate of waypoint data so may remove
-		[JsonIgnore] public bool Exit        { get => (flags & (int)DefinitionFlags.Exit)        != 0; set => SetFlag(DefinitionFlags.Exit,        value); }//duplicate of waypoint data so may remove
-        [JsonIgnore] public bool Door        { get => (flags & (int)DefinitionFlags.Door)        != 0; set => SetFlag(DefinitionFlags.Door,        value); }//no longer needed
+        [JsonIgnore] public bool Door        { get => (flags & (int)DefinitionFlags.Door)        != 0; set => SetFlag(DefinitionFlags.Door,        value); }
 		[JsonIgnore] public bool Unit        { get => (flags & (int)DefinitionFlags.Unit)        != 0; set => SetFlag(DefinitionFlags.Unit,        value); }
         [JsonIgnore] public bool Sway        { get => (flags & (int)DefinitionFlags.Sway)        != 0; set => SetFlag(DefinitionFlags.Sway,        value); }
         [JsonIgnore] public bool Wash        { get => (flags & (int)DefinitionFlags.Wash)        != 0; set => SetFlag(DefinitionFlags.Wash,        value); }
@@ -123,8 +120,6 @@ namespace ClassicTilestorm
 		{
 			["Move"] = DefinitionFlags.Bake,
 			["Roll"] = DefinitionFlags.Roll,
-			["Home"] = DefinitionFlags.Home,
-			["Exit"] = DefinitionFlags.Exit,
 			["Door"] = DefinitionFlags.Door,
 			["Unit"] = DefinitionFlags.Unit,
 			["Plan"] = DefinitionFlags.Plan,
@@ -222,13 +217,17 @@ namespace ClassicTilestorm
                     string trimmed = part.Trim();
                     if (string.IsNullOrEmpty(trimmed)) continue;
 
+                    if (string.Equals(trimmed, "Exit", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(trimmed, "Home", StringComparison.OrdinalIgnoreCase))
+                        continue;
+
                     if (FlagLookup.TryGetValue(trimmed, out var flag))
 					{
 						if (flag == DefinitionFlags.Bake)
 							((IFlagAccess)def).Flags &= ~(int)DefinitionFlags.Bake;
 						else
 							((IFlagAccess)def).Flags |= (int)flag;
-					}
+                    }
                     else
                         Debug.LogWarning($"Unknown flag in JSON: '{trimmed}'");
                 }

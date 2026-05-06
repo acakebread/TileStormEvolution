@@ -36,8 +36,6 @@ namespace ClassicTilestorm
 				// Pass 1: only leaving cells → cleanup + deselect
 				foreach (var iter in leaving)
 				{
-					if (iter is Cell cell && cell.position != cell.origin)
-						iMap.RemoveTileAt(cell.origin);
 					iter.Deselect(this);
 				}
 
@@ -45,7 +43,12 @@ namespace ClassicTilestorm
 				foreach (var iter in leaving)
 				{
 					if (iter is Cell cell)
-						iMap.UpdateTileAt(cell.position, cell.variant);
+					{
+						if (cell.position != cell.origin)
+							iMap.MoveTile(cell.origin, cell.position, cell.variant);
+						else
+							iMap.UpdateTileAt(cell.position, cell.variant);
+					}
 				}
 
 				// Preserve original null-when-empty convention
@@ -471,7 +474,14 @@ namespace ClassicTilestorm
 			var cursorTile = pick.logicalIndex;
 			if (!HasSelection || (selection[0] is MapAttachment ma && ma.tile != cursorTile))
 				SelectAttachments(GetAttachmentsAsSelectables(index: cursorTile));
-			return HasSelection;
+
+			if (!HasSelection)
+				return false;
+
+			if (selection[0] is Waypoint waypoint && IsDoorTile(waypoint.tile))
+				return false;
+
+			return true;
 		}
 
 		private void UpdateAttachmentDrag()
@@ -518,6 +528,16 @@ namespace ClassicTilestorm
 		{
 			selection = value;
 			MapUtils.RebuildMarkers(iMap, selection);
+		}
+
+		private bool IsDoorTile(int tileIndex)
+		{
+			if (tileIndex < 0 || iMap == null)
+				return false;
+
+			var variant = iMap.GetVariantAt(tileIndex);
+			var def = ResourceManager.GetDefinition(variant.hash);
+			return def?.Door ?? false;
 		}
 	}
 }

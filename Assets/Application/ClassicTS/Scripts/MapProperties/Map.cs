@@ -55,6 +55,7 @@ namespace ClassicTilestorm
 
 		int UpdateTileAt(Vector3 pos, Variant variant);
 		int InsertTileAt(Vector3 pos, Variant variant);
+		int MoveTile(Vector3 fromPos, Vector3 toPos, Variant variant);
 
 		RectInt ContentBounds();
 		RectInt ResizeMap(RectInt extents);
@@ -68,6 +69,7 @@ namespace ClassicTilestorm
 		bool RemoveAttachments(MapAttachment[] _);
 		void RefreshAttachment(MapAttachment _);
 		void RefreshAttachments(MapAttachment[] _);
+		void RemapWaypointTile(int fromTile, int toTile);
 
 		int CameraHitTile(Camera camera, Vector3 position);
 		Variant CameraHitVariant(Camera camera, Vector3 position);
@@ -240,23 +242,19 @@ namespace ClassicTilestorm
 
 		public int GetStartTile()
 		{
-			if (waypoints?.Length > 0) return waypoints[0];
+			if (waypoints?.Length > 0)
+				return waypoints[0];
 
-			for (var i = 0; i < width * height; ++i)
-				if (GetTile(i).IsStart) return i;
-
-			Debug.LogWarning("No start tile found!");
+			Debug.LogWarning("No start waypoint found!");
 			return -1;
 		}
 
 		public int GetEndTile()
 		{
-			if (waypoints?.Length > 0) return waypoints[waypoints.Length - 1];
+			if (waypoints?.Length > 0)
+				return waypoints[waypoints.Length - 1];
 
-			for (var i = 0; i < width * height; ++i)
-				if (GetTile(i).IsEnd) return i;
-
-			Debug.LogWarning("No end tile found!");
+			Debug.LogWarning("No end waypoint found!");
 			return -1;
 		}
 
@@ -350,8 +348,7 @@ namespace ClassicTilestorm
 
 			PreviewRenderLayers.RemovePreviewLayersFromChildLights(parent);
 
-			if (null == waypoints || 0 == waypoints.Length)
-				waypoints = this.GenerateWaypoints();
+			SyncDoorWaypoints();
 			parent.gameObject.GetOrAddComponent<WindController>();
 
 			return true;

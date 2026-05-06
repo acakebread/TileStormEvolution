@@ -518,8 +518,6 @@ namespace ClassicTilestorm
 			var flagsList = new List<string>();
 			if (def.Bake) flagsList.Add("Static");
 			if (def.Roll) flagsList.Add("Roll");
-			if (def.Home) flagsList.Add("Home");
-			if (def.Exit) flagsList.Add("Exit");
 			if (def.Door) flagsList.Add("Door");
 			if (def.Unit) flagsList.Add("Console");//the 'unit' flag
 			if (def.Plan) flagsList.Add("Plan");

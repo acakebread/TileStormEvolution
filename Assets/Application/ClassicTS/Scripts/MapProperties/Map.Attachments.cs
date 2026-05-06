@@ -9,6 +9,91 @@ namespace ClassicTilestorm
 	{
 		[NonSerialized] private readonly Dictionary<MapAttachment, GameObject> attachmentGameObjects = new();
 
+		private bool IsDoorTile(int tileIndex)
+		{
+			if (tileIndex < 0 || tiles == null || tileIndex >= tiles.Length)
+				return false;
+
+			var def = ResourceManager.GetDefinition(GetVariantForIndex(tileIndex).hash);
+			return def?.Door ?? false;
+		}
+
+		private void SyncDoorWaypoints()
+		{
+			var currentWaypoints = (waypoints ?? Array.Empty<int>())
+				.Where(tile => tile >= 0)
+				.ToList();
+
+			var scannedDoors = new List<int>(2);
+			if (tiles != null)
+			{
+				for (var tile = 0; tile < tiles.Length && scannedDoors.Count < 2; tile++)
+				{
+					if (IsDoorTile(tile) && !scannedDoors.Contains(tile))
+						scannedDoors.Add(tile);
+				}
+			}
+
+			int? startDoor = null;
+			foreach (var tile in currentWaypoints)
+			{
+				if (IsDoorTile(tile))
+				{
+					startDoor = tile;
+					break;
+				}
+			}
+
+			if (!startDoor.HasValue && scannedDoors.Count > 0)
+				startDoor = scannedDoors[0];
+
+			int? endDoor = null;
+			for (var i = currentWaypoints.Count - 1; i >= 0; i--)
+			{
+				var tile = currentWaypoints[i];
+				if (tile != startDoor && IsDoorTile(tile))
+				{
+					endDoor = tile;
+					break;
+				}
+			}
+
+			if (!endDoor.HasValue)
+			{
+				foreach (var tile in scannedDoors)
+				{
+					if (tile != startDoor)
+					{
+						endDoor = tile;
+						break;
+					}
+				}
+			}
+
+			var middleWaypoints = new List<int>();
+			var seenMiddle = new HashSet<int>();
+
+			foreach (var tile in currentWaypoints)
+			{
+				if (tile == startDoor || tile == endDoor || IsDoorTile(tile))
+					continue;
+
+				if (seenMiddle.Add(tile))
+					middleWaypoints.Add(tile);
+			}
+
+			var normalized = new List<int>();
+			if (startDoor.HasValue)
+				normalized.Add(startDoor.Value);
+
+			normalized.AddRange(middleWaypoints);
+
+			if (endDoor.HasValue)
+				normalized.Add(endDoor.Value);
+
+			waypoints = normalized.Count > 0 ? normalized.ToArray() : null;
+		}
+
 		public MapAttachment[] GetAttachments(int? tileIndex = null, Type[] filterTypes = null)
 		{
 			var real = attachments ?? Array.Empty<MapAttachment>();
@@ -44,7 +129,10 @@ namespace ClassicTilestorm
 			if (attachment is Waypoint wp)
 			{
 				if (waypoints != null && wp.waypointIndex >= 0 && wp.waypointIndex < waypoints.Length)
+				{
 					waypoints[wp.waypointIndex] = wp.tile;
+					SyncDoorWaypoints();
+				}
 			}
 
 			string prefabName = attachment switch
@@ -110,6 +198,7 @@ namespace ClassicTilestorm
 					list.Add(-1);
 				list[wp.waypointIndex] = wp.tile;
 				waypoints = list.ToArray();
+				SyncDoorWaypoints();
 			}
 			else
 			{
@@ -142,6 +231,7 @@ namespace ClassicTilestorm
 				}
 
 				waypoints = newWaypoints.Count > 0 ? newWaypoints.ToArray() : null;
+				SyncDoorWaypoints();
 
 				removed = true;
 			}
@@ -191,6 +281,25 @@ namespace ClassicTilestorm
 			}
 
 			return anyRemoved;
+		}
+
+		public void RemapWaypointTile(int fromTile, int toTile)
+		{
+			if (waypoints == null || fromTile < 0 || toTile < 0)
+				return;
+
+			var changed = false;
+			for (var i = 0; i < waypoints.Length; i++)
+			{
+				if (waypoints[i] == fromTile)
+				{
+					waypoints[i] = toTile;
+					changed = true;
+				}
+			}
+
+			if (changed)
+				SyncDoorWaypoints();
 		}
 
 		public void RefreshAttachments(MapAttachment[] attachmentsToRefresh)
