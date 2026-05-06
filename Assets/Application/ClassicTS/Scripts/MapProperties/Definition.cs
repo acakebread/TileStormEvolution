@@ -13,24 +13,28 @@ namespace ClassicTilestorm
         None = 0,
 
         // ── Directions – must use exactly the same values as DirectionFlags ──
-        North = 1 << 0,   // (1 <<  0) 0b0000000000000001
-        South = 1 << 1,   // (1 <<  1) 0b0000000000000010
-        East  = 1 << 2,   // (1 <<  2) 0b0000000000000100
-        West  = 1 << 3,   // (1 <<  3) 0b0000000000001000
+        North = 1 << 0,   // 0b0001
+        South = 1 << 1,   // 0b0010
+        East  = 1 << 2,   // 0b0100
+        West  = 1 << 3,   // 0b1000
+
+		//1 << 4 reserved for diagonals
+		//1 << 5 reserved for diagonals
+		//1 << 6 reserved for diagonals
+		//1 << 7 reserved for diagonals
 
 		DirMask = 0b1111,  // bits 0–3 only (N=1, S=2, E=4, W=8)
 
 		// ── Gameplay flags – start from bit 8 and never touch 0–7 ─────────────
-		Bake        = 1 << 8,   // internal inverse of serialized "Move"
-		Roll        = 1 << 9,   // explicit opt-in for roll behaviour
-        // Bits 11-12 intentionally left unused to preserve legacy flag spacing.
-        Door        = 1 << 13,  // (1 << 13) 0b0010000000000000
-        Desk        = 1 << 14,  // (1 << 14) 0b0100000000000000
+		Bake = 1 << 8,   // internal inverse of serialized "Move"
+		Roll = 1 << 9,   // explicit opt-in for roll behaviour
+        Door = 1 << 10,
+        Desk = 1 << 11,
 
 		// Newer gameplay flags (continuing sequentially)
-		Wash        = 1 << 15,  // (1 << 15) 0b1000000000000000
-        Sway        = 1 << 16,  // (1 << 16) 0b10000000000000000   (bit 16)
-		Plan        = 1 << 17,  // (1 << 17) 0b100000000000000000  (bit 17)
+		Wash = 1 << 12,
+        Sway = 1 << 13,
+		Plan = 1 << 14,
 
         // ────────────────────────────────────────────────────────────────
         // Reserved for future gameplay flags (bits 18+)
