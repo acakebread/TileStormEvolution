@@ -222,8 +222,13 @@ namespace ClassicTilestorm
                     if (string.IsNullOrEmpty(trimmed)) continue;
 
                     if (string.Equals(trimmed, "Exit", StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(trimmed, "Home", StringComparison.OrdinalIgnoreCase))
-                        continue;
+                        string.Equals(trimmed, "Home", StringComparison.OrdinalIgnoreCase) ||
+						string.Equals(trimmed, "Dock", StringComparison.OrdinalIgnoreCase))
+                    {
+
+						Debug.LogWarning($"Legacy flag detected in JSON: '{trimmed}'");
+						continue;
+                    }
 
                     if (FlagLookup.TryGetValue(trimmed, out var flag))
 					{
