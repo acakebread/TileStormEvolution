@@ -77,8 +77,20 @@ namespace ClassicTilestorm
 				lastIndex += stride;
 			}
 
-			// Validate ending condition
 			var lastTile = map.GetTile(lastIndex);
+
+			// In easy mode, if a roll-led strip has collected a non-roll tail,
+			// trim that tail back to the last roll tile before validating.
+			if (!difficult && map.GetTile(startIndex).IsRoll)
+			{
+				while (lastIndex != strip.First && !lastTile.IsRoll)
+				{
+					lastIndex -= stride;
+					lastTile = map.GetTile(lastIndex);
+				}
+			}
+
+			// Validate ending condition
 			if (!(lastTile.IsFold | lastTile.IsRoll))
 				return strip; // return invalid strip as 'fail' condition
 
