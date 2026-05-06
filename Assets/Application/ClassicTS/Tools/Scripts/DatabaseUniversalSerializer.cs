@@ -84,7 +84,7 @@ namespace ClassicTilestorm
 			public bool bStart;
 			public bool bEnd;
 			public int nPickup;
-			public bool bPlan;
+			public bool bGang;
 			public bool bNorth;
 			public bool bSouth;
 			public bool bEast;

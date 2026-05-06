@@ -520,7 +520,7 @@ namespace ClassicTilestorm
 			if (def.Roll) flagsList.Add("Roll");
 			if (def.Door) flagsList.Add("Door");
 			if (def.Desk) flagsList.Add("Desk");
-			if (def.Plan) flagsList.Add("Plan");
+			if (def.Gang) flagsList.Add("Plan");
 			if (def.Sway) flagsList.Add("Sway");
 			if (def.Wash) flagsList.Add("Wash");
 

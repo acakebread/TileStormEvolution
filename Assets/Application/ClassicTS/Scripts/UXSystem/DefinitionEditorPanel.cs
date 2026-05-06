@@ -122,7 +122,7 @@ namespace ClassicTilestorm
 			new("Desk",        "Is Desk",	  d => d.Desk,        (d, v) => d.Desk = v),
 			new("Sway",        "Sways",       d => d.Sway,        (d, v) => d.Sway = v),
 			new("Wash",        "Bouyant",     d => d.Wash,        (d, v) => d.Wash = v),
-			new("Plan",        "Grid Puzzle", d => d.Plan,        (d, v) => d.Plan = v),
+			new("Gang",        "Grid Puzzle", d => d.Gang,        (d, v) => d.Gang = v),
 		};
 
 		protected override void Awake()

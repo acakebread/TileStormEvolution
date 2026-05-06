@@ -34,10 +34,10 @@ namespace ClassicTilestorm
 		// Newer gameplay flags (continuing sequentially)
 		Wash = 1 << 12,
         Sway = 1 << 13,
-		Plan = 1 << 14,
+		Gang = 1 << 14,
 
         // ────────────────────────────────────────────────────────────────
-        // Reserved for future gameplay flags (bits 18+)
+        // Reserved for future gameplay flags (bits 15+)
         // Do NOT reuse bits 0–7 — they are permanently reserved for directions
         // ────────────────────────────────────────────────────────────────
     }
@@ -76,7 +76,7 @@ namespace ClassicTilestorm
 		[JsonIgnore] public bool Desk        { get => (flags & (int)DefinitionFlags.Desk)        != 0; set => SetFlag(DefinitionFlags.Desk,        value); }
         [JsonIgnore] public bool Sway        { get => (flags & (int)DefinitionFlags.Sway)        != 0; set => SetFlag(DefinitionFlags.Sway,        value); }
         [JsonIgnore] public bool Wash        { get => (flags & (int)DefinitionFlags.Wash)        != 0; set => SetFlag(DefinitionFlags.Wash,        value); }
-        [JsonIgnore] public bool Plan        { get => (flags & (int)DefinitionFlags.Plan)        != 0; set => SetFlag(DefinitionFlags.Plan,        value); }
+        [JsonIgnore] public bool Gang        { get => (flags & (int)DefinitionFlags.Gang)        != 0; set => SetFlag(DefinitionFlags.Gang,        value); }
 
         //for a tile to be moveable at all it needs to be non static or not baked, so Drag, Fold and Roll all have this in common
 		public bool Drag => !Bake && !string.IsNullOrWhiteSpace(model);
@@ -126,7 +126,7 @@ namespace ClassicTilestorm
 			["Roll"] = DefinitionFlags.Roll,
 			["Door"] = DefinitionFlags.Door,
 			["Desk"] = DefinitionFlags.Desk,
-			["Plan"] = DefinitionFlags.Plan,
+			["Gang"] = DefinitionFlags.Gang,
 			["Sway"] = DefinitionFlags.Sway,
 			["Wash"] = DefinitionFlags.Wash,
 		};

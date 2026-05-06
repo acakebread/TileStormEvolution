@@ -80,7 +80,7 @@ namespace ClassicTilestorm.Editor
 			public string szBank;
 
 			public bool bNorth, bSouth, bEast, bWest;
-			public bool bStart, bEnd, bConsole, bSlide, bRoll, bFold, bDoor, bPlan;
+			public bool bStart, bEnd, bConsole, bSlide, bRoll, bFold, bDoor, bGang;
 
 			public int nPickup; // 0=none, 1=coin, 2=key, 3=health, 4=ammo
 		}
@@ -121,7 +121,7 @@ namespace ClassicTilestorm.Editor
 				if (old.bRoll) flags.Add("Roll");
 				if (old.bFold) flags.Add("Fold");
 				if (old.bDoor) flags.Add("Door");
-				if (old.bPlan) flags.Add("Plan");
+				if (old.bGang) flags.Add("Gang");
 				//if (flags.Count > 0) def.flags = string.Join(",", flags);
 
 				var dirs = new List<char>();
