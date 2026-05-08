@@ -40484,8 +40484,8 @@
     },
     {
       "id": "8VWAek",
-      "name": "egy tile console n",
-      "model": "egy_console_n",
+      "name": "egy tile console",
+      "model": "egy_console",
       "texture": "Egypt",
       "flags": "Desk",
       "connections": "N"
