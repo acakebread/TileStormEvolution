@@ -40992,12 +40992,6 @@
       ]
     },
     {
-      "id": "Jungle",
-      "name": "Jungle",
-      "alphaTest": false,
-      "texture": "Jungle_texturepage"
-    },
-    {
       "id": "Egypt",
       "name": "Egypt",
       "alphaTest": false,
@@ -41011,12 +41005,6 @@
           "duration": 0.5
         }
       ]
-    },
-    {
-      "id": "Medieval",
-      "name": "Medieval",
-      "alphaTest": false,
-      "texture": "Med_texturepage"
     },
     {
       "id": "Caustic",
