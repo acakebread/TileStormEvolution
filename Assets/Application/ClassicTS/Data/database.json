@@ -40575,7 +40575,7 @@
     {
       "id": "23UUn0",
       "name": "egy boundary n",
-      "model": "egy_tile_n_boundary_edge",
+      "model": "egy_tile_boundary_edge",
       "texture": "Egypt"
     },
     {
