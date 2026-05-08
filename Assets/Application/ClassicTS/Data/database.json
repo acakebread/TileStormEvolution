@@ -40736,7 +40736,6 @@
       "id": "E4WjRD",
       "name": "jun tile door",
       "model": "jun_tile_ns_door",
-      "texture": "Jungle",
       "flags": "Door",
       "connections": "NS"
     },
@@ -40744,49 +40743,42 @@
       "id": "6jquRN",
       "name": "jun tile console n",
       "model": "jun_console_n",
-      "texture": "Jungle",
       "flags": "Desk",
       "connections": "N"
     },
     {
       "id": "6c0yvj",
       "name": "jun tile boundary",
-      "model": "jun_tile_boundary",
-      "texture": "Jungle"
+      "model": "jun_tile_boundary"
     },
     {
       "id": "6n29xr",
       "name": "jun tile slide",
       "model": "jun_tile_slide",
-      "texture": "Jungle",
       "flags": "Move, Roll"
     },
     {
       "id": "0e2RF9",
       "name": "jun tile static nesw",
       "model": "jun_tile_nsew_static",
-      "texture": "Jungle",
       "connections": "NSEW"
     },
     {
       "id": "D0JQ7D",
       "name": "jun tile static ns",
       "model": "jun_tile_ns_static",
-      "texture": "Jungle",
       "connections": "NS"
     },
     {
       "id": "9uNFv9",
       "name": "jun tile static ne",
       "model": "jun_tile_ne_corner_static",
-      "texture": "Jungle",
       "connections": "NE"
     },
     {
       "id": "44Rdar",
       "name": "jun tile nesw",
       "model": "jun_tile_nsew",
-      "texture": "Jungle",
       "flags": "Move, Wash",
       "connections": "NSEW"
     },
@@ -40794,7 +40786,6 @@
       "id": "AwcehK",
       "name": "jun tile ns",
       "model": "jun_tile_ns",
-      "texture": "Jungle",
       "flags": "Move, Wash",
       "connections": "NS"
     },
@@ -40802,7 +40793,6 @@
       "id": "8mNmuv",
       "name": "jun tile corner ne",
       "model": "jun_tile_ne_corner",
-      "texture": "Jungle",
       "flags": "Move, Wash",
       "connections": "NE"
     },
@@ -40810,7 +40800,6 @@
       "id": "1ePHrc",
       "name": "jun tile stone nesw",
       "model": "jun_tile_stone_nsew",
-      "texture": "Jungle",
       "flags": "Move",
       "connections": "NSEW"
     },
@@ -40818,7 +40807,6 @@
       "id": "9xfXA2",
       "name": "jun tile stone ns",
       "model": "jun_tile_stone_ns",
-      "texture": "Jungle",
       "flags": "Move",
       "connections": "NS"
     },
@@ -40826,96 +40814,81 @@
       "id": "61ciV6",
       "name": "jun tile stone ne",
       "model": "jun_tile_stone_ne_corner",
-      "texture": "Jungle",
       "flags": "Move",
       "connections": "NE"
     },
     {
       "id": "1mPQ2W",
       "name": "jun boundary earth",
-      "model": "jun_boundary_earth",
-      "texture": "Jungle"
+      "model": "jun_boundary_earth"
     },
     {
       "id": "1PDtN8",
       "name": "jun boundary grass",
-      "model": "jun_boundary_grass",
-      "texture": "Jungle"
+      "model": "jun_boundary_grass"
     },
     {
       "id": "78tUdd",
       "name": "jun boundary earth grass n",
-      "model": "jun_boundary_grass_earth_n_01",
-      "texture": "Jungle"
+      "model": "jun_boundary_grass_earth_n_01"
     },
     {
       "id": "2jUH3p",
       "name": "jun boundary earth grass ne",
-      "model": "jun_boundary_earth_grass_corner_ne",
-      "texture": "Jungle"
+      "model": "jun_boundary_earth_grass_corner_ne"
     },
     {
       "id": "5F4DRj",
       "name": "jun boundary grass earth n",
-      "model": "jun_boundary_grass_earth_n",
-      "texture": "Jungle"
+      "model": "jun_boundary_grass_earth_n"
     },
     {
       "id": "DcW8yq",
       "name": "jun boundary grass earth ne",
-      "model": "jun_boundary_grass_earth_corner_ne",
-      "texture": "Jungle"
+      "model": "jun_boundary_grass_earth_corner_ne"
     },
     {
       "id": "1EnmH9",
       "name": "jun tree single",
       "model": "jun_boundary_tree_single",
-      "texture": "Jungle",
       "flags": "Sway"
     },
     {
       "id": "E2Gx89",
       "name": "jun tree plant",
       "model": "jun_boundary_tree_plant",
-      "texture": "Jungle",
       "flags": "Sway"
     },
     {
       "id": "7k7k2n",
       "name": "jun tree double",
       "model": "jun_boundary_tree_double",
-      "texture": "Jungle",
       "flags": "Sway"
     },
     {
       "id": "EQj3fm",
       "name": "jun plant",
-      "model": "jun_boundary_plant",
-      "texture": "Jungle"
+      "model": "jun_boundary_plant"
     },
     {
       "id": "6KHVk9",
       "name": "jun boundary n",
-      "model": "jun_tile_n_boundary_edge",
-      "texture": "Jungle"
+      "model": "jun_tile_n_boundary_edge"
     },
     {
       "id": "8KGuUc",
       "name": "jun boundary ne",
-      "model": "jun_tile_ne_boundary_corner",
-      "texture": "Jungle"
+      "model": "jun_tile_ne_boundary_corner"
     },
     {
       "id": "5aXJkc",
       "name": "jun boundary small ne",
-      "model": "jun_tile_ne_boundary_sml_corner",
-      "texture": "Jungle"
+      "model": "jun_tile_ne_boundary_sml_corner"
     },
     {
       "id": "9Aq8d4",
       "name": "jun statue n",
-      "model": "jun_boundary_statue_n",
-      "texture": "Jungle"
+      "model": "jun_boundary_statue_n"
     },
     {
       "id": "CyHA4u",
@@ -41040,12 +41013,6 @@
           "duration": 1.0
         }
       ]
-    },
-    {
-      "id": "Jungle",
-      "name": "Jungle",
-      "alphaTest": false,
-      "texture": "Jungle_texturepage"
     },
     {
       "id": "Egypt",
