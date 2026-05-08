@@ -1,6 +1,6 @@
 # Modified by OBJRotate180 (Mesh rotated 180 degrees around Y-axis)
 # Original file: egy_tile_nw_corner.obj
-mtllib egy_tile_nw_corner.mtl
+mtllib ../Materials/egy_tile_nw_corner.mtl
 v 0.499996 -0.200000 0.500004
 v 0.500004 -0.200000 -0.499996
 v 0.500002 0.000000 0.333930

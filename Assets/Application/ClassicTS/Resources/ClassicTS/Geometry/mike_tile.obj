@@ -1,6 +1,6 @@
 # Modified by OBJRotate180 (Mesh rotated 180 degrees around Y-axis)
 # Original file: mike_tile.obj
-mtllib mike_tile.mtl
+mtllib ../Materials/mike_tile.mtl
 v -0.499774 -0.000301 -0.500040
 v 0.500226 -0.000301 -0.500040
 v 0.500226 -0.200301 -0.500040

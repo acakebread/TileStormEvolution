@@ -1,6 +1,6 @@
 # Modified by OBJRotate180 (Mesh rotated 180 degrees around Y-axis)
 # Original file: tile_star.obj
-mtllib tile_star.mtl
+mtllib ../Materials/tile_star.mtl
 v 0.500000 -0.100000 -0.500000
 v -0.500000 -0.100000 -0.500000
 v 0.500000 -0.050000 -0.500000

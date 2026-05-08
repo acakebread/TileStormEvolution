@@ -1,6 +1,6 @@
 # Modified by OBJRotate180 (Mesh rotated 180 degrees around Y-axis)
 # Original file: ss_tile_door_ns.obj
-mtllib ss_tile_door_ns.mtl
+mtllib ../Materials/ss_tile_door_ns.mtl
 v -0.500000 -0.200000 -0.500000
 v -0.500000 -0.200000 0.500000
 v -0.500008 0.100000 -0.500000

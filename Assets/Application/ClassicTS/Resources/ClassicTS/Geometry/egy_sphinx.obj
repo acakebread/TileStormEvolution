@@ -1,7 +1,7 @@
 # OBJClean Brute-Force Test
 # Tolerance: 0.001000
 # Original verts: 2157 → after: 394
-mtllib egy_sphinx.mtl
+mtllib ../Materials/egy_sphinx.mtl
 v 0.500000 -0.200000 1.000000
 v 0.500000 -0.200000 0.000000
 v 0.500008 0.145000 1.000000

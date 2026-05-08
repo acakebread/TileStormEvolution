@@ -1,6 +1,6 @@
 # Modified by OBJRotate180 (Mesh rotated 180 degrees around Y-axis)
 # Original file: tile_turn_right.obj
-mtllib tile_turn_right.mtl
+mtllib ../Materials/tile_turn_right.mtl
 v -0.378339 0.067564 0.134287
 v -0.070592 0.067564 0.313270
 v -0.070592 0.067564 0.207683

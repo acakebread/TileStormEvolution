@@ -1,4 +1,4 @@
-mtllib editor_quad.mtl
+mtllib ../Materials/editor_quad.mtl
 v 0.500000 -0.025000 -0.500000
 v -0.500000 -0.025000 -0.500000
 v 0.500000 -0.025000 0.500000

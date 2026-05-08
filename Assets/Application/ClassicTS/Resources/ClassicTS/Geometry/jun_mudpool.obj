@@ -1,6 +1,6 @@
 # Blender 4.1.1
 # www.blender.org
-mtllib jun_mudpool.mtl
+mtllib ../Materials/jun_mudpool.mtl
 o jun_mudpool
 v -0.000002 0.195000 1.000004
 v -1.000002 0.195000 1.000004

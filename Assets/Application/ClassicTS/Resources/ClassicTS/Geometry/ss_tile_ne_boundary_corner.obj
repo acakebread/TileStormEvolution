@@ -1,6 +1,6 @@
 # Modified by OBJRotate180 (Mesh rotated 180 degrees around Y-axis)
 # Original file: ss_tile_ne_boundary_corner.obj
-mtllib ss_tile_ne_boundary_corner.mtl
+mtllib ../Materials/ss_tile_ne_boundary_corner.mtl
 v 0.499996 -0.200000 0.500002
 v 0.499999 -0.200000 -0.499999
 v 0.499996 0.100004 0.500002

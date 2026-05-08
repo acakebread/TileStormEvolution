@@ -1,6 +1,6 @@
 # Modified by OBJRotate180 (Mesh rotated 180 degrees around Y-axis)
 # Original file: ss_tile_boundary_grid.obj
-mtllib ss_tile_boundary_grid.mtl
+mtllib ../Materials/ss_tile_boundary_grid.mtl
 v 0.499997 0.100000 -0.499990
 v -0.499997 0.100000 -0.500003
 v 0.499997 0.100000 0.499978

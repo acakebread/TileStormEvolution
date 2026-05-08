@@ -1,4 +1,4 @@
-mtllib coin.mtl
+mtllib ../Materials/coin.mtl
 o Cylinder01
 usemtl coin
 v 0.022776905903548084 0.09868509253784685 -0.17092750228746567
