@@ -1,6 +1,6 @@
 # Modified by OBJRotate180 (Mesh rotated 180 degrees around Y-axis)
 # Original file: ss_wall_n.obj
-mtllib ../Materials/ss_wall_n.mtl
+mtllib Materials/ss_wall_n.mtl
 v -0.499995 1.456923 -0.281229
 v 0.499999 1.456923 -0.281210
 v -0.499993 1.456923 -0.499981

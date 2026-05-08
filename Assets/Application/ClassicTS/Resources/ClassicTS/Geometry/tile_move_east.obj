@@ -1,6 +1,6 @@
 # Modified by OBJRotate180 (Mesh rotated 180 degrees around Y-axis)
 # Original file: tile_move_east.obj
-mtllib ../Materials/tile_move_east.mtl
+mtllib Materials/tile_move_east.mtl
 v 0.500000 -0.100000 -0.500000
 v -0.500000 -0.100000 -0.500000
 v 0.500000 -0.050000 -0.500000

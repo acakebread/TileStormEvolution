@@ -1,6 +1,6 @@
 # Modified by OBJRotate180 (Mesh rotated 180 degrees around Y-axis)
 # Original file: eggbot_egy.obj
-mtllib ../Materials/eggbot_egy.mtl
+mtllib Materials/eggbot_egy.mtl
 v -0.120423 0.783716 0.039248
 v -0.130849 0.742767 0.052963
 v -0.130555 0.819932 0.113892

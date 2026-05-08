@@ -1,6 +1,6 @@
 # Modified by OBJRotate180 (Mesh rotated 180 degrees around Y-axis)
 # Original file: med_tile_ns_well.obj
-mtllib ../Materials/med_tile_ns_well.mtl
+mtllib Materials/med_tile_ns_well.mtl
 v -0.500000 -0.200000 0.500000
 v 0.500000 -0.200000 0.500000
 v -0.500000 0.145000 0.500008

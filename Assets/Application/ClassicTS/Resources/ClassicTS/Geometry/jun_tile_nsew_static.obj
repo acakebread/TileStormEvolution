@@ -1,6 +1,6 @@
 # Modified by OBJRotate180 (Mesh rotated 180 degrees around Y-axis)
 # Original file: jun_tile_nsew_static.obj
-mtllib ../Materials/jun_tile_nsew_static.mtl
+mtllib Materials/jun_tile_nsew_static.mtl
 v -0.499997 -0.200000 -0.500003
 v -0.500000 -0.200000 0.499994
 v -0.499998 0.000000 -0.334239

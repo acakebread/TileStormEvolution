@@ -1,6 +1,6 @@
 # Modified by OBJRotate180 (Mesh rotated 180 degrees around Y-axis)
 # Original file: med_tile_sw_corner.obj
-mtllib ../Materials/med_tile_sw_corner.mtl
+mtllib Materials/med_tile_sw_corner.mtl
 v 0.500000 -0.200000 -0.500001
 v -0.500001 -0.200000 -0.500000
 v 0.333926 0.000000 -0.500005

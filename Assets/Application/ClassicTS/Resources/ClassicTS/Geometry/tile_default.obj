@@ -1,6 +1,6 @@
 # Modified by OBJRotate180 (Mesh rotated 180 degrees around Y-axis)
 # Original file: tile_default.obj
-mtllib ../Materials/tile_default.mtl
+mtllib Materials/tile_default.mtl
 v 0.500000 -0.049632 -0.500000
 v -0.500000 -0.049632 -0.500000
 v -0.450000 0.000330 -0.450000

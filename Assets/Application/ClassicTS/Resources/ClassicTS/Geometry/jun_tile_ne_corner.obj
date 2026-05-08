@@ -1,6 +1,6 @@
 # Modified by OBJRotate180 (Mesh rotated 180 degrees around Y-axis)
 # Original file: jun_tile_ne_corner.obj
-mtllib ../Materials/jun_tile_ne_corner.mtl
+mtllib Materials/jun_tile_ne_corner.mtl
 v -0.392372 0.000000 0.415591
 v -0.003139 0.000000 -0.329731
 v -0.500001 0.000000 0.413453

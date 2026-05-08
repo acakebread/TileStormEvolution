@@ -1,6 +1,6 @@
 # Modified by OBJRotate180 (Mesh rotated 180 degrees around Y-axis)
 # Original file: tile_freeze.obj
-mtllib ../Materials/tile_freeze.mtl
+mtllib Materials/tile_freeze.mtl
 v 0.500000 -0.100000 -0.500000
 v -0.500000 -0.100000 -0.500000
 v 0.500000 -0.050000 -0.500000

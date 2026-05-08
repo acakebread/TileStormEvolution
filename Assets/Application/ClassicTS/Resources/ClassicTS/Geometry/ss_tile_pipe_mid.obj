@@ -1,6 +1,6 @@
 # Modified by OBJRotate180 (Mesh rotated 180 degrees around Y-axis)
 # Original file: ss_tile_pipe_mid.obj
-mtllib ../Materials/ss_tile_pipe_mid.mtl
+mtllib Materials/ss_tile_pipe_mid.mtl
 v 0.499993 0.100000 0.500001
 v 0.499979 0.100000 -0.499996
 v -0.500004 0.100000 0.499996

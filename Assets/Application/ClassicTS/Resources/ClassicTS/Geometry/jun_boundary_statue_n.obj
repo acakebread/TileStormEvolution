@@ -1,6 +1,6 @@
 # Modified by OBJRotate180 (Mesh rotated 180 degrees around Y-axis)
 # Original file: jun_boundary_statue_n.obj
-mtllib ../Materials/jun_boundary_statue_n.mtl
+mtllib Materials/jun_boundary_statue_n.mtl
 v 0.500000 -0.200000 0.500000
 v 0.500000 -0.200000 -0.500000
 v 0.500008 0.195000 0.500000

@@ -1,6 +1,6 @@
 # Modified by OBJRotate180 (Mesh rotated 180 degrees around Y-axis)
 # Original file: jun_tile_w_boundary_edge.obj
-mtllib ../Materials/jun_tile_w_boundary_edge.mtl
+mtllib Materials/jun_tile_w_boundary_edge.mtl
 v 0.004041 -0.200000 0.500000
 v 0.499998 -0.200000 0.500000
 v 0.004041 0.194997 0.500000
