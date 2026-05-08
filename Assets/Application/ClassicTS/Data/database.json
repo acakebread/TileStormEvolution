@@ -40477,7 +40477,7 @@
     {
       "id": "DvCe9T",
       "name": "egy tile door",
-      "model": "egy_tile_ns_door",
+      "model": "egy_tile_door",
       "texture": "Egypt",
       "flags": "Door",
       "connections": "NS"
@@ -40518,28 +40518,28 @@
     {
       "id": "7J4P6c",
       "name": "egy tile static nesw",
-      "model": "egy_tile_nsew_static",
+      "model": "egy_tile_crossroads_static",
       "texture": "Egypt",
       "connections": "NSEW"
     },
     {
       "id": "DAUKG9",
       "name": "egy tile static ns",
-      "model": "egy_tile_ns_static",
+      "model": "egy_tile_straight_static",
       "texture": "Egypt",
       "connections": "NS"
     },
     {
       "id": "7kQ4Yu",
       "name": "egy tile static ne",
-      "model": "egy_tile_ne_corner_static",
+      "model": "egy_tile_corner_static",
       "texture": "Egypt",
       "connections": "NE"
     },
     {
       "id": "3m9XNT",
       "name": "egy tile nesw",
-      "model": "egy_tile_nsew",
+      "model": "egy_tile_crossroads",
       "texture": "Egypt",
       "flags": "Move",
       "connections": "NSEW"
@@ -40547,7 +40547,7 @@
     {
       "id": "APAQMR",
       "name": "egy tile ns",
-      "model": "egy_tile_ns",
+      "model": "egy_tile_straight",
       "texture": "Egypt",
       "flags": "Move",
       "connections": "NS"
@@ -40555,7 +40555,7 @@
     {
       "id": "CNKtmM",
       "name": "egy tile corner ne",
-      "model": "egy_tile_ne_corner",
+      "model": "egy_tile_corner",
       "texture": "Egypt",
       "flags": "Move",
       "connections": "NE"
@@ -40563,13 +40563,13 @@
     {
       "id": "Aa47m9",
       "name": "egy boundary ne",
-      "model": "egy_tile_ne_boundary_corner",
+      "model": "egy_tile_boundary_corner",
       "texture": "Egypt"
     },
     {
       "id": "81m9R9",
       "name": "egy boundary small ne",
-      "model": "egy_tile_ne_boundary_sml_corner",
+      "model": "egy_tile_boundary_sml_corner",
       "texture": "Egypt"
     },
     {
@@ -40581,7 +40581,7 @@
     {
       "id": "EDQx80",
       "name": "med tile door",
-      "model": "med_tile_ns_door",
+      "model": "med_tile_door",
       "flags": "Door",
       "connections": "NS"
     },
@@ -40613,91 +40613,91 @@
     {
       "id": "75dq85",
       "name": "med tile static nesw",
-      "model": "med_tile_nsew_static",
+      "model": "med_tile_crossroad_static",
       "connections": "NSEW"
     },
     {
       "id": "DWxH1r",
       "name": "med tile static ns",
-      "model": "med_tile_ns_static",
+      "model": "med_tile_straight_static",
       "connections": "NS"
     },
     {
       "id": "55GMx1",
       "name": "med tile static ne",
-      "model": "med_tile_ne_corner_static",
+      "model": "med_tile_corner_static",
       "connections": "NE"
     },
     {
       "id": "82jX54",
       "name": "med tile nesw",
-      "model": "med_tile_nsew",
+      "model": "med_tile_crossroad",
       "flags": "Move",
       "connections": "NSEW"
     },
     {
       "id": "ACaMdD",
       "name": "med tile ns",
-      "model": "med_tile_ns",
+      "model": "med_tile_straight",
       "flags": "Move",
       "connections": "NS"
     },
     {
       "id": "78F1P9",
       "name": "med tile corner ne",
-      "model": "med_tile_ne_corner",
+      "model": "med_tile_corner",
       "flags": "Move",
       "connections": "NE"
     },
     {
       "id": "2qKvhv",
       "name": "med boundary ne",
-      "model": "med_tile_ne_boundary_corner"
+      "model": "med_tile_boundary_corner"
     },
     {
       "id": "93Xvt6",
       "name": "med boundary small ne",
-      "model": "med_tile_ne_boundary_sml_corner"
+      "model": "med_tile_boundary_sml_corner"
     },
     {
       "id": "1MC943",
       "name": "med boundary n",
-      "model": "med_tile_n_boundary_edge"
+      "model": "med_tile_boundary_edge"
     },
     {
       "id": "46VAC4",
       "name": "med boundary house blue ns",
-      "model": "med_tile_sml_blue_hse_ns"
+      "model": "med_tile_sml_blue_hse"
     },
     {
       "id": "6iTdwH",
       "name": "med boundary house red ns",
-      "model": "med_tile_sml_red_hse_ns"
+      "model": "med_tile_sml_red_hse"
     },
     {
       "id": "1YGxfJ",
       "name": "med boundary house big blue ns",
-      "model": "med_tile_big_blue_hse_ns"
+      "model": "med_tile_big_blue_hse"
     },
     {
       "id": "9Ep7Dj",
       "name": "med boundary house big red ns",
-      "model": "med_tile_big_red_hse_ns"
+      "model": "med_tile_big_red_hse"
     },
     {
       "id": "5y92UG",
       "name": "med boundary cage n",
-      "model": "med_tile_n_boundary_cage"
+      "model": "med_tile_boundary_cage"
     },
     {
       "id": "7WEY7G",
       "name": "med boundary stocks ns",
-      "model": "med_tile_ns_stocks"
+      "model": "med_tile_stocks"
     },
     {
       "id": "052AE3",
       "name": "med boundary well ns",
-      "model": "med_tile_ns_well"
+      "model": "med_tile_well"
     },
     {
       "id": "DPdUHW",
@@ -40712,14 +40712,14 @@
     {
       "id": "E4WjRD",
       "name": "jun tile door",
-      "model": "jun_tile_ns_door",
+      "model": "jun_tile_door",
       "flags": "Door",
       "connections": "NS"
     },
     {
       "id": "6jquRN",
       "name": "jun tile console n",
-      "model": "jun_console_n",
+      "model": "jun_console",
       "flags": "Desk",
       "connections": "N"
     },
@@ -40737,60 +40737,60 @@
     {
       "id": "0e2RF9",
       "name": "jun tile static nesw",
-      "model": "jun_tile_nsew_static",
+      "model": "jun_tile_crossroad_static",
       "connections": "NSEW"
     },
     {
       "id": "D0JQ7D",
       "name": "jun tile static ns",
-      "model": "jun_tile_ns_static",
+      "model": "jun_tile_straight_static",
       "connections": "NS"
     },
     {
       "id": "9uNFv9",
       "name": "jun tile static ne",
-      "model": "jun_tile_ne_corner_static",
+      "model": "jun_tile_corner_static",
       "connections": "NE"
     },
     {
       "id": "44Rdar",
       "name": "jun tile nesw",
-      "model": "jun_tile_nsew",
+      "model": "jun_tile_crossroad",
       "flags": "Move, Wash",
       "connections": "NSEW"
     },
     {
       "id": "AwcehK",
       "name": "jun tile ns",
-      "model": "jun_tile_ns",
+      "model": "jun_tile_straight",
       "flags": "Move, Wash",
       "connections": "NS"
     },
     {
       "id": "8mNmuv",
       "name": "jun tile corner ne",
-      "model": "jun_tile_ne_corner",
+      "model": "jun_tile_corner",
       "flags": "Move, Wash",
       "connections": "NE"
     },
     {
       "id": "1ePHrc",
       "name": "jun tile stone nesw",
-      "model": "jun_tile_stone_nsew",
+      "model": "jun_tile_stone_crossroad",
       "flags": "Move",
       "connections": "NSEW"
     },
     {
       "id": "9xfXA2",
       "name": "jun tile stone ns",
-      "model": "jun_tile_stone_ns",
+      "model": "jun_tile_stone_straight",
       "flags": "Move",
       "connections": "NS"
     },
     {
       "id": "61ciV6",
       "name": "jun tile stone ne",
-      "model": "jun_tile_stone_ne_corner",
+      "model": "jun_tile_stone_corner",
       "flags": "Move",
       "connections": "NE"
     },
@@ -40807,22 +40807,22 @@
     {
       "id": "78tUdd",
       "name": "jun boundary earth grass n",
-      "model": "jun_boundary_grass_earth_n_01"
+      "model": "jun_boundary_grass_earth_01"
     },
     {
       "id": "2jUH3p",
       "name": "jun boundary earth grass ne",
-      "model": "jun_boundary_earth_grass_corner_ne"
+      "model": "jun_boundary_earth_grass_corner"
     },
     {
       "id": "5F4DRj",
       "name": "jun boundary grass earth n",
-      "model": "jun_boundary_grass_earth_n"
+      "model": "jun_boundary_grass_earth"
     },
     {
       "id": "DcW8yq",
       "name": "jun boundary grass earth ne",
-      "model": "jun_boundary_grass_earth_corner_ne"
+      "model": "jun_boundary_grass_earth_corner"
     },
     {
       "id": "1EnmH9",
@@ -40850,22 +40850,22 @@
     {
       "id": "6KHVk9",
       "name": "jun boundary n",
-      "model": "jun_tile_n_boundary_edge"
+      "model": "jun_tile_boundary_edge"
     },
     {
       "id": "8KGuUc",
       "name": "jun boundary ne",
-      "model": "jun_tile_ne_boundary_corner"
+      "model": "jun_tile_boundary_corner"
     },
     {
       "id": "5aXJkc",
       "name": "jun boundary small ne",
-      "model": "jun_tile_ne_boundary_sml_corner"
+      "model": "jun_tile_boundary_sml_corner"
     },
     {
       "id": "9Aq8d4",
       "name": "jun statue n",
-      "model": "jun_boundary_statue_n"
+      "model": "jun_boundary_statue"
     },
     {
       "id": "CyHA4u",

@@ -120,7 +120,7 @@ vn -0.707099 0.000000 0.707114
 vn -0.707099 0.000000 0.707114
 o tile_boundary_edged_corner
 o tile_boundary_edged_corner
-usemtl PDX01_-_Default
+usemtl ind_tile_ne_boundary_corner
 f 1/1/1 2/2/2 3/3/3
 f 4/4/4 5/5/5 6/6/6
 f 7/7/7 8/8/8 9/9/9

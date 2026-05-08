@@ -21,7 +21,7 @@ vn 0.000000 1.000000 0.000000
 vn 0.000000 1.000000 0.000000
 o tile_straight
 o tile_straight
-usemtl PDX01_-_Default
+usemtl ind_tile_slide_plain
 f 1/1/1 2/2/2 3/3/3
 f 4/4/4 5/5/5 6/6/6
 

@@ -435,7 +435,7 @@ vn 1.000000 0.000001 0.000002
 vn 1.000000 0.000000 0.000002
 o console
 o console
-usemtl PDX01_-_Default
+usemtl ind_console_n
 f 1/1/1 2/2/2 3/3/3
 f 4/4/4 5/5/5 6/6/6
 f 7/7/7 8/8/8 9/9/9
