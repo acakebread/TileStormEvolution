@@ -1,6 +1,6 @@
 # Modified by OBJRotate180 (Mesh rotated 180 degrees around Y-axis)
 # Original file: jun_boundary_grass.obj
-mtllib jun_boundary_grass_earth_n_01.mtl
+mtllib Materials/jun_boundary_grass.mtl
 v 0.500000 0.195000 0.500000
 v -0.500008 0.195000 0.500000
 v 0.500000 -0.200000 0.500000
@@ -63,10 +63,9 @@ vn 0.000000 0.000000 -1.000000
 vn 0.000000 0.000000 -1.000000
 o grass_earth_1
 o grass_earth_1
-usemtl PDX01_-_Default
+usemtl jun_boundary_grass
 o grass_earth_1
-g Material_0
-usemtl PDX01_-_Default
+usemtl jun_boundary_grass
 f 6/6/6 8/8/8 2/2/2
 f 2/2/2 8/8/8 4/4/4
 f 7/7/7 5/5/5 3/3/3

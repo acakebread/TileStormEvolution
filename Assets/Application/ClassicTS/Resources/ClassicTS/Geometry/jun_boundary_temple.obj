@@ -1,7 +1,7 @@
 # OBJClean Brute-Force Test
 # Tolerance: 0.001000
 # Original verts: 2304 → after: 395
-mtllib jun_boundary_temple.mtl
+mtllib Materials/jun_boundary_temple.mtl
 v -1.000013 -0.200000 1.000004
 v -0.000013 -0.200000 1.000004
 v -1.000013 0.195000 1.000012

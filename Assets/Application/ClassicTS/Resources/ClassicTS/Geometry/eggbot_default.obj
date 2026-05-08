@@ -1,6 +1,6 @@
 # Modified by OBJRotate180 (Mesh rotated 180 degrees around Y-axis)
 # Original file: eggbot_default.obj
-mtllib eggbot_default.mtl
+mtllib Materials/eggbot_default.mtl
 v -0.140980 0.778983 0.127607
 v -0.130555 0.819932 0.113892
 v -0.130849 0.742767 0.052963

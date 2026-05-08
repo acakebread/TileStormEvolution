@@ -1,6 +1,6 @@
 # Modified by OBJRotate180 (Mesh rotated 180 degrees around Y-axis)
 # Original file: tile_nesw.obj
-mtllib tile_nesw.mtl
+mtllib Materials/tile_nesw.mtl
 v -0.300000 0.000000 -0.500000
 v -0.500000 -0.199948 -0.500000
 v -0.500000 0.100000 -0.500000

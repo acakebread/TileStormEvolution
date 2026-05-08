@@ -1,6 +1,6 @@
 # Modified by OBJRotate180 (Mesh rotated 180 degrees around Y-axis)
 # Original file: tile_fire.obj
-mtllib tile_fire.mtl
+mtllib Materials/tile_fire.mtl
 v 0.500000 -0.100000 -0.500000
 v -0.500000 -0.100000 -0.500000
 v 0.500000 -0.050000 -0.500000

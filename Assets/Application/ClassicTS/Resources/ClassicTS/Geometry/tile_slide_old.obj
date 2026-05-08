@@ -1,6 +1,6 @@
 # Modified by OBJRotate180 (Mesh rotated 180 degrees around Y-axis)
 # Original file: tile_slide_old.obj
-mtllib tile_slide_old.mtl
+mtllib Materials/tile_slide_old.mtl
 v 0.500000 -0.050000 -0.500000
 v -0.500000 -0.050000 -0.500000
 v 0.500000 -0.050000 0.500000

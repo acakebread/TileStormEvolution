@@ -1,6 +1,6 @@
 # Modified by OBJRotate180 (Mesh rotated 180 degrees around Y-axis)
 # Original file: arrow.obj
-mtllib arrow.mtl
+mtllib Materials/arrow.mtl
 v 0.300000 0.000000 -0.300000
 v 0.000000 0.000000 0.300000
 v -0.300000 0.000000 -0.300000

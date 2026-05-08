@@ -1,6 +1,6 @@
 # Modified by OBJRotate180 (Mesh rotated 180 degrees around Y-axis)
 # Original file: jun_boundary_tree_single.obj
-mtllib jun_boundary_grass_earth_n_01.mtl
+mtllib Materials/jun_boundary_tree_single.mtl
 v 0.500000 0.195000 -0.500000
 v 0.500000 0.195000 0.500008
 v 0.500000 -0.200000 -0.500000
@@ -198,10 +198,9 @@ vn -1.000000 0.000000 0.000000
 vn -1.000000 0.000000 0.000000
 o grass_earth_1
 o grass_earth_1
-usemtl PDX01_-_Default
+usemtl jun_boundary_tree_single
 o grass_earth_1
-g Material_0
-usemtl PDX01_-_Default
+usemtl jun_boundary_tree_single
 f 7/7/7 5/5/5 3/3/3
 f 3/3/3 5/5/5 1/1/1
 f 45/45/45 53/53/53 51/51/51

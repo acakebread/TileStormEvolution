@@ -1,4 +1,4 @@
-mtllib tile_quiz.mtl
+mtllib Materials/tile_quiz.mtl
 v -0.5 -0.002 -0.5
 v -0.5 -0.002 0.5
 v 0.5 -0.002 -0.5

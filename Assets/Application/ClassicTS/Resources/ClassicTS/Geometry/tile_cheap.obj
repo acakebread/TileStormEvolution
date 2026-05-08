@@ -1,6 +1,6 @@
 # Modified by OBJRotate180 (Mesh rotated 180 degrees around Y-axis)
 # Original file: tile_cheap.obj
-mtllib tile_cheap.mtl
+mtllib Materials/tile_cheap.mtl
 v 0.500000 0.000000 -0.500000
 v -0.500000 0.000000 -0.500000
 v 0.450000 0.100016 -0.450000
