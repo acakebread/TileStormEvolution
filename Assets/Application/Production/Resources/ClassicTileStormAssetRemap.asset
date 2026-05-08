@@ -101,18 +101,10 @@ MonoBehaviour:
     replacement: ind_tile_boundary_hatch
   - legacyName: ss_tile_boundary_vent
     replacement: ind_tile_boundary_vent
-  - legacyName: ss_tile_boundary_chev
-    replacement: ind_tile_boundary_chev
-  - legacyName: ss_tile_boundary_grid
-    replacement: ind_tile_boundary_grid
-  - legacyName: ss_tile_boundary_hatch
-    replacement: ind_tile_boundary_hatch
   - legacyName: ss_tile_boundary_pitted
     replacement: ind_tile_boundary_pitted
   - legacyName: ss_tile_boundary_plate
     replacement: ind_tile_boundary_plate
-  - legacyName: ss_tile_boundary_vent
-    replacement: ind_tile_boundary_vent
   - legacyName: ss_tile_door_ns
     replacement: ind_tile_door_ns
   - legacyName: ss_tile_n_boundary_edge
