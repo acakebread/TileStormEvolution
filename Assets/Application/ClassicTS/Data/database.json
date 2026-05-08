@@ -40583,7 +40583,7 @@
       "id": "EDQx80",
       "name": "med tile door",
       "model": "med_tile_ns_door",
-      "texture": "Medieval",
+      
       "flags": "Door",
       "connections": "NS"
     },
@@ -40591,7 +40591,7 @@
       "id": "2KKauy",
       "name": "med tile console n",
       "model": "med_console_n",
-      "texture": "Medieval",
+      
       "flags": "Desk",
       "connections": "N"
     },
@@ -40605,42 +40605,41 @@
     {
       "id": "7U6WJe",
       "name": "med tile boundary",
-      "model": "med_tile_boundary",
-      "texture": "Medieval"
+      "model": "med_tile_boundary"
     },
     {
       "id": "81d2rQ",
       "name": "med tile slide",
       "model": "med_tile_slide",
-      "texture": "Medieval",
+      
       "flags": "Move, Roll"
     },
     {
       "id": "75dq85",
       "name": "med tile static nesw",
       "model": "med_tile_nsew_static",
-      "texture": "Medieval",
+      
       "connections": "NSEW"
     },
     {
       "id": "DWxH1r",
       "name": "med tile static ns",
       "model": "med_tile_ns_static",
-      "texture": "Medieval",
+      
       "connections": "NS"
     },
     {
       "id": "55GMx1",
       "name": "med tile static ne",
       "model": "med_tile_ne_corner_static",
-      "texture": "Medieval",
+      
       "connections": "NE"
     },
     {
       "id": "82jX54",
       "name": "med tile nesw",
       "model": "med_tile_nsew",
-      "texture": "Medieval",
+      
       "flags": "Move",
       "connections": "NSEW"
     },
@@ -40648,7 +40647,7 @@
       "id": "ACaMdD",
       "name": "med tile ns",
       "model": "med_tile_ns",
-      "texture": "Medieval",
+      
       "flags": "Move",
       "connections": "NS"
     },
@@ -40656,81 +40655,69 @@
       "id": "78F1P9",
       "name": "med tile corner ne",
       "model": "med_tile_ne_corner",
-      "texture": "Medieval",
+      
       "flags": "Move",
       "connections": "NE"
     },
     {
       "id": "2qKvhv",
       "name": "med boundary ne",
-      "model": "med_tile_ne_boundary_corner",
-      "texture": "Medieval"
+      "model": "med_tile_ne_boundary_corner"
     },
     {
       "id": "93Xvt6",
       "name": "med boundary small ne",
-      "model": "med_tile_ne_boundary_sml_corner",
-      "texture": "Medieval"
+      "model": "med_tile_ne_boundary_sml_corner"
     },
     {
       "id": "1MC943",
       "name": "med boundary n",
-      "model": "med_tile_n_boundary_edge",
-      "texture": "Medieval"
+      "model": "med_tile_n_boundary_edge"
     },
     {
       "id": "46VAC4",
       "name": "med boundary house blue ns",
-      "model": "med_tile_sml_blue_hse_ns",
-      "texture": "Medieval"
+      "model": "med_tile_sml_blue_hse_ns"
     },
     {
       "id": "6iTdwH",
       "name": "med boundary house red ns",
-      "model": "med_tile_sml_red_hse_ns",
-      "texture": "Medieval"
+      "model": "med_tile_sml_red_hse_ns"
     },
     {
       "id": "1YGxfJ",
       "name": "med boundary house big blue ns",
-      "model": "med_tile_big_blue_hse_ns",
-      "texture": "Medieval"
+      "model": "med_tile_big_blue_hse_ns"
     },
     {
       "id": "9Ep7Dj",
       "name": "med boundary house big red ns",
-      "model": "med_tile_big_red_hse_ns",
-      "texture": "Medieval"
+      "model": "med_tile_big_red_hse_ns"
     },
     {
       "id": "5y92UG",
       "name": "med boundary cage n",
-      "model": "med_tile_n_boundary_cage",
-      "texture": "Medieval"
+      "model": "med_tile_n_boundary_cage"
     },
     {
       "id": "7WEY7G",
       "name": "med boundary stocks ns",
-      "model": "med_tile_ns_stocks",
-      "texture": "Medieval"
+      "model": "med_tile_ns_stocks"
     },
     {
       "id": "052AE3",
       "name": "med boundary well ns",
-      "model": "med_tile_ns_well",
-      "texture": "Medieval"
+      "model": "med_tile_ns_well"
     },
     {
       "id": "DPdUHW",
       "name": "med boundary tent blue",
-      "model": "med_tile_tent_blue",
-      "texture": "Medieval"
+      "model": "med_tile_tent_blue"
     },
     {
       "id": "AQwcFW",
       "name": "med boundary tent green",
-      "model": "med_tile_tent_green",
-      "texture": "Medieval"
+      "model": "med_tile_tent_green"
     },
     {
       "id": "E4WjRD",
@@ -41028,12 +41015,6 @@
           "duration": 0.5
         }
       ]
-    },
-    {
-      "id": "Medieval",
-      "name": "Medieval",
-      "alphaTest": false,
-      "texture": "Med_texturepage"
     },
     {
       "id": "Caustic",
