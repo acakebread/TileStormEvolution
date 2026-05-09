@@ -40977,402 +40977,52 @@
     {
       "id": "Industrial",
       "name": "Industrial",
-      "frames": [
-        {
-          "texture": "Ind_texturepage_new_01",
-          "duration": 1.0
-        },
-        {
-          "texture": "Ind_texturepage_new_01a",
-          "duration": 1.0
-        }
-      ]
+      "texture": "Industrial"
     },
     {
       "id": "Egypt",
       "name": "Egypt",
-      "frames": [
-        {
-          "texture": "Egypt_texturepage",
-          "duration": 0.5
-        },
-        {
-          "texture": "Egypt_texturepage_01",
-          "duration": 0.5
-        }
-      ]
+      "texture": "Egypt"
     },
     {
       "id": "Caustic",
       "name": "Caustic",
-      "frames": [
-        {
-          "texture": "caust00",
-          "duration": 0.04
-        },
-        {
-          "texture": "caust01",
-          "duration": 0.04
-        },
-        {
-          "texture": "caust02",
-          "duration": 0.04
-        },
-        {
-          "texture": "caust03",
-          "duration": 0.04
-        },
-        {
-          "texture": "caust04",
-          "duration": 0.04
-        },
-        {
-          "texture": "caust05",
-          "duration": 0.04
-        },
-        {
-          "texture": "caust06",
-          "duration": 0.04
-        },
-        {
-          "texture": "caust07",
-          "duration": 0.04
-        },
-        {
-          "texture": "caust08",
-          "duration": 0.04
-        },
-        {
-          "texture": "caust09",
-          "duration": 0.04
-        },
-        {
-          "texture": "caust10",
-          "duration": 0.04
-        },
-        {
-          "texture": "caust11",
-          "duration": 0.04
-        },
-        {
-          "texture": "caust12",
-          "duration": 0.04
-        },
-        {
-          "texture": "caust13",
-          "duration": 0.04
-        },
-        {
-          "texture": "caust14",
-          "duration": 0.04
-        },
-        {
-          "texture": "caust15",
-          "duration": 0.04
-        },
-        {
-          "texture": "caust16",
-          "duration": 0.04
-        },
-        {
-          "texture": "caust17",
-          "duration": 0.04
-        },
-        {
-          "texture": "caust18",
-          "duration": 0.04
-        },
-        {
-          "texture": "caust19",
-          "duration": 0.04
-        },
-        {
-          "texture": "caust20",
-          "duration": 0.04
-        },
-        {
-          "texture": "caust21",
-          "duration": 0.04
-        },
-        {
-          "texture": "caust22",
-          "duration": 0.04
-        },
-        {
-          "texture": "caust23",
-          "duration": 0.04
-        },
-        {
-          "texture": "caust24",
-          "duration": 0.04
-        },
-        {
-          "texture": "caust25",
-          "duration": 0.04
-        },
-        {
-          "texture": "caust26",
-          "duration": 0.04
-        },
-        {
-          "texture": "caust27",
-          "duration": 0.04
-        },
-        {
-          "texture": "caust28",
-          "duration": 0.04
-        },
-        {
-          "texture": "caust29",
-          "duration": 0.04
-        },
-        {
-          "texture": "caust30",
-          "duration": 0.04
-        },
-        {
-          "texture": "caust31",
-          "duration": 0.04
-        }
-      ]
+      "texture": "Caustic"
     },
     {
       "id": "Eggbot Default",
       "name": "Eggbot Default",
-      "frames": [
-        {
-          "texture": "eggbot_default_0",
-          "duration": 3.0
-        },
-        {
-          "texture": "eggbot_default_1",
-          "duration": 0.05
-        },
-        {
-          "texture": "eggbot_default_2",
-          "duration": 0.1
-        },
-        {
-          "texture": "eggbot_default_1",
-          "duration": 0.05
-        },
-        {
-          "texture": "eggbot_default_0",
-          "duration": 5.0
-        },
-        {
-          "texture": "eggbot_default_1",
-          "duration": 0.05
-        },
-        {
-          "texture": "eggbot_default_2",
-          "duration": 0.15
-        },
-        {
-          "texture": "eggbot_default_1",
-          "duration": 0.05
-        }
-      ]
+      "texture": "Eggbot Default"
     },
     {
       "id": "Eggbot Medieval",
       "name": "Eggbot Medieval",
-      "frames": [
-        {
-          "texture": "eggbot_med_0",
-          "duration": 3.0
-        },
-        {
-          "texture": "eggbot_med_1",
-          "duration": 0.05
-        },
-        {
-          "texture": "eggbot_med_2",
-          "duration": 0.1
-        },
-        {
-          "texture": "eggbot_med_1",
-          "duration": 0.05
-        },
-        {
-          "texture": "eggbot_med_0",
-          "duration": 5.0
-        },
-        {
-          "texture": "eggbot_med_1",
-          "duration": 0.05
-        },
-        {
-          "texture": "eggbot_med_2",
-          "duration": 0.1
-        },
-        {
-          "texture": "eggbot_med_1",
-          "duration": 0.05
-        }
-      ]
+      "texture": "Eggbot Medieval"
     },
     {
       "id": "Eggbot Jungle",
       "name": "Eggbot Jungle",
-      "frames": [
-        {
-          "texture": "eggbot_jun_0",
-          "duration": 3.0
-        },
-        {
-          "texture": "eggbot_jun_1",
-          "duration": 0.05
-        },
-        {
-          "texture": "eggbot_jun_2",
-          "duration": 0.1
-        },
-        {
-          "texture": "eggbot_jun_1",
-          "duration": 0.05
-        },
-        {
-          "texture": "eggbot_jun_0",
-          "duration": 5.0
-        },
-        {
-          "texture": "eggbot_jun_1",
-          "duration": 0.05
-        },
-        {
-          "texture": "eggbot_jun_2",
-          "duration": 0.1
-        },
-        {
-          "texture": "eggbot_jun_1",
-          "duration": 0.05
-        }
-      ]
+      "texture": "Eggbot Jungle"
     },
     {
       "id": "Eggbot Industrial",
       "name": "Eggbot Industrial",
-      "frames": [
-        {
-          "texture": "eggbot_ind_0",
-          "duration": 5.0
-        },
-        {
-          "texture": "eggbot_ind_1",
-          "duration": 0.05
-        },
-        {
-          "texture": "eggbot_ind_2",
-          "duration": 0.1
-        },
-        {
-          "texture": "eggbot_ind_1",
-          "duration": 0.05
-        },
-        {
-          "texture": "eggbot_ind_0",
-          "duration": 3.0
-        },
-        {
-          "texture": "eggbot_ind_1",
-          "duration": 0.05
-        },
-        {
-          "texture": "eggbot_ind_2",
-          "duration": 0.1
-        },
-        {
-          "texture": "eggbot_ind_1",
-          "duration": 0.05
-        }
-      ]
+      "texture": "Eggbot Industrial"
     },
     {
       "id": "Eggbot Egypt",
       "name": "Eggbot Egypt",
-      "frames": [
-        {
-          "texture": "eggbot_egy_0",
-          "duration": 5.0
-        },
-        {
-          "texture": "eggbot_egy_1",
-          "duration": 0.05
-        },
-        {
-          "texture": "eggbot_egy_2",
-          "duration": 0.1
-        },
-        {
-          "texture": "eggbot_egy_1",
-          "duration": 0.05
-        },
-        {
-          "texture": "eggbot_egy_0",
-          "duration": 3.0
-        },
-        {
-          "texture": "eggbot_egy_1",
-          "duration": 0.05
-        },
-        {
-          "texture": "eggbot_egy_2",
-          "duration": 0.1
-        },
-        {
-          "texture": "eggbot_egy_1",
-          "duration": 0.05
-        }
-      ]
+      "texture": "Eggbot Egypt"
     },
     {
       "id": "Toxic Pipes",
       "name": "Toxic Pipes",
-      "frames": [
-        {
-          "texture": "Ind_pipes_1a",
-          "duration": 1.0
-        },
-        {
-          "texture": "Ind_pipes_1b",
-          "duration": 1.1
-        }
-      ]
+      "texture": "Toxic Pipes"
     },
     {
       "id": "Mud Pit",
       "name": "Mud Pit",
-      "frames": [
-        {
-          "texture": "jun_mud_01",
-          "duration": 0.1
-        },
-        {
-          "texture": "jun_mud_02",
-          "duration": 0.1
-        },
-        {
-          "texture": "jun_mud_03",
-          "duration": 0.1
-        },
-        {
-          "texture": "jun_mud_04",
-          "duration": 0.1
-        },
-        {
-          "texture": "jun_mud_05",
-          "duration": 0.1
-        },
-        {
-          "texture": "jun_mud_06",
-          "duration": 0.1
-        },
-        {
-          "texture": "jun_mud_07",
-          "duration": 0.1
-        }
-      ]
+      "texture": "Mud Pit"
     },
     {
       "id": "Alpha Test",
