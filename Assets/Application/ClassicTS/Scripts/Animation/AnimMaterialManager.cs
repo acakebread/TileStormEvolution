@@ -7,7 +7,7 @@ namespace ClassicTilestorm
 	public sealed class AnimMaterialManager : MonoBehaviour
 	{
 		private static AnimMaterialManager _instance;
-		private readonly Dictionary<Key, AnimMaterial> _materials = new();
+		private readonly Dictionary<Key, Entry> _materials = new();
 		private readonly List<AnimMaterial> _animatedMaterials = new();
 
 		private static AnimMaterialManager Instance
@@ -26,30 +26,18 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public static AnimMaterial GetOrCreate(TextureSequence sequence, Material sourceMaterial, Material replacementMaterial = null)
+		public static AnimMaterial Acquire(TextureSequence sequence, Material sourceMaterial, Material replacementMaterial = null)
 		{
 			if (sourceMaterial == null && replacementMaterial == null) return null;
 			if (sequence == null && replacementMaterial == null) return null;
 
-			return Instance.GetOrCreateInternal(sequence, sourceMaterial, replacementMaterial);
+			return Instance.AcquireInternal(sequence, sourceMaterial, replacementMaterial);
 		}
 
-		public static void Apply(Renderer renderer, TextureSequence sequence, Material replacementMaterial = null)
+		public static void Release(AnimMaterial material)
 		{
-			if (renderer == null) return;
-			if (sequence == null && replacementMaterial == null) return;
-
-			var sourceMaterials = renderer.sharedMaterials;
-			if (sourceMaterials == null || sourceMaterials.Length == 0) return;
-
-			var animatedMaterials = new Material[sourceMaterials.Length];
-			for (var i = 0; i < sourceMaterials.Length; i++)
-			{
-				var animMaterial = GetOrCreate(sequence, sourceMaterials[i], replacementMaterial);
-				animatedMaterials[i] = animMaterial?.Material ?? sourceMaterials[i];
-			}
-
-			renderer.sharedMaterials = animatedMaterials;
+			if (_instance == null || material == null) return;
+			_instance.ReleaseInternal(material);
 		}
 
 		public static bool Apply(GameObject gameObject, TextureSequence sequence, Material replacementMaterial = null)
@@ -57,26 +45,32 @@ namespace ClassicTilestorm
 			if (gameObject == null) return false;
 			if (sequence == null && replacementMaterial == null) return false;
 
+			var binding = gameObject.GetComponent<AnimMaterialBinding>();
+			if (binding == null)
+				binding = gameObject.AddComponent<AnimMaterialBinding>();
+			binding.Clear();
+
 			var applied = false;
 			var meshRenderers = gameObject.GetComponentsInChildren<MeshRenderer>(true);
 			for (var i = 0; i < meshRenderers.Length; i++)
 			{
-				Apply(meshRenderers[i], sequence, replacementMaterial);
-				applied = true;
+				applied |= Apply(meshRenderers[i], sequence, replacementMaterial, binding);
 			}
 
 			var skinnedRenderers = gameObject.GetComponentsInChildren<SkinnedMeshRenderer>(true);
 			for (var i = 0; i < skinnedRenderers.Length; i++)
 			{
-				Apply(skinnedRenderers[i], sequence, replacementMaterial);
-				applied = true;
+				applied |= Apply(skinnedRenderers[i], sequence, replacementMaterial, binding);
 			}
+
+			if (!applied)
+				DestroyBinding(binding);
 
 			return applied;
 		}
 
 		public static bool IsEmissive(TextureSequence sequence, Material sourceMaterial, Material replacementMaterial = null)
-			=> GetOrCreate(sequence, sourceMaterial, replacementMaterial)?.IsEmissive ?? MaterialUtils.IsEmissive(replacementMaterial);
+			=> MaterialUtils.IsEmissive(replacementMaterial != null ? replacementMaterial : sourceMaterial);
 
 		public static void Clear()
 		{
@@ -84,18 +78,71 @@ namespace ClassicTilestorm
 			_instance.ClearInternal();
 		}
 
-		private AnimMaterial GetOrCreateInternal(TextureSequence sequence, Material sourceMaterial, Material replacementMaterial)
+		private static bool Apply(Renderer renderer, TextureSequence sequence, Material replacementMaterial, AnimMaterialBinding binding)
 		{
-			var key = new Key(sequence, sourceMaterial, replacementMaterial);
-			if (_materials.TryGetValue(key, out var material))
-				return material;
+			if (renderer == null || binding == null) return false;
 
-			material = new AnimMaterial(sequence, sourceMaterial, replacementMaterial);
-			_materials.Add(key, material);
+			var sourceMaterials = renderer.sharedMaterials;
+			if (sourceMaterials == null || sourceMaterials.Length == 0) return false;
+
+			var animatedMaterials = new Material[sourceMaterials.Length];
+			var applied = false;
+			for (var i = 0; i < sourceMaterials.Length; i++)
+			{
+				var animMaterial = Acquire(sequence, sourceMaterials[i], replacementMaterial);
+				animatedMaterials[i] = animMaterial?.Material ?? sourceMaterials[i];
+				if (animMaterial == null) continue;
+
+				binding.Add(animMaterial);
+				applied = true;
+			}
+
+			if (applied)
+				renderer.sharedMaterials = animatedMaterials;
+
+			return applied;
+		}
+
+		private AnimMaterial AcquireInternal(TextureSequence sequence, Material sourceMaterial, Material replacementMaterial)
+		{
+			var key = new Key(sequence, replacementMaterial);
+			if (_materials.TryGetValue(key, out var entry))
+			{
+				entry.ReferenceCount++;
+				return entry.Material;
+			}
+
+			var material = new AnimMaterial(sequence, sourceMaterial, replacementMaterial);
+			_materials.Add(key, new Entry(key, material));
 			if (material.IsAnimated)
 				_animatedMaterials.Add(material);
 
 			return material;
+		}
+
+		private void ReleaseInternal(AnimMaterial material)
+		{
+			Key? releaseKey = null;
+			Entry releaseEntry = null;
+
+			foreach (var pair in _materials)
+			{
+				var entry = pair.Value;
+				if (entry.Material != material) continue;
+
+				entry.ReferenceCount--;
+				if (entry.ReferenceCount > 0) return;
+
+				releaseKey = entry.Key;
+				releaseEntry = entry;
+				break;
+			}
+
+			if (!releaseKey.HasValue || releaseEntry == null) return;
+
+			_materials.Remove(releaseKey.Value);
+			_animatedMaterials.Remove(material);
+			releaseEntry.Material.Destroy();
 		}
 
 		private void Update()
@@ -115,28 +162,46 @@ namespace ClassicTilestorm
 
 		private void ClearInternal()
 		{
-			foreach (var material in _materials.Values)
-				material.Destroy();
+			foreach (var entry in _materials.Values)
+				entry.Material.Destroy();
 
 			_materials.Clear();
 			_animatedMaterials.Clear();
 		}
 
+		private static void DestroyBinding(AnimMaterialBinding binding)
+		{
+			if (binding == null) return;
+
+			if (Application.isPlaying)
+				Destroy(binding);
+			else
+				DestroyImmediate(binding);
+		}
+
+		private sealed class Entry
+		{
+			public readonly Key Key;
+			public readonly AnimMaterial Material;
+			public int ReferenceCount;
+
+			public Entry(Key key, AnimMaterial material)
+			{
+				Key = key;
+				Material = material;
+				ReferenceCount = 1;
+			}
+		}
+
 		private readonly struct Key
 		{
 			private readonly string _sequenceId;
-			private readonly EntityId _sourceMaterialId;
 			private readonly EntityId _replacementMaterialId;
-			private readonly Vector2 _mainTextureOffset;
-			private readonly Vector2 _mainTextureScale;
 
-			public Key(TextureSequence sequence, Material sourceMaterial, Material replacementMaterial)
+			public Key(TextureSequence sequence, Material replacementMaterial)
 			{
 				_sequenceId = sequence?.id ?? string.Empty;
-				_sourceMaterialId = sourceMaterial != null ? sourceMaterial.GetEntityId() : default;
 				_replacementMaterialId = replacementMaterial != null ? replacementMaterial.GetEntityId() : default;
-				_mainTextureOffset = sourceMaterial != null ? sourceMaterial.mainTextureOffset : Vector2.zero;
-				_mainTextureScale = sourceMaterial != null ? sourceMaterial.mainTextureScale : Vector2.one;
 			}
 		}
 	}
