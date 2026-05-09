@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using MassiveHadronLtd;
 using UnityEngine;
@@ -87,6 +88,7 @@ namespace ClassicTilestorm
 
 			var animatedMaterials = new Material[sourceMaterials.Length];
 			var applied = false;
+
 			for (var i = 0; i < sourceMaterials.Length; i++)
 			{
 				var animMaterial = Acquire(sequence, sourceMaterials[i], replacementMaterial);
@@ -106,6 +108,7 @@ namespace ClassicTilestorm
 		private AnimMaterial AcquireInternal(TextureSequence sequence, Material sourceMaterial, Material replacementMaterial)
 		{
 			var key = new Key(sequence, replacementMaterial);
+
 			if (_materials.TryGetValue(key, out var entry))
 			{
 				entry.ReferenceCount++;
@@ -114,6 +117,7 @@ namespace ClassicTilestorm
 
 			var material = new AnimMaterial(sequence, sourceMaterial, replacementMaterial);
 			_materials.Add(key, new Entry(key, material));
+
 			if (material.IsAnimated)
 				_animatedMaterials.Add(material);
 
@@ -122,9 +126,6 @@ namespace ClassicTilestorm
 
 		private void ReleaseInternal(AnimMaterial material)
 		{
-			Key? releaseKey = null;
-			Entry releaseEntry = null;
-
 			foreach (var pair in _materials)
 			{
 				var entry = pair.Value;
@@ -133,16 +134,11 @@ namespace ClassicTilestorm
 				entry.ReferenceCount--;
 				if (entry.ReferenceCount > 0) return;
 
-				releaseKey = entry.Key;
-				releaseEntry = entry;
-				break;
+				_materials.Remove(pair.Key);
+				_animatedMaterials.Remove(material);
+				entry.Material.Destroy();
+				return;
 			}
-
-			if (!releaseKey.HasValue || releaseEntry == null) return;
-
-			_materials.Remove(releaseKey.Value);
-			_animatedMaterials.Remove(material);
-			releaseEntry.Material.Destroy();
 		}
 
 		private void Update()
@@ -193,7 +189,7 @@ namespace ClassicTilestorm
 			}
 		}
 
-		private readonly struct Key
+		private readonly struct Key : IEquatable<Key>
 		{
 			private readonly string _sequenceId;
 			private readonly EntityId _replacementMaterialId;
@@ -201,7 +197,31 @@ namespace ClassicTilestorm
 			public Key(TextureSequence sequence, Material replacementMaterial)
 			{
 				_sequenceId = sequence?.id ?? string.Empty;
-				_replacementMaterialId = replacementMaterial != null ? replacementMaterial.GetEntityId() : default;
+				_replacementMaterialId = replacementMaterial != null
+					? replacementMaterial.GetEntityId()
+					: default;
+			}
+
+			public bool Equals(Key other)
+			{
+				return string.Equals(_sequenceId, other._sequenceId) &&
+					   _replacementMaterialId.Equals(other._replacementMaterialId);
+			}
+
+			public override bool Equals(object obj)
+			{
+				return obj is Key other && Equals(other);
+			}
+
+			public override int GetHashCode()
+			{
+				unchecked
+				{
+					int hash = 17;
+					hash = hash * 23 + (_sequenceId?.GetHashCode() ?? 0);
+					hash = hash * 23 + _replacementMaterialId.GetHashCode();
+					return hash;
+				}
 			}
 		}
 	}
