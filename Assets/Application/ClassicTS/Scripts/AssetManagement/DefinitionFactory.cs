@@ -92,7 +92,7 @@ namespace ClassicTilestorm
 		{
 			if (gameObject == null || definition == null || IsHD(gameObject)) return;
 
-			var texture = TextureSequenceManager.GetFrameZero(definition.texture);
+			var texture = AnimMaterialInfoManager.GetFrameZero(definition.texture) ?? TextureSequenceManager.GetFrameZero(definition.texture);
 			var material = MaterialAssets.Find(definition.material);
 			if (!MaterialUtils.IsEmissive(material)) material = null;
 			var emissive = MaterialUtils.EmissiiveColour(material, Color.white * 1.2f);

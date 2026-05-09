@@ -15,6 +15,15 @@ namespace ClassicTilestorm
 			return info != null ? info.ToTextureSequence() : null;
 		}
 
+		public static Texture2D GetFrameZero(string id)
+		{
+			var info = Get(id);
+			if (info == null || info.frames == null || info.frames.Length == 0)
+				return null;
+
+			return info.frames[0].texture;
+		}
+
 		public static AnimMaterialInfo Get(string id)
 		{
 			if (string.IsNullOrEmpty(id)) return null;

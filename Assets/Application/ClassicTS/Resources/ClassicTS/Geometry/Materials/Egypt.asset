@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 434ede3c4379427282fde50332a2e255, type: 3}
+  m_Name: Egypt
+  m_EditorClassIdentifier: 
+  id: Egypt
+  alphaTest: 0
+  frames:
+  - texture: {fileID: 2800000, guid: 8724fe6028c6b71468d639b7e2433e5d, type: 3}
+    duration: 0.5
+  - texture: {fileID: 2800000, guid: a7bc8c23f4f2aff49b3cb387b71d5b98, type: 3}
+    duration: 0.5
