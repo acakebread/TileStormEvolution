@@ -40967,19 +40967,16 @@
     {
       "id": "Default",
       "name": "Default",
-      "alphaTest": false,
       "texture": "blank"
     },
     {
       "id": "Marker",
       "name": "Marker",
-      "alphaTest": false,
       "texture": "Marker"
     },
     {
       "id": "Industrial",
       "name": "Industrial",
-      "alphaTest": false,
       "frames": [
         {
           "texture": "Ind_texturepage_new_01",
@@ -40994,7 +40991,6 @@
     {
       "id": "Egypt",
       "name": "Egypt",
-      "alphaTest": false,
       "frames": [
         {
           "texture": "Egypt_texturepage",
@@ -41009,7 +41005,6 @@
     {
       "id": "Caustic",
       "name": "Caustic",
-      "alphaTest": false,
       "frames": [
         {
           "texture": "caust00",
@@ -41144,7 +41139,6 @@
     {
       "id": "Eggbot Default",
       "name": "Eggbot Default",
-      "alphaTest": false,
       "frames": [
         {
           "texture": "eggbot_default_0",
@@ -41183,7 +41177,6 @@
     {
       "id": "Eggbot Medieval",
       "name": "Eggbot Medieval",
-      "alphaTest": false,
       "frames": [
         {
           "texture": "eggbot_med_0",
@@ -41222,7 +41215,6 @@
     {
       "id": "Eggbot Jungle",
       "name": "Eggbot Jungle",
-      "alphaTest": false,
       "frames": [
         {
           "texture": "eggbot_jun_0",
@@ -41261,7 +41253,6 @@
     {
       "id": "Eggbot Industrial",
       "name": "Eggbot Industrial",
-      "alphaTest": false,
       "frames": [
         {
           "texture": "eggbot_ind_0",
@@ -41300,7 +41291,6 @@
     {
       "id": "Eggbot Egypt",
       "name": "Eggbot Egypt",
-      "alphaTest": false,
       "frames": [
         {
           "texture": "eggbot_egy_0",
@@ -41339,7 +41329,6 @@
     {
       "id": "Toxic Pipes",
       "name": "Toxic Pipes",
-      "alphaTest": false,
       "frames": [
         {
           "texture": "Ind_pipes_1a",
@@ -41354,7 +41343,6 @@
     {
       "id": "Mud Pit",
       "name": "Mud Pit",
-      "alphaTest": false,
       "frames": [
         {
           "texture": "jun_mud_01",
@@ -41395,25 +41383,21 @@
     {
       "id": "Chalk Test",
       "name": "Chalk Test",
-      "alphaTest": false,
       "texture": "chalk 512x512"
     },
     {
       "id": "Texture Test",
       "name": "Texture Test",
-      "alphaTest": false,
       "texture": "Marker"
     },
     {
       "id": "Rainbow",
       "name": "Rainbow",
-      "alphaTest": false,
       "texture": "rainbow"
     },
     {
       "id": "coin",
       "name": "coin",
-      "alphaTest": false,
       "texture": "coin"
     }
   ],

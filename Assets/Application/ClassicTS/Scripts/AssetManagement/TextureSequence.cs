@@ -115,8 +115,11 @@ namespace ClassicTilestorm
 			writer.WritePropertyName("name");
 			writer.WriteValue(ts.id);
 
-			writer.WritePropertyName("alphaTest");
-			writer.WriteValue(ts.alphaTest);
+			if (ts.alphaTest)
+			{
+				writer.WritePropertyName("alphaTest");
+				writer.WriteValue(true);
+			}
 
 			if (!string.IsNullOrEmpty(ts.texture))
 			{
