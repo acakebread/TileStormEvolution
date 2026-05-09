@@ -30,7 +30,8 @@ namespace ClassicTilestorm
 			var appliedAnimMaterial = false;
 			if (!IsHD(gameObject))
 			{
-				var sequence = TextureSequenceManager.GetTextureSequence(definition.texture);
+				var sequence = AnimMaterialInfoManager.GetTextureSequence(definition.texture)
+							   ?? TextureSequenceManager.GetTextureSequence(definition.texture);
 				appliedAnimMaterial = AnimMaterialManager.Apply(gameObject, sequence, replacement);
 			}
 
