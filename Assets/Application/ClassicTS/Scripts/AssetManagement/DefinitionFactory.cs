@@ -23,22 +23,19 @@ namespace ClassicTilestorm
 			if (null == gameObject)
 				return null;
 
-			//temporary provision to suppress texture replacement on loaded HD models
-			var renderers = gameObject.GetComponentsInChildren<MeshRenderer>(true);
-
 			//Apply Definition Properties
 			var replacement = MaterialAssets.Find(definition.material);
 
 			// Apply texture animation and / or material replacement
-			var textureAnimator = gameObject.AddComponent<TextureSetAnimator>();
+			var appliedAnimMaterial = false;
 			if (!IsHD(gameObject))
 			{
 				var sequence = TextureSequenceManager.GetTextureSequence(definition.texture);
-				textureAnimator.Initialize(sequence, replacement);
+				appliedAnimMaterial = AnimMaterialManager.Apply(gameObject, sequence, replacement);
 			}
 
 			// Point light only if emissive and we have an animator (meaning texture was applied) - placeholder only
-			if (null != textureAnimator && textureAnimator.IsEmissive)
+			if (appliedAnimMaterial && MaterialUtils.IsEmissive(replacement))
 				LightFactory.AddPointLight(gameObject, replacement.GetColor("_EmissionColor"));
 
 			// Add collider for interactive tiles
