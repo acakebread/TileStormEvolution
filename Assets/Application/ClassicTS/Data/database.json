@@ -40326,7 +40326,7 @@
     {
       "id": "Cp5F4e",
       "name": "ind tile console",
-      "model": "ind_console_n",
+      "model": "ind_console",
       "texture": "Industrial",
       "flags": "Desk",
       "connections": "N"

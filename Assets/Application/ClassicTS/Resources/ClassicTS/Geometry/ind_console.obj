@@ -1,6 +1,6 @@
 # Modified by OBJRotate180 (Mesh rotated 180 degrees around Y-axis)
-# Original file: ss_console_n.obj
-mtllib Materials/ind_console_n.mtl
+# Original file: ss_console.obj
+mtllib Materials/ind_console.mtl
 v 0.499998 0.100000 -0.499989
 v -0.499996 0.100000 -0.500004
 v 0.499996 0.100000 0.499979
@@ -435,7 +435,7 @@ vn 1.000000 0.000001 0.000002
 vn 1.000000 0.000000 0.000002
 o console
 o console
-usemtl ind_console_n
+usemtl ind_console
 f 1/1/1 2/2/2 3/3/3
 f 4/4/4 5/5/5 6/6/6
 f 7/7/7 8/8/8 9/9/9
