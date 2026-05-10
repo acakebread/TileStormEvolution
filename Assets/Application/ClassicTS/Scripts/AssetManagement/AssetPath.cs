@@ -2,8 +2,22 @@ namespace ClassicTilestorm
 {
 	public static class AssetPath
 	{
+		public const string MaterialsFolder = "Materials";
+
 		private static string geometryPath = null;//"ClassicTS/Geometry/"
 		public static string GeometryPath { get => geometryPath ?? ApplicationSettings.GeometryPath; set => geometryPath = value; }
+
+		public static string GeometryMaterialsPath
+		{
+			get
+			{
+				var root = GeometryPath?.Trim('/')?.Trim();
+				if (string.IsNullOrEmpty(root))
+					return MaterialsFolder;
+
+				return $"{root}/{MaterialsFolder}";
+			}
+		}
 
 		private static string texturePath = null;//"ClassicTS/Textures/"
 		public static string TexturePath { get => texturePath ?? ApplicationSettings.TexturePath; set => texturePath = value; }

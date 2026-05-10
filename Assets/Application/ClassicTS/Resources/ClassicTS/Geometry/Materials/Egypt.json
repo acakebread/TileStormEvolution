@@ -1,11 +1,11 @@
 {
   "frames": [
     {
-      "texture": "Egypt_texturepage",
+      "texture": "Egypt_00",
       "duration": 0.5
     },
     {
-      "texture": "Egypt_texturepage_01",
+      "texture": "Egypt_01",
       "duration": 0.5
     }
   ]

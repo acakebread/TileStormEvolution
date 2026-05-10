@@ -1,11 +1,11 @@
 {
   "frames": [
     {
-      "texture": "Ind_texturepage_new_01",
+      "texture": "Industrial_00",
       "duration": 1
     },
     {
-      "texture": "Ind_texturepage_new_01a",
+      "texture": "Industrial_01",
       "duration": 1
     }
   ]

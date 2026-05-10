@@ -65,11 +65,11 @@ namespace ClassicTilestorm
 
 		private static TextAsset LoadJsonAsset(string id)
 		{
-			var root = AssetPath.GeometryPath?.Trim('/')?.Trim();
+			var root = AssetPath.GeometryMaterialsPath;
 			if (string.IsNullOrEmpty(root))
 				return null;
 
-			var basePath = $"{root}/Materials/{id}";
+			var basePath = $"{root}/{id}";
 
 			var asset = Resources.Load<TextAsset>(basePath);
 			if (asset != null) return asset;
@@ -100,13 +100,11 @@ namespace ClassicTilestorm
 
 		private static Texture2D LoadAnimationTexture(string textureName)
 		{
-			var root = AssetPath.GeometryPath?.Trim('/')?.Trim();
+			var root = AssetPath.GeometryMaterialsPath;
 			if (string.IsNullOrEmpty(root) || string.IsNullOrEmpty(textureName))
 				return null;
 
-			var basePath = $"{root}/Materials/{textureName}";
-
-			return Resources.Load<Texture2D>(basePath);
+			return Resources.Load<Texture2D>($"{root}/{textureName}");
 		}
 
 		public static void ClearCache()
