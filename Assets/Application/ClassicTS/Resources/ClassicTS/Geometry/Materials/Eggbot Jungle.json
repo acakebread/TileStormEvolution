@@ -1,7 +1,4 @@
 {
-  "id": "Eggbot Jungle",
-  "name": "Eggbot Jungle",
-  "alphaTest": false,
   "frames": [
     { "texture": "eggbot_jun_0", "duration": 3 },
     { "texture": "eggbot_jun_1", "duration": 0.05 },

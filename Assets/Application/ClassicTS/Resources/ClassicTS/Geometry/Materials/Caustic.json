@@ -1,7 +1,4 @@
 {
-  "id": "Caustic",
-  "name": "Caustic",
-  "alphaTest": false,
   "frames": [
     { "texture": "caust00", "duration": 0.04 },
     { "texture": "caust01", "duration": 0.04 },

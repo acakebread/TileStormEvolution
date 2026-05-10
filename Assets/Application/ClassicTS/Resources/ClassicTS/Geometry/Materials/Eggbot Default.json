@@ -1,7 +1,4 @@
 {
-  "id": "Eggbot Default",
-  "name": "Eggbot Default",
-  "alphaTest": false,
   "frames": [
     { "texture": "eggbot_default_0", "duration": 3 },
     { "texture": "eggbot_default_1", "duration": 0.05 },

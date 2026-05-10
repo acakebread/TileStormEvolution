@@ -1,7 +1,4 @@
 {
-  "id": "Industrial",
-  "name": "Industrial",
-  "alphaTest": false,
   "frames": [
     {
       "texture": "Ind_texturepage_new_01",

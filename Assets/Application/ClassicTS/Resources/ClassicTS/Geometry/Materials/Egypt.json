@@ -1,7 +1,4 @@
 {
-  "id": "Egypt",
-  "name": "Egypt",
-  "alphaTest": false,
   "frames": [
     {
       "texture": "Egypt_texturepage",

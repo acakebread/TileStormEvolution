@@ -1,7 +1,4 @@
 {
-  "id": "Mud Pit",
-  "name": "Mud Pit",
-  "alphaTest": false,
   "frames": [
     { "texture": "jun_mud_01", "duration": 0.1 },
     { "texture": "jun_mud_02", "duration": 0.1 },
