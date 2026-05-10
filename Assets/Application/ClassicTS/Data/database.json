@@ -40966,8 +40966,7 @@
   "textures": [
     {
       "id": "Default",
-      "name": "Default",
-      "texture": "blank"
+      "name": "Default"
     },
     {
       "id": "Marker",
