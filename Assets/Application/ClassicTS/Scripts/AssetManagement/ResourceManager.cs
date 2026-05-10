@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Collections.Generic;
+using Newtonsoft.Json;
 using MassiveHadronLtd;
 using UnityEngine;
 
@@ -16,11 +17,15 @@ namespace ClassicTilestorm
 	public class TextureInfo
 	{
 		public string id;
+		[JsonIgnore]
 		public string name { get => id; }//future replacement for id - just the display name in the editor
 		public bool alphaTest = false;
 
 		// Canonical single texture (shorthand)
 		public string texture;
+
+		public bool ShouldSerializealphaTest()
+			=> alphaTest;
 	}
 
 	[Serializable]
@@ -29,7 +34,6 @@ namespace ClassicTilestorm
 		public Map[] maps;
 		public Definition[] definitions;
 		public TextureInfo[] textures;
-		public Legacy.Button[] buttons;
 	}
 
 	public static class ResourceManager
@@ -40,7 +44,6 @@ namespace ClassicTilestorm
 		public static IList<Map> Maps => _db?.maps ?? Array.Empty<Map>();
 		public static IList<Definition> Definitions => _db?.definitions ?? Array.Empty<Definition>();
 		public static IList<TextureInfo> TextureInfos => _db?.textures ?? Array.Empty<TextureInfo>();
-		public static IList<Legacy.Button> Buttons => _db?.buttons ?? Array.Empty<Legacy.Button>();
 
 		public static bool HasDefinition(int id) => Definitions.Any(def => def.HashID == id);
 

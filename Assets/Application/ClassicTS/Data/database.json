@@ -40965,88 +40965,71 @@
   ],
   "textures": [
     {
-      "id": "Default",
-      "name": "Default"
+      "id": "Default"
     },
     {
       "id": "Marker",
-      "name": "Marker",
       "texture": "Marker"
     },
     {
       "id": "Industrial",
-      "name": "Industrial",
       "texture": "Industrial"
     },
     {
       "id": "Egypt",
-      "name": "Egypt",
       "texture": "Egypt"
     },
     {
       "id": "Caustic",
-      "name": "Caustic",
       "texture": "Caustic"
     },
     {
       "id": "Eggbot Default",
-      "name": "Eggbot Default",
       "texture": "Eggbot Default"
     },
     {
       "id": "Eggbot Medieval",
-      "name": "Eggbot Medieval",
       "texture": "Eggbot Medieval"
     },
     {
       "id": "Eggbot Jungle",
-      "name": "Eggbot Jungle",
       "texture": "Eggbot Jungle"
     },
     {
       "id": "Eggbot Industrial",
-      "name": "Eggbot Industrial",
       "texture": "Eggbot Industrial"
     },
     {
       "id": "Eggbot Egypt",
-      "name": "Eggbot Egypt",
       "texture": "Eggbot Egypt"
     },
     {
       "id": "Toxic Pipes",
-      "name": "Toxic Pipes",
       "texture": "Toxic Pipes"
     },
     {
       "id": "Mud Pit",
-      "name": "Mud Pit",
       "texture": "Mud Pit"
     },
     {
       "id": "Alpha Test",
-      "name": "Alpha Test",
       "alphaTest": true,
       "texture": "lock_tick"
     },
     {
       "id": "Chalk Test",
-      "name": "Chalk Test",
       "texture": "chalk 512x512"
     },
     {
       "id": "Texture Test",
-      "name": "Texture Test",
       "texture": "Marker"
     },
     {
       "id": "Rainbow",
-      "name": "Rainbow",
       "texture": "rainbow"
     },
     {
       "id": "coin",
-      "name": "coin",
       "texture": "coin"
     }
   ]

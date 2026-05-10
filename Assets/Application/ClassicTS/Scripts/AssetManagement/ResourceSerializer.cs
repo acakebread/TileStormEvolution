@@ -90,10 +90,6 @@ namespace ClassicTilestorm
 					textures = root["textures"] != null
 						? serializer.Deserialize<TextureInfo[]>(root["textures"].CreateReader())
 						: Array.Empty<TextureInfo>(),
-
-					buttons = root["buttons"] != null
-						? serializer.Deserialize<Legacy.Button[]>(root["buttons"].CreateReader())
-						: Array.Empty<Legacy.Button>()
 				};
 
 				if (data.maps == null || data.definitions == null ||
@@ -144,10 +140,6 @@ namespace ClassicTilestorm
 			if (data.textures != null && data.textures.Length > 0)
 				root["textures"] = JArray.FromObject(data.textures, JsonSerializer.Create(settings));
 
-			// ← Only add buttons if the array is not null AND has items
-			if (data.buttons != null && data.buttons.Length > 0)
-				root["buttons"] = JArray.FromObject(data.buttons, JsonSerializer.Create(settings));
-
 			string json = root.ToString(verbose ? Formatting.Indented : Formatting.None);
 
 			string path = string.IsNullOrEmpty(filepath)
@@ -160,8 +152,7 @@ namespace ClassicTilestorm
 			Debug.Log($"Database saved → {path} " +
 					  $"(maps: {mapsToSave?.Length ?? 0}, " +
 					  $"definitions: {data.definitions?.Length ?? 0}, " +
-					  $"textures: {data.textures?.Length ?? 0}, " +
-					  $"buttons: {data.buttons?.Length ?? 0})");
+					  $"textures: {data.textures?.Length ?? 0}");
 		}
 
 		public static void ImportAtomicMap(string filepath)
