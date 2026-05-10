@@ -40295,20 +40295,17 @@
     {
       "id": "Dhxx26",
       "name": "tutankhamun",
-      "model": "tutankhamun",
-      "texture": "Egypt"
+      "model": "tutankhamun"
     },
     {
       "id": "038hvM",
       "name": "sphinx",
-      "model": "egy_sphinx",
-      "texture": "Egypt"
+      "model": "egy_sphinx"
     },
     {
       "id": "2fi9Qe",
       "name": "anubis",
-      "model": "egy_anubis",
-      "texture": "Egypt"
+      "model": "egy_anubis"
     },
     {
       "id": "3dhrwu",
@@ -40335,7 +40332,6 @@
       "id": "2w9vTQ",
       "name": "ind tile slide",
       "model": "ind_tile_slide_plain",
-      "texture": "Industrial",
       "flags": "Move, Roll"
     },
     {
@@ -40399,68 +40395,57 @@
     {
       "id": "0F0wCU",
       "name": "ind toxic pipe join straight",
-      "model": "ind_tile_pipe_join",
-      "texture": "Industrial"
+      "model": "ind_tile_pipe_join"
     },
     {
       "id": "ECUVrk",
       "name": "ind toxic pipe cross",
-      "model": "ind_tile_pipe_mid",
-      "texture": "Industrial"
+      "model": "ind_tile_pipe_mid"
     },
     {
       "id": "8NpvXp",
       "name": "ind toxic pipe straight",
-      "model": "ind_tile_pipe_straight",
-      "texture": "Industrial"
+      "model": "ind_tile_pipe_straight"
     },
     {
       "id": "8jtjX2",
       "name": "ind toxic pipe bend",
-      "model": "ind_tile_pipe_corner",
-      "texture": "Industrial"
+      "model": "ind_tile_pipe_corner"
     },
     {
       "id": "ANmNdr",
       "name": "ind toxic pipe floor",
-      "model": "ind_tile_pipe_floor",
-      "texture": "Industrial"
+      "model": "ind_tile_pipe_floor"
     },
     {
       "id": "4pdw17",
       "name": "ind tile boundary",
-      "model": "ind_tile_boundary",
-      "texture": "Industrial"
+      "model": "ind_tile_boundary"
     },
     {
       "id": "0TGhTv",
       "name": "ind tile boundary 2",
-      "model": "ind_tile_boundary_pitted",
-      "texture": "Industrial"
+      "model": "ind_tile_boundary_pitted"
     },
     {
       "id": "4T8R1f",
       "name": "ind boundary edge",
-      "model": "ind_tile_boundary_edge",
-      "texture": "Industrial"
+      "model": "ind_tile_boundary_edge"
     },
     {
       "id": "7x8ynD",
       "name": "ind boundary corner large",
-      "model": "ind_tile_boundary_corner",
-      "texture": "Industrial"
+      "model": "ind_tile_boundary_corner"
     },
     {
       "id": "46Hmr0",
       "name": "ind boundary corner small",
-      "model": "ind_tile_boundary_sml_corner",
-      "texture": "Industrial"
+      "model": "ind_tile_boundary_sml_corner"
     },
     {
       "id": "2FMcwa",
       "name": "ind tile boundary 3",
-      "model": "ind_tile_boundary_plate",
-      "texture": "Industrial"
+      "model": "ind_tile_boundary_plate"
     },
     {
       "id": "3GVJyw",
@@ -40478,7 +40463,6 @@
       "id": "DvCe9T",
       "name": "egy tile door",
       "model": "egy_tile_door",
-      "texture": "Egypt",
       "flags": "Door",
       "connections": "NS"
     },
@@ -40486,33 +40470,28 @@
       "id": "8VWAek",
       "name": "egy tile console",
       "model": "egy_console",
-      "texture": "Egypt",
       "flags": "Desk",
       "connections": "N"
     },
     {
       "id": "6d5t6k",
       "name": "egy tile boundary",
-      "model": "egy_tile_boundary",
-      "texture": "Egypt"
+      "model": "egy_tile_boundary"
     },
     {
       "id": "0ACD6e",
       "name": "egy boundary obelisk",
-      "model": "egy_tile_boundary_oblisk",
-      "texture": "Egypt"
+      "model": "egy_tile_boundary_oblisk"
     },
     {
       "id": "52Gwa3",
       "name": "egy tile pyramid",
-      "model": "egy_tile_boundary_pyramid",
-      "texture": "Egypt"
+      "model": "egy_tile_boundary_pyramid"
     },
     {
       "id": "5E4P2K",
       "name": "egy tile slide",
       "model": "egy_tile_slide",
-      "texture": "Egypt",
       "flags": "Move, Roll"
     },
     {
@@ -40563,20 +40542,17 @@
     {
       "id": "Aa47m9",
       "name": "egy boundary corner",
-      "model": "egy_tile_boundary_corner",
-      "texture": "Egypt"
+      "model": "egy_tile_boundary_corner"
     },
     {
       "id": "81m9R9",
       "name": "egy boundary small corner",
-      "model": "egy_tile_boundary_sml_corner",
-      "texture": "Egypt"
+      "model": "egy_tile_boundary_sml_corner"
     },
     {
       "id": "23UUn0",
       "name": "egy boundary",
-      "model": "egy_tile_boundary_edge",
-      "texture": "Egypt"
+      "model": "egy_tile_boundary_edge"
     },
     {
       "id": "EDQx80",
@@ -40922,8 +40898,7 @@
     {
       "id": "42vJcJ",
       "name": "coin",
-      "model": "coin",
-      "texture": "coin"
+      "model": "coin"
     },
     {
       "id": "176q90",
