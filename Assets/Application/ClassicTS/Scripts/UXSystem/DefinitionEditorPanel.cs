@@ -253,7 +253,7 @@ namespace ClassicTilestorm
 
 		private void PopulateTextureDropdown() =>
 			PopulateDropdown(textureSequenceDropdown,
-				ResourceManager.TextureSequences
+				ResourceManager.TextureInfos
 					.Where(ts => !string.IsNullOrEmpty(ts.id))
 					.Select(ts => ts.id)
 					.Distinct(StringComparer.OrdinalIgnoreCase)

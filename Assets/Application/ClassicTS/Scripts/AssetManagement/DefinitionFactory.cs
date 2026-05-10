@@ -136,15 +136,12 @@ namespace ClassicTilestorm
 
 		public static Texture2D ResolveTexture(string id)
 		{
-			var legacySequence = ResourceManager.GetTextureSequence(id);
-			if (legacySequence == null)
+			var legacyTexture = ResourceManager.GetTextureInfo(id);
+			if (legacyTexture == null)
 				return Texture2DAssets.Find(id);
 
-			if (!string.IsNullOrEmpty(legacySequence.texture))
-				return Texture2DAssets.Find(legacySequence.texture);
-
-			if (legacySequence.ResolvedFrames != null && legacySequence.ResolvedFrames.Length > 0)
-				return legacySequence.ResolvedFrames[0].texture;
+			if (!string.IsNullOrEmpty(legacyTexture.texture))
+				return Texture2DAssets.Find(legacyTexture.texture);
 
 			return null;
 		}

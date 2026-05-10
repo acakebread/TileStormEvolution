@@ -88,16 +88,16 @@ namespace ClassicTilestorm
 						: Array.Empty<Definition>(),
 
 					textures = root["textures"] != null
-						? serializer.Deserialize<TextureSequence[]>(root["textures"].CreateReader())
-						: Array.Empty<TextureSequence>(),
+						? serializer.Deserialize<TextureInfo[]>(root["textures"].CreateReader())
+						: Array.Empty<TextureInfo>(),
 
 					buttons = root["buttons"] != null
 						? serializer.Deserialize<Legacy.Button[]>(root["buttons"].CreateReader())
 						: Array.Empty<Legacy.Button>()
 				};
 
-				if (data.maps == null || data.definitions == null || data.textures == null ||
-					data.maps.Length == 0 || data.definitions.Length == 0 || data.textures.Length == 0)
+				if (data.maps == null || data.definitions == null ||
+					data.maps.Length == 0 || data.definitions.Length == 0)
 				{
 					Debug.LogError("ResourceSerializer: Database failed validation");
 					return null;

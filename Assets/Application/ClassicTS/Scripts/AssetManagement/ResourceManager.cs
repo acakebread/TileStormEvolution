@@ -13,11 +13,22 @@ namespace ClassicTilestorm
 	}
 
 	[Serializable]
+	public class TextureInfo
+	{
+		public string id;
+		public string name { get => id; }//future replacement for id - just the display name in the editor
+		public bool alphaTest = false;
+
+		// Canonical single texture (shorthand)
+		public string texture;
+	}
+
+	[Serializable]
 	public class DatabaseData
 	{
 		public Map[] maps;
 		public Definition[] definitions;
-		public TextureSequence[] textures;
+		public TextureInfo[] textures;
 		public Legacy.Button[] buttons;
 	}
 
@@ -28,15 +39,15 @@ namespace ClassicTilestorm
 
 		public static IList<Map> Maps => _db?.maps ?? Array.Empty<Map>();
 		public static IList<Definition> Definitions => _db?.definitions ?? Array.Empty<Definition>();
-		public static IList<TextureSequence> TextureSequences => _db?.textures ?? Array.Empty<TextureSequence>();
+		public static IList<TextureInfo> TextureInfos => _db?.textures ?? Array.Empty<TextureInfo>();
 		public static IList<Legacy.Button> Buttons => _db?.buttons ?? Array.Empty<Legacy.Button>();
 
 		public static bool HasDefinition(int id) => Definitions.Any(def => def.HashID == id);
 
 		public static Definition GetDefinition(HashId id) => Definitions.FirstOrDefault(d => d.HashID == id);
 
-		public static TextureSequence GetTextureSequence(string id)
-			=> string.IsNullOrEmpty(id) ? null : TextureSequences.FirstOrDefault(ts => ts.id == id);
+		public static TextureInfo GetTextureInfo(string id)
+			=> string.IsNullOrEmpty(id) ? null : TextureInfos.FirstOrDefault(ts => ts.id == id);
 
 		// ── DEFINITION CREATION WITH OPTIONAL UNIQUENESS CHECK ────────────────
 
