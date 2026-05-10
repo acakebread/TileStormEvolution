@@ -1,10 +1,68 @@
 using System;
+using Newtonsoft.Json;
 using MassiveHadronLtd;
 using UnityEngine;
 
 namespace ClassicTilestorm
 {
-	public sealed class AnimMaterial
+	[Serializable]
+	public class TextureFrame
+	{
+		[JsonProperty("texture")] public string textureName;
+		[JsonProperty("duration")] public float duration;
+
+		[JsonIgnore] private Texture2D _texture;
+		[JsonIgnore]
+		public Texture2D texture
+		{
+			get => _texture;
+			set => _texture = value;
+		}
+	}
+
+	[Serializable]
+	public class AnimMaterial
+	{
+		public string id;
+		public string name { get => id; }//future replacement for id - just the display name in the editor
+		public bool alphaTest = false;
+
+		// Canonical single texture (shorthand)
+		public string texture;
+
+		// Only used for real animated sequences
+		public TextureFrame[] frames;
+
+		private TextureFrame[] _resolvedFrames;
+
+		[JsonIgnore]
+		public TextureFrame[] ResolvedFrames
+		{
+			get
+			{
+				if (_resolvedFrames != null) return _resolvedFrames;
+
+				if (!string.IsNullOrEmpty(texture))
+				{
+					_resolvedFrames = new[] { new TextureFrame { textureName = texture, duration = 0f } };
+				}
+				else
+				{
+					_resolvedFrames = frames?.Length > 0 ? frames : Array.Empty<TextureFrame>();
+				}
+				return _resolvedFrames;
+			}
+		}
+
+		internal void SetResolvedFrames(TextureFrame[] resolved)
+		{
+			_resolvedFrames = resolved;
+		}
+
+		[JsonIgnore] public Texture2D FirstTexture => ResolvedFrames.Length > 0 ? ResolvedFrames[0].texture : null;
+	}
+
+	public sealed class AnimMaterialInstance
 	{
 		private readonly TextureFrame[] _frames;
 		private readonly bool _animateEmissionMap;
@@ -17,12 +75,12 @@ namespace ClassicTilestorm
 
 		public event Action<Texture2D> OnTextureChanged;
 
-		internal AnimMaterial(TextureSequence sequence, Material sourceMaterial, Material replacementMaterial)
+		internal AnimMaterialInstance(AnimMaterial definition, Material sourceMaterial, Material replacementMaterial)
 		{
-			_frames = sequence?.ResolvedFrames ?? Array.Empty<TextureFrame>();
+			_frames = definition?.ResolvedFrames ?? Array.Empty<TextureFrame>();
 			Material = new Material(replacementMaterial != null ? replacementMaterial : sourceMaterial)
 			{
-				name = BuildName(sequence, sourceMaterial, replacementMaterial),
+				name = BuildName(definition, sourceMaterial, replacementMaterial),
 				hideFlags = HideFlags.DontSave
 			};
 
@@ -75,10 +133,10 @@ namespace ClassicTilestorm
 				UnityEngine.Object.DestroyImmediate(Material);
 		}
 
-		private static string BuildName(TextureSequence sequence, Material sourceMaterial, Material replacementMaterial)
+		private static string BuildName(AnimMaterial definition, Material sourceMaterial, Material replacementMaterial)
 		{
 			var sourceName = replacementMaterial != null ? replacementMaterial.name : sourceMaterial != null ? sourceMaterial.name : "Material";
-			return sequence != null ? $"{sourceName} [{sequence.id} AnimMaterial]" : $"{sourceName} [AnimMaterial]";
+			return definition != null ? $"{sourceName} [{definition.id} AnimMaterial]" : $"{sourceName} [AnimMaterial]";
 		}
 	}
 }

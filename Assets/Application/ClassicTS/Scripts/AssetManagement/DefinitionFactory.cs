@@ -30,15 +30,15 @@ namespace ClassicTilestorm
 			var appliedVisuals = false;
 			if (!IsHD(gameObject))
 			{
-				var sequence = AnimMaterialInfoManager.GetTextureSequence(definition.texture);
-				var texture = sequence != null
-					? AnimMaterialInfoManager.GetFrameZero(definition.texture)
-					: ResolveTexture(definition.texture);
-
+				var sequence = AnimMaterialInfoManager.GetAnimMaterial(definition.texture);
 				if (sequence != null)
 					appliedVisuals = AnimMaterialManager.Apply(gameObject, sequence, replacement);
-				else if (texture != null || replacement != null)
-					appliedVisuals = ApplyStaticVisuals(gameObject, texture, replacement);
+				else
+				{
+					var texture = ResolveTexture(definition.texture);
+					if (texture != null || replacement != null)
+						appliedVisuals = ApplyStaticVisuals(gameObject, texture, replacement);
+				}
 			}
 
 			// Point light only if emissive and we have an animator (meaning texture was applied) - placeholder only

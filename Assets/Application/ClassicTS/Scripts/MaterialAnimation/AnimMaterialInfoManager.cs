@@ -8,37 +8,37 @@ namespace ClassicTilestorm
 {
 	public static class AnimMaterialInfoManager
 	{
-		private static readonly Dictionary<string, TextureSequence> Cache = new(StringComparer.OrdinalIgnoreCase);
+		private static readonly Dictionary<string, AnimMaterial> Cache = new(StringComparer.OrdinalIgnoreCase);
 
-		public static TextureSequence GetTextureSequence(string id)
+		public static AnimMaterial GetAnimMaterial(string id)
 		{
 			if (string.IsNullOrEmpty(id)) return null;
 
 			if (Cache.TryGetValue(id, out var cached))
 				return cached;
 
-			var sequence = Load(id);
-			Cache[id] = sequence;
-			return sequence;
+			var definition = Load(id);
+			Cache[id] = definition;
+			return definition;
 		}
 
 		public static Texture2D GetFrameZero(string id)
 		{
-			var sequence = GetTextureSequence(id);
-			if (sequence == null || sequence.ResolvedFrames == null || sequence.ResolvedFrames.Length == 0)
+			var definition = GetAnimMaterial(id);
+			if (definition == null || definition.ResolvedFrames == null || definition.ResolvedFrames.Length == 0)
 				return null;
 
-			return sequence.FirstTexture;
+			return definition.FirstTexture;
 		}
 
-		public static TextureSequence Get(string id)
+		public static AnimMaterial Get(string id)
 		{
 			if (string.IsNullOrEmpty(id)) return null;
 
-			return GetTextureSequence(id);
+			return GetAnimMaterial(id);
 		}
 
-		private static TextureSequence Load(string id)
+		private static AnimMaterial Load(string id)
 		{
 			try
 			{
@@ -46,15 +46,15 @@ namespace ClassicTilestorm
 				if (jsonAsset == null || string.IsNullOrWhiteSpace(jsonAsset.text))
 					return null;
 
-				var sequence = JsonConvert.DeserializeObject<TextureSequence>(jsonAsset.text);
-				if (sequence == null)
+				var definition = JsonConvert.DeserializeObject<AnimMaterial>(jsonAsset.text);
+				if (definition == null)
 					return null;
 
-				if (string.IsNullOrWhiteSpace(sequence.id))
-					sequence.id = id;
+				if (string.IsNullOrWhiteSpace(definition.id))
+					definition.id = id;
 
-				ResolveTextures(sequence);
-				return sequence;
+				ResolveTextures(definition);
+				return definition;
 			}
 			catch (Exception ex)
 			{
@@ -77,9 +77,9 @@ namespace ClassicTilestorm
 			return Resources.Load<TextAsset>($"{basePath}.json");
 		}
 
-		private static void ResolveTextures(TextureSequence sequence)
+		private static void ResolveTextures(AnimMaterial definition)
 		{
-			var frames = sequence.ResolvedFrames;
+			var frames = definition.ResolvedFrames;
 			if (frames == null || frames.Length == 0) return;
 
 			var modified = false;
@@ -95,7 +95,7 @@ namespace ClassicTilestorm
 			}
 
 			if (modified)
-				sequence.SetResolvedFrames(frames);
+				definition.SetResolvedFrames(frames);
 		}
 
 		public static void ClearCache()

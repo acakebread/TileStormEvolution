@@ -9,7 +9,7 @@ namespace ClassicTilestorm
 	{
 		private static AnimMaterialManager _instance;
 		private readonly Dictionary<Key, Entry> _materials = new();
-		private readonly List<AnimMaterial> _animatedMaterials = new();
+		private readonly List<AnimMaterialInstance> _animatedMaterials = new();
 
 		private static AnimMaterialManager Instance
 		{
@@ -27,24 +27,24 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public static AnimMaterial Acquire(TextureSequence sequence, Material sourceMaterial, Material replacementMaterial = null)
+		public static AnimMaterialInstance Acquire(AnimMaterial definition, Material sourceMaterial, Material replacementMaterial = null)
 		{
 			if (sourceMaterial == null && replacementMaterial == null) return null;
-			if (sequence == null && replacementMaterial == null) return null;
+			if (definition == null && replacementMaterial == null) return null;
 
-			return Instance.AcquireInternal(sequence, sourceMaterial, replacementMaterial);
+			return Instance.AcquireInternal(definition, sourceMaterial, replacementMaterial);
 		}
 
-		public static void Release(AnimMaterial material)
+		public static void Release(AnimMaterialInstance material)
 		{
 			if (_instance == null || material == null) return;
 			_instance.ReleaseInternal(material);
 		}
 
-		public static bool Apply(GameObject gameObject, TextureSequence sequence, Material replacementMaterial = null)
+		public static bool Apply(GameObject gameObject, AnimMaterial definition, Material replacementMaterial = null)
 		{
 			if (gameObject == null) return false;
-			if (sequence == null && replacementMaterial == null) return false;
+			if (definition == null && replacementMaterial == null) return false;
 
 			var binding = gameObject.GetComponent<AnimMaterialBinding>();
 			if (binding == null)
@@ -55,13 +55,13 @@ namespace ClassicTilestorm
 			var meshRenderers = gameObject.GetComponentsInChildren<MeshRenderer>(true);
 			for (var i = 0; i < meshRenderers.Length; i++)
 			{
-				applied |= Apply(meshRenderers[i], sequence, replacementMaterial, binding);
+				applied |= Apply(meshRenderers[i], definition, replacementMaterial, binding);
 			}
 
 			var skinnedRenderers = gameObject.GetComponentsInChildren<SkinnedMeshRenderer>(true);
 			for (var i = 0; i < skinnedRenderers.Length; i++)
 			{
-				applied |= Apply(skinnedRenderers[i], sequence, replacementMaterial, binding);
+				applied |= Apply(skinnedRenderers[i], definition, replacementMaterial, binding);
 			}
 
 			if (!applied)
@@ -70,7 +70,7 @@ namespace ClassicTilestorm
 			return applied;
 		}
 
-		public static bool IsEmissive(TextureSequence sequence, Material sourceMaterial, Material replacementMaterial = null)
+		public static bool IsEmissive(AnimMaterial definition, Material sourceMaterial, Material replacementMaterial = null)
 			=> MaterialUtils.IsEmissive(replacementMaterial != null ? replacementMaterial : sourceMaterial);
 
 		public static void Clear()
@@ -79,7 +79,7 @@ namespace ClassicTilestorm
 			_instance.ClearInternal();
 		}
 
-		private static bool Apply(Renderer renderer, TextureSequence sequence, Material replacementMaterial, AnimMaterialBinding binding)
+		private static bool Apply(Renderer renderer, AnimMaterial definition, Material replacementMaterial, AnimMaterialBinding binding)
 		{
 			if (renderer == null || binding == null) return false;
 
@@ -91,7 +91,7 @@ namespace ClassicTilestorm
 
 			for (var i = 0; i < sourceMaterials.Length; i++)
 			{
-				var animMaterial = Acquire(sequence, sourceMaterials[i], replacementMaterial);
+				var animMaterial = Acquire(definition, sourceMaterials[i], replacementMaterial);
 				animatedMaterials[i] = animMaterial?.Material ?? sourceMaterials[i];
 				if (animMaterial == null) continue;
 
@@ -105,9 +105,9 @@ namespace ClassicTilestorm
 			return applied;
 		}
 
-		private AnimMaterial AcquireInternal(TextureSequence sequence, Material sourceMaterial, Material replacementMaterial)
+		private AnimMaterialInstance AcquireInternal(AnimMaterial definition, Material sourceMaterial, Material replacementMaterial)
 		{
-			var key = new Key(sequence, replacementMaterial);
+			var key = new Key(definition, replacementMaterial);
 
 			if (_materials.TryGetValue(key, out var entry))
 			{
@@ -115,7 +115,7 @@ namespace ClassicTilestorm
 				return entry.Material;
 			}
 
-			var material = new AnimMaterial(sequence, sourceMaterial, replacementMaterial);
+			var material = new AnimMaterialInstance(definition, sourceMaterial, replacementMaterial);
 			_materials.Add(key, new Entry(key, material));
 
 			if (material.IsAnimated)
@@ -124,7 +124,7 @@ namespace ClassicTilestorm
 			return material;
 		}
 
-		private void ReleaseInternal(AnimMaterial material)
+		private void ReleaseInternal(AnimMaterialInstance material)
 		{
 			foreach (var pair in _materials)
 			{
@@ -178,10 +178,10 @@ namespace ClassicTilestorm
 		private sealed class Entry
 		{
 			public readonly Key Key;
-			public readonly AnimMaterial Material;
+			public readonly AnimMaterialInstance Material;
 			public int ReferenceCount;
 
-			public Entry(Key key, AnimMaterial material)
+			public Entry(Key key, AnimMaterialInstance material)
 			{
 				Key = key;
 				Material = material;
@@ -191,12 +191,12 @@ namespace ClassicTilestorm
 
 		private readonly struct Key : IEquatable<Key>
 		{
-			private readonly string _sequenceId;
+			private readonly string _definitionId;
 			private readonly EntityId _replacementMaterialId;
 
-			public Key(TextureSequence sequence, Material replacementMaterial)
+			public Key(AnimMaterial definition, Material replacementMaterial)
 			{
-				_sequenceId = sequence?.id ?? string.Empty;
+				_definitionId = definition?.id ?? string.Empty;
 				_replacementMaterialId = replacementMaterial != null
 					? replacementMaterial.GetEntityId()
 					: default;
@@ -204,7 +204,7 @@ namespace ClassicTilestorm
 
 			public bool Equals(Key other)
 			{
-				return string.Equals(_sequenceId, other._sequenceId) &&
+				return string.Equals(_definitionId, other._definitionId) &&
 					   _replacementMaterialId.Equals(other._replacementMaterialId);
 			}
 
@@ -218,7 +218,7 @@ namespace ClassicTilestorm
 				unchecked
 				{
 					int hash = 17;
-					hash = hash * 23 + (_sequenceId?.GetHashCode() ?? 0);
+					hash = hash * 23 + (_definitionId?.GetHashCode() ?? 0);
 					hash = hash * 23 + _replacementMaterialId.GetHashCode();
 					return hash;
 				}
