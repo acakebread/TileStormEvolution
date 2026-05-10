@@ -58,7 +58,6 @@ namespace ClassicTilestorm
 			_resolvedFrames = resolved;
 		}
 
-		[JsonIgnore] public bool bAlphaTest => alphaTest;
 		[JsonIgnore] public Texture2D FirstTexture => ResolvedFrames.Length > 0 ? ResolvedFrames[0].texture : null;
 	}
 }
