@@ -26,7 +26,6 @@ namespace ClassicTilestorm.Assets
 			PrefabAssets.ClearCache();
 			TextureAssets.ClearCache();
 			Texture2DAssets.ClearCache();
-			TextureSequenceManager.ClearCache();
 			AnimMaterialInfoManager.ClearCache();
 			MaterialAssets.ClearCache();
 			//don't know if these need clearing

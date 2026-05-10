@@ -1,0 +1,15 @@
+{
+  "id": "Eggbot Egypt",
+  "name": "Eggbot Egypt",
+  "alphaTest": false,
+  "frames": [
+    { "texture": "eggbot_egy_0", "duration": 5 },
+    { "texture": "eggbot_egy_1", "duration": 0.05 },
+    { "texture": "eggbot_egy_2", "duration": 0.1 },
+    { "texture": "eggbot_egy_1", "duration": 0.05 },
+    { "texture": "eggbot_egy_0", "duration": 3 },
+    { "texture": "eggbot_egy_1", "duration": 0.05 },
+    { "texture": "eggbot_egy_2", "duration": 0.1 },
+    { "texture": "eggbot_egy_1", "duration": 0.05 }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "id": "Industrial",
+  "name": "Industrial",
+  "alphaTest": false,
+  "frames": [
+    {
+      "texture": "Ind_texturepage_new_01",
+      "duration": 1
+    },
+    {
+      "texture": "Ind_texturepage_new_01a",
+      "duration": 1
+    }
+  ]
+}

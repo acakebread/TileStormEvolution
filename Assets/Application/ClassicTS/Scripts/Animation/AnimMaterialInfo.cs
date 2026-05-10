@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace ClassicTilestorm
 {
-	[CreateAssetMenu(fileName = "AnimMaterialInfo", menuName = "Classic TileStorm/Anim Material Info")]
+	[Obsolete("Anim material definitions now load from json files alongside materials.")]
 	public sealed class AnimMaterialInfo : ScriptableObject
 	{
 		public string id;

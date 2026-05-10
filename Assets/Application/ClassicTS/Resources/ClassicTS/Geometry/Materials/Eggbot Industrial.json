@@ -1,0 +1,15 @@
+{
+  "id": "Eggbot Industrial",
+  "name": "Eggbot Industrial",
+  "alphaTest": false,
+  "frames": [
+    { "texture": "eggbot_ind_0", "duration": 5 },
+    { "texture": "eggbot_ind_1", "duration": 0.05 },
+    { "texture": "eggbot_ind_2", "duration": 0.1 },
+    { "texture": "eggbot_ind_1", "duration": 0.05 },
+    { "texture": "eggbot_ind_0", "duration": 3 },
+    { "texture": "eggbot_ind_1", "duration": 0.05 },
+    { "texture": "eggbot_ind_2", "duration": 0.1 },
+    { "texture": "eggbot_ind_1", "duration": 0.05 }
+  ]
+}

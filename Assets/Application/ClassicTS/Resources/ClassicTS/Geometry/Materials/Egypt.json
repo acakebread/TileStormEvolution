@@ -1,0 +1,15 @@
+{
+  "id": "Egypt",
+  "name": "Egypt",
+  "alphaTest": false,
+  "frames": [
+    {
+      "texture": "Egypt_texturepage",
+      "duration": 0.5
+    },
+    {
+      "texture": "Egypt_texturepage_01",
+      "duration": 0.5
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "id": "Toxic Pipes",
+  "name": "Toxic Pipes",
+  "alphaTest": false,
+  "frames": [
+    { "texture": "Ind_pipes_1a", "duration": 1 },
+    { "texture": "Ind_pipes_1b", "duration": 1.1 }
+  ]
+}
