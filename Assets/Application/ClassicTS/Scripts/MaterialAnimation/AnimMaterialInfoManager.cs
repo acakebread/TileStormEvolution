@@ -88,7 +88,7 @@ namespace ClassicTilestorm
 				var frame = frames[i];
 				if (frame.texture == null && !string.IsNullOrWhiteSpace(frame.textureName))
 				{
-					frame.texture = Texture2DAssets.Find(frame.textureName);
+					frame.texture = LoadAnimationTexture(frame.textureName);
 					frames[i] = frame;
 					modified = true;
 				}
@@ -96,6 +96,17 @@ namespace ClassicTilestorm
 
 			if (modified)
 				definition.SetResolvedFrames(frames);
+		}
+
+		private static Texture2D LoadAnimationTexture(string textureName)
+		{
+			var root = AssetPath.GeometryPath?.Trim('/')?.Trim();
+			if (string.IsNullOrEmpty(root) || string.IsNullOrEmpty(textureName))
+				return null;
+
+			var basePath = $"{root}/Materials/{textureName}";
+
+			return Resources.Load<Texture2D>(basePath);
 		}
 
 		public static void ClearCache()
