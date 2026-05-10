@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using Newtonsoft.Json;
 using UnityEngine;
 using ClassicTilestorm.Assets;
@@ -67,33 +65,16 @@ namespace ClassicTilestorm
 
 		private static TextAsset LoadJsonAsset(string id)
 		{
-			var root = AssetPath.MaterialPath?.Trim('/')?.Trim();
-			var path = string.IsNullOrEmpty(root) ? id : $"{root}/{id}";
+			var root = AssetPath.GeometryPath?.Trim('/')?.Trim();
+			if (string.IsNullOrEmpty(root))
+				return null;
 
-			var asset = Resources.Load<TextAsset>(path);
+			var basePath = $"{root}/Materials/{id}";
+
+			var asset = Resources.Load<TextAsset>(basePath);
 			if (asset != null) return asset;
 
-			asset = Resources.Load<TextAsset>($"{path}.json");
-			if (asset != null) return asset;
-
-			// Fallback for any json asset placed directly under Resources
-			if (!string.Equals(path, id, StringComparison.OrdinalIgnoreCase))
-			{
-				asset = Resources.Load<TextAsset>(id);
-				if (asset != null) return asset;
-
-				asset = Resources.Load<TextAsset>($"{id}.json");
-				if (asset != null) return asset;
-			}
-
-			// Final fallback: scan loaded TextAssets by filename.
-			var allTextAssets = Resources.LoadAll<TextAsset>(string.Empty);
-			var match = allTextAssets.FirstOrDefault(candidate =>
-				candidate != null &&
-				string.Equals(candidate.name, id, StringComparison.OrdinalIgnoreCase));
-			if (match != null) return match;
-
-			return null;
+			return Resources.Load<TextAsset>($"{basePath}.json");
 		}
 
 		private static void ResolveTextures(TextureSequence sequence)
