@@ -16,7 +16,9 @@ namespace ClassicTilestorm
 			}
 
 			//temporary provision to suppress texture replacement on loaded HD models
-			var texture = DefinitionFactory.IsHD(prefab) ? null : AnimMaterialInfoManager.GetFrameZero(definition.texture);
+			var texture = DefinitionFactory.IsHD(prefab)
+				? null
+				: AnimMaterialInfoManager.GetFrameZero(definition.texture) ?? DefinitionFactory.ResolveTexture(definition.texture);
 			var material = MaterialAssets.Find(definition.material);
 			var matrix = Matrix4x4.TRS(position, rotation, scale == default ? Vector3.one : scale);
 
@@ -78,6 +80,7 @@ namespace ClassicTilestorm
 				}
 				return result;
 			}
+
 		}
 	}
 }

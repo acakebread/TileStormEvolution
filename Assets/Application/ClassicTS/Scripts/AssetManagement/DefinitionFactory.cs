@@ -27,15 +27,22 @@ namespace ClassicTilestorm
 			var replacement = MaterialAssets.Find(definition.material);
 
 			// Apply texture animation and / or material replacement
-			var appliedAnimMaterial = false;
+			var appliedVisuals = false;
 			if (!IsHD(gameObject))
 			{
 				var sequence = AnimMaterialInfoManager.GetTextureSequence(definition.texture);
-				appliedAnimMaterial = AnimMaterialManager.Apply(gameObject, sequence, replacement);
+				var texture = sequence != null
+					? AnimMaterialInfoManager.GetFrameZero(definition.texture)
+					: ResolveTexture(definition.texture);
+
+				if (sequence != null)
+					appliedVisuals = AnimMaterialManager.Apply(gameObject, sequence, replacement);
+				else if (texture != null || replacement != null)
+					appliedVisuals = ApplyStaticVisuals(gameObject, texture, replacement);
 			}
 
 			// Point light only if emissive and we have an animator (meaning texture was applied) - placeholder only
-			if (appliedAnimMaterial && MaterialUtils.IsEmissive(replacement))
+			if (appliedVisuals && MaterialUtils.IsEmissive(replacement))
 				LightFactory.AddPointLight(gameObject, replacement.GetColor("_EmissionColor"));
 
 			// Add collider for interactive tiles
@@ -91,7 +98,7 @@ namespace ClassicTilestorm
 		{
 			if (gameObject == null || definition == null || IsHD(gameObject)) return;
 
-			var texture = AnimMaterialInfoManager.GetFrameZero(definition.texture);
+			var texture = AnimMaterialInfoManager.GetFrameZero(definition.texture) ?? ResolveTexture(definition.texture);
 			var material = MaterialAssets.Find(definition.material);
 			if (!MaterialUtils.IsEmissive(material)) material = null;
 			var emissive = MaterialUtils.EmissiiveColour(material, Color.white * 1.2f);
@@ -125,6 +132,47 @@ namespace ClassicTilestorm
 			}
 
 			renderer.materials = replacementArray;
+		}
+
+		public static Texture2D ResolveTexture(string id)
+		{
+			var legacySequence = ResourceManager.GetTextureSequence(id);
+			if (legacySequence == null)
+				return Texture2DAssets.Find(id);
+
+			if (!string.IsNullOrEmpty(legacySequence.texture))
+				return Texture2DAssets.Find(legacySequence.texture);
+
+			if (legacySequence.ResolvedFrames != null && legacySequence.ResolvedFrames.Length > 0)
+				return legacySequence.ResolvedFrames[0].texture;
+
+			return null;
+		}
+
+		private static bool ApplyStaticVisuals(GameObject gameObject, Texture2D texture, Material replacement)
+		{
+			if (gameObject == null) return false;
+
+			var material = replacement;
+			if (!MaterialUtils.IsEmissive(material)) material = null;
+			var emissive = MaterialUtils.EmissiiveColour(material, Color.white * 1.2f);
+
+			var applied = false;
+			var meshRenderers = gameObject.GetComponentsInChildren<MeshRenderer>(true);
+			for (var i = 0; i < meshRenderers.Length; i++)
+			{
+				ReplaceRendererMaterials(meshRenderers[i], texture, replacement, emissive);
+				applied = true;
+			}
+
+			var skinnedRenderers = gameObject.GetComponentsInChildren<SkinnedMeshRenderer>(true);
+			for (var i = 0; i < skinnedRenderers.Length; i++)
+			{
+				ReplaceRendererMaterials(skinnedRenderers[i], texture, replacement, emissive);
+				applied = true;
+			}
+
+			return applied;
 		}
 	}
 }
