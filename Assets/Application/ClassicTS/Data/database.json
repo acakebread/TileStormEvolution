@@ -40184,29 +40184,37 @@
       "character": "Eggbot Medieval",
       "effect": "FrostEffect",
       "skybox": "EgyptSkybox",
-      "width": 1,
+      "width": 3,
       "height": 3,
       "tiles": [
         0,
+        0,
         1,
-        0
+        2,
+        0,
+        3,
+        0,
+        0,
+        1
       ],
       "solve": [
         0,
-        3
+        9
       ],
       "table": [
+        "000000",
         "2An3fe",
+        "CyHA4u",
         "0KdnWP|angle:180.0"
       ],
       "waypoints": [
-        0,
-        2
+        2,
+        8
       ],
       "attachments": [
         {
           "type": "View",
-          "tile": 0,
+          "tile": 2,
           "data": [
             6.40963,
             3.80257177,
@@ -40316,7 +40324,6 @@
       "id": "2An3fe",
       "name": "ind tile door",
       "model": "ind_tile_door",
-      "texture": "Industrial",
       "flags": "Door",
       "connections": "NS"
     },
@@ -40324,7 +40331,6 @@
       "id": "Cp5F4e",
       "name": "ind tile console",
       "model": "ind_console",
-      "texture": "Industrial",
       "flags": "Desk",
       "connections": "N"
     },
@@ -40338,28 +40344,24 @@
       "id": "AaNkrC",
       "name": "ind tile static crossroads",
       "model": "ind_tile_crossroads_static",
-      "texture": "Industrial",
       "connections": "NSEW"
     },
     {
       "id": "0KdnWP",
       "name": "ind tile static straight",
       "model": "ind_tile_straight_static",
-      "texture": "Industrial",
       "connections": "NS"
     },
     {
       "id": "9xfU7Y",
       "name": "ind tile static bend",
       "model": "ind_tile_corner_static",
-      "texture": "Industrial",
       "connections": "NE"
     },
     {
       "id": "D2m8HU",
       "name": "ind tile crossroads",
       "model": "ind_tile_crossroads",
-      "texture": "Industrial",
       "flags": "Move",
       "connections": "NSEW"
     },
@@ -40367,7 +40369,6 @@
       "id": "9hR5pQ",
       "name": "ind tile straight",
       "model": "ind_tile_straight",
-      "texture": "Industrial",
       "flags": "Move",
       "connections": "NS"
     },
@@ -40375,7 +40376,6 @@
       "id": "DJNAYq",
       "name": "ind tile corner bend",
       "model": "ind_tile_corner",
-      "texture": "Industrial",
       "flags": "Move",
       "connections": "NE"
     },
@@ -40383,14 +40383,12 @@
       "id": "2XfyDx",
       "name": "ind caustic",
       "model": "tile_caustic",
-      "texture": "Caustic",
       "material": "toxic"
     },
     {
       "id": "3tNMCV",
       "name": "ind toxic pipe join leak",
-      "model": "ind_tile_pipe_join_leak",
-      "texture": "Toxic Pipes"
+      "model": "ind_tile_pipe_join_leak"
     },
     {
       "id": "0F0wCU",
@@ -40450,14 +40448,12 @@
     {
       "id": "3GVJyw",
       "name": "ind legacy wall straight",
-      "model": "ind_wall",
-      "texture": "Industrial"
+      "model": "ind_wall"
     },
     {
       "id": "5Un9xE",
       "name": "ind legacy wall corner",
-      "model": "ind_wall_corner",
-      "texture": "Industrial"
+      "model": "ind_wall_corner"
     },
     {
       "id": "DvCe9T",
@@ -40846,8 +40842,7 @@
     {
       "id": "CyHA4u",
       "name": "jun mud pool",
-      "model": "jun_mudpool",
-      "texture": "Mud Pit"
+      "model": "jun_mudpool"
     },
     {
       "id": "75M6eC",
@@ -40868,8 +40863,7 @@
     {
       "id": "443D4h",
       "name": "Eggbot Industrial",
-      "model": "eggbot_ind",
-      "texture": "Eggbot Industrial"
+      "model": "eggbot_ind"
     },
     {
       "id": "528y34",
@@ -40985,6 +40979,10 @@
     {
       "id": "Mud Pit",
       "texture": "Mud Pit"
+    },
+    {
+      "id": "jun_mudpool",
+      "texture": "jun_mudpool"
     },
     {
       "id": "Alpha Test",

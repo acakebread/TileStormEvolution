@@ -25,12 +25,13 @@ namespace ClassicTilestorm
 
 			//Apply Definition Properties
 			var replacement = MaterialAssets.Find(definition.material);
+			var animMaterialName = GetPrimaryTextureName(gameObject);
 
 			// Apply texture animation and / or material replacement
 			var appliedVisuals = false;
 			if (!IsHD(gameObject))
 			{
-				var sequence = AnimMaterialInfoManager.GetAnimMaterial(definition.texture);
+				var sequence = AnimMaterialInfoManager.GetAnimMaterial(animMaterialName);
 				if (sequence != null)
 					appliedVisuals = AnimMaterialManager.Apply(gameObject, sequence, replacement);
 				else
@@ -98,7 +99,7 @@ namespace ClassicTilestorm
 		{
 			if (gameObject == null || definition == null || IsHD(gameObject)) return;
 
-			var texture = AnimMaterialInfoManager.GetFrameZero(definition.texture) ?? ResolveTexture(definition.texture);
+			var texture = AnimMaterialInfoManager.GetFrameZero(GetPrimaryTextureName(gameObject)) ?? ResolveTexture(definition.texture);
 			var material = MaterialAssets.Find(definition.material);
 			if (!MaterialUtils.IsEmissive(material)) material = null;
 			var emissive = MaterialUtils.EmissiiveColour(material, Color.white * 1.2f);
@@ -144,6 +145,51 @@ namespace ClassicTilestorm
 				return Texture2DAssets.Find(legacyTexture.texture);
 
 			return null;
+		}
+
+		public static string GetPrimaryTextureName(GameObject gameObject)
+		{
+			if (gameObject == null)
+				return null;
+
+			var renderers = gameObject.GetComponentsInChildren<Renderer>(true);
+			for (var i = 0; i < renderers.Length; i++)
+			{
+				var renderer = renderers[i];
+				if (renderer == null)
+					continue;
+
+				var materials = renderer.sharedMaterials;
+				if (materials == null || materials.Length == 0)
+					continue;
+
+				for (var j = 0; j < materials.Length; j++)
+				{
+					var material = materials[j];
+					if (material == null || material.mainTexture == null)
+						continue;
+
+					var textureName = material.mainTexture.name;
+					if (string.IsNullOrWhiteSpace(textureName))
+						continue;
+
+					return NormalizeTextureName(textureName);
+				}
+			}
+
+			return null;
+		}
+
+		private static string NormalizeTextureName(string name)
+		{
+			if (string.IsNullOrWhiteSpace(name))
+				return name;
+
+			var clean = System.IO.Path.GetFileNameWithoutExtension(name.Trim());
+			const string suffix = " (Instance)";
+			return clean.EndsWith(suffix, System.StringComparison.OrdinalIgnoreCase)
+				? clean.Substring(0, clean.Length - suffix.Length)
+				: clean;
 		}
 
 		private static bool ApplyStaticVisuals(GameObject gameObject, Texture2D texture, Material replacement)
