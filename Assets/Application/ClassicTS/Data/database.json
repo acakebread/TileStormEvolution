@@ -40242,7 +40242,6 @@
       "id": "3ExQpJ",
       "name": "slide and roll",
       "model": "tile_quiz",
-      "texture": "Chalk Test",
       "flags": "Move, Roll"
     },
     {
@@ -40874,27 +40873,14 @@
       "model": "eggbot_jun"
     },
     {
-      "id": "836V9t",
-      "name": "Texture Test",
-      "model": "tile_flat",
-      "texture": "Texture Test"
-    },
-    {
       "id": "42vJcJ",
       "name": "coin",
       "model": "coin"
     },
     {
-      "id": "176q90",
-      "name": "Alpha Test",
-      "model": "editor_quad",
-      "texture": "Alpha Test"
-    },
-    {
       "id": "4nKU0M",
       "name": "debug tile",
-      "model": "debug_tile",
-      "texture": "Marker"
+      "model": "debug_tile"
     },
     {
       "id": "603Cit",
@@ -40916,80 +40902,6 @@
       "name": "test no nav slide",
       "model": "tile_trans",
       "flags": "Move"
-    }
-  ],
-  "textures": [
-    {
-      "id": "Default"
-    },
-    {
-      "id": "Marker",
-      "texture": "Marker"
-    },
-    {
-      "id": "Industrial",
-      "texture": "Industrial"
-    },
-    {
-      "id": "Egypt",
-      "texture": "Egypt"
-    },
-    {
-      "id": "Caustic",
-      "texture": "Caustic"
-    },
-    {
-      "id": "Eggbot Default",
-      "texture": "Eggbot Default"
-    },
-    {
-      "id": "Eggbot Medieval",
-      "texture": "Eggbot Medieval"
-    },
-    {
-      "id": "Eggbot Jungle",
-      "texture": "Eggbot Jungle"
-    },
-    {
-      "id": "Eggbot Industrial",
-      "texture": "Eggbot Industrial"
-    },
-    {
-      "id": "Eggbot Egypt",
-      "texture": "Eggbot Egypt"
-    },
-    {
-      "id": "Toxic Pipes",
-      "texture": "Toxic Pipes"
-    },
-    {
-      "id": "Mud Pit",
-      "texture": "Mud Pit"
-    },
-    {
-      "id": "jun_mudpool",
-      "texture": "jun_mudpool"
-    },
-    {
-      "id": "Alpha Test",
-      "alphaTest": true,
-      "texture": "lock_tick"
-    },
-    {
-      "id": "Chalk Test",
-      "texture": "chalk 512x512"
-    },
-    {
-      "id": "Texture Test",
-      "texture": "Marker"
-    },
-    {
-      "id": "Rainbow",
-      "texture": "rainbow"
-    },
-    {
-      "id": "coin",
-      "texture": "coin"
     }
   ]
 }
