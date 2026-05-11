@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 434ede3c4379427282fde50332a2e255, type: 3}
+  m_Name: Mud Pit
+  m_EditorClassIdentifier: 
+  id: Mud Pit
+  alphaTest: 0
+  frames:
+  - texture: {fileID: 2800000, guid: 91ff96cff62bf0343937db0e383e92af, type: 3}
+    duration: 0.1
+  - texture: {fileID: 2800000, guid: 49fe90c2403cd7f4cbb82f3fb8fb8a89, type: 3}
+    duration: 0.1
+  - texture: {fileID: 2800000, guid: 455e6b8f8e778bf4cb8627064be55cce, type: 3}
+    duration: 0.1
+  - texture: {fileID: 2800000, guid: 2663a21db80b3754ea2d82202aa7104f, type: 3}
+    duration: 0.1
+  - texture: {fileID: 2800000, guid: 42fcba2a927828c40ac8e1c58dd51ca8, type: 3}
+    duration: 0.1
+  - texture: {fileID: 2800000, guid: bea4fbeed7eb22748b993d32ebd3e533, type: 3}
+    duration: 0.1
+  - texture: {fileID: 2800000, guid: 115b5a74fcd06f84ead3e8dbbc0a6202, type: 3}
+    duration: 0.1

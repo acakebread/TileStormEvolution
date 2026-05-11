@@ -23,23 +23,39 @@ namespace ClassicTilestorm
 			if (null == gameObject)
 				return null;
 
-			//temporary provision to suppress texture replacement on loaded HD models
-			var renderers = gameObject.GetComponentsInChildren<MeshRenderer>(true);
-
 			//Apply Definition Properties
 			var replacement = MaterialAssets.Find(definition.material);
+			var animMaterialName = GetPrimaryTextureName(gameObject);
 
 			// Apply texture animation and / or material replacement
-			var textureAnimator = gameObject.AddComponent<TextureSetAnimator>();
+			var appliedVisuals = false;
 			if (!IsHD(gameObject))
 			{
-				var sequence = TextureSequenceManager.GetTextureSequence(definition.texture);
-				textureAnimator.Initialize(sequence, replacement);
+				var sequence = AnimMaterialInfoManager.GetAnimMaterial(animMaterialName);
+				if (sequence != null)
+					appliedVisuals = AnimMaterialManager.Apply(gameObject, sequence, replacement);
+				else
+				{
+					var texture = ResolveTexture(definition.texture);
+					if (texture != null || replacement != null)
+						appliedVisuals = ApplyStaticVisuals(gameObject, texture, replacement);
+				}
 			}
 
-			// Point light only if emissive and we have an animator (meaning texture was applied) - placeholder only
-			if (null != textureAnimator && textureAnimator.IsEmissive)
-				LightFactory.AddPointLight(gameObject, replacement.GetColor("_EmissionColor"));
+			//// Point light only if emissive and we have an animator (meaning texture was applied) - placeholder only
+			//if (appliedVisuals && MaterialUtils.IsEmissive(replacement))
+			//	LightFactory.AddPointLight(gameObject, replacement.GetColor("_EmissionColor"));
+
+			// === UPDATED POINT LIGHT LOGIC ===
+			if (appliedVisuals)
+			{
+				Color? emissiveColor = GetEmissiveColor(gameObject);
+				if (emissiveColor.HasValue)
+				{
+					LightFactory.AddPointLight(gameObject, emissiveColor.Value);
+				}
+			}
+
 
 			// Add collider for interactive tiles
 			if (definition.Drag)
@@ -94,7 +110,7 @@ namespace ClassicTilestorm
 		{
 			if (gameObject == null || definition == null || IsHD(gameObject)) return;
 
-			var texture = TextureSequenceManager.GetFrameZero(definition.texture);
+			var texture = AnimMaterialInfoManager.GetFrameZero(GetPrimaryTextureName(gameObject)) ?? ResolveTexture(definition.texture);
 			var material = MaterialAssets.Find(definition.material);
 			if (!MaterialUtils.IsEmissive(material)) material = null;
 			var emissive = MaterialUtils.EmissiiveColour(material, Color.white * 1.2f);
@@ -128,6 +144,129 @@ namespace ClassicTilestorm
 			}
 
 			renderer.materials = replacementArray;
+		}
+
+		public static Texture2D ResolveTexture(string id)
+		{
+			var legacyTexture = ResourceManager.GetTextureInfo(id);
+			if (legacyTexture == null)
+				return Texture2DAssets.Find(id);
+
+			if (!string.IsNullOrEmpty(legacyTexture.texture))
+				return Texture2DAssets.Find(legacyTexture.texture);
+
+			return null;
+		}
+
+		public static string GetPrimaryTextureName(GameObject gameObject)
+		{
+			if (gameObject == null)
+				return null;
+
+			var renderers = gameObject.GetComponentsInChildren<Renderer>(true);
+			for (var i = 0; i < renderers.Length; i++)
+			{
+				var renderer = renderers[i];
+				if (renderer == null)
+					continue;
+
+				var materials = renderer.sharedMaterials;
+				if (materials == null || materials.Length == 0)
+					continue;
+
+				for (var j = 0; j < materials.Length; j++)
+				{
+					var material = materials[j];
+					if (material == null || material.mainTexture == null)
+						continue;
+
+					var textureName = material.mainTexture.name;
+					if (string.IsNullOrWhiteSpace(textureName))
+						continue;
+
+					return NormalizeTextureName(textureName);
+				}
+			}
+
+			return null;
+		}
+
+		private static string NormalizeTextureName(string name)
+		{
+			if (string.IsNullOrWhiteSpace(name))
+				return name;
+
+			var clean = System.IO.Path.GetFileNameWithoutExtension(name.Trim());
+			const string suffix = " (Instance)";
+			return clean.EndsWith(suffix, System.StringComparison.OrdinalIgnoreCase)
+				? clean.Substring(0, clean.Length - suffix.Length)
+				: clean;
+		}
+
+		private static bool ApplyStaticVisuals(GameObject gameObject, Texture2D texture, Material replacement)
+		{
+			if (gameObject == null) return false;
+
+			var material = replacement;
+			if (!MaterialUtils.IsEmissive(material)) material = null;
+			var emissive = MaterialUtils.EmissiiveColour(material, Color.white * 1.2f);
+
+			var applied = false;
+			var meshRenderers = gameObject.GetComponentsInChildren<MeshRenderer>(true);
+			for (var i = 0; i < meshRenderers.Length; i++)
+			{
+				ReplaceRendererMaterials(meshRenderers[i], texture, replacement, emissive);
+				applied = true;
+			}
+
+			var skinnedRenderers = gameObject.GetComponentsInChildren<SkinnedMeshRenderer>(true);
+			for (var i = 0; i < skinnedRenderers.Length; i++)
+			{
+				ReplaceRendererMaterials(skinnedRenderers[i], texture, replacement, emissive);
+				applied = true;
+			}
+
+			return applied;
+		}
+
+		/// <summary>
+		/// Checks the final materials on the GameObject (including AnimMaterialInstance) 
+		/// to see if any are emissive and returns the emission color if found.
+		/// </summary>
+		private static Color? GetEmissiveColor(GameObject gameObject)
+		{
+			if (gameObject == null) return null;
+
+			// 1. Check AnimMaterialBinding first (most common now)
+			var binding = gameObject.GetComponent<AnimMaterialBinding>();
+			if (binding != null)
+			{
+				foreach (var animMat in binding.GetMaterials()) // You'll need to expose this or access _materials
+				{
+					if (animMat != null && animMat.IsEmissive)
+					{
+						return animMat.Material.GetColor("_EmissionColor");
+					}
+				}
+			}
+
+			// 2. Fallback: Check all renderers directly
+			var renderers = gameObject.GetComponentsInChildren<Renderer>(true);
+			foreach (var renderer in renderers)
+			{
+				foreach (var mat in renderer.sharedMaterials)
+				{
+					if (mat == null) continue;
+
+					if (mat.IsKeywordEnabled("_EMISSION") ||
+						mat.GetColor("_EmissionColor").maxColorComponent > 0.01f)
+					{
+						return mat.GetColor("_EmissionColor");
+					}
+				}
+			}
+
+			return null;
 		}
 	}
 }

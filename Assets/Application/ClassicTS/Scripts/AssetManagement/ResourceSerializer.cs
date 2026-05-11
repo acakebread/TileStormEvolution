@@ -88,16 +88,12 @@ namespace ClassicTilestorm
 						: Array.Empty<Definition>(),
 
 					textures = root["textures"] != null
-						? serializer.Deserialize<TextureSequence[]>(root["textures"].CreateReader())
-						: Array.Empty<TextureSequence>(),
-
-					buttons = root["buttons"] != null
-						? serializer.Deserialize<Legacy.Button[]>(root["buttons"].CreateReader())
-						: Array.Empty<Legacy.Button>()
+						? serializer.Deserialize<TextureInfo[]>(root["textures"].CreateReader())
+						: Array.Empty<TextureInfo>(),
 				};
 
-				if (data.maps == null || data.definitions == null || data.textures == null ||
-					data.maps.Length == 0 || data.definitions.Length == 0 || data.textures.Length == 0)
+				if (data.maps == null || data.definitions == null ||
+					data.maps.Length == 0 || data.definitions.Length == 0)
 				{
 					Debug.LogError("ResourceSerializer: Database failed validation");
 					return null;
@@ -123,26 +119,28 @@ namespace ClassicTilestorm
 				mapsToSave = data.maps
 					.Select(m => CreateCroppedCopy(m))
 					.ToArray();
-
-				Debug.Log($"Saving database with {mapsToSave.Length} cropped maps");
 			}
-
-			var saveData = new DatabaseData
-			{
-				maps = mapsToSave,
-				definitions = data.definitions,
-				textures = data.textures,
-				buttons = data.buttons
-			};
 
 			var settings = new JsonSerializerSettings
 			{
 				NullValueHandling = NullValueHandling.Ignore,
 				Formatting = verbose ? Formatting.Indented : Formatting.None,
-				Converters = { new DatabaseMapConverter() }  // ← add this
+				Converters = { new DatabaseMapConverter() }
 			};
 
-			string json = JsonConvert.SerializeObject(saveData, settings);
+			// Build JObject manually so we can skip empty buttons array
+			var root = new JObject();
+
+			if (mapsToSave != null && mapsToSave.Length > 0)
+				root["maps"] = JArray.FromObject(mapsToSave, JsonSerializer.Create(settings));
+
+			if (data.definitions != null && data.definitions.Length > 0)
+				root["definitions"] = JArray.FromObject(data.definitions, JsonSerializer.Create(settings));
+
+			if (data.textures != null && data.textures.Length > 0)
+				root["textures"] = JArray.FromObject(data.textures, JsonSerializer.Create(settings));
+
+			string json = root.ToString(verbose ? Formatting.Indented : Formatting.None);
 
 			string path = string.IsNullOrEmpty(filepath)
 				? Path.Combine(Application.persistentDataPath, "database.json")
@@ -151,7 +149,10 @@ namespace ClassicTilestorm
 			EnsureFolder(Path.GetDirectoryName(path));
 			File.WriteAllText(path, json);
 
-			Debug.Log($"Database saved {(cropAllMaps ? "with all maps cropped" : "preserving original sizes")} → {path}");
+			Debug.Log($"Database saved → {path} " +
+					  $"(maps: {mapsToSave?.Length ?? 0}, " +
+					  $"definitions: {data.definitions?.Length ?? 0}, " +
+					  $"textures: {data.textures?.Length ?? 0}");
 		}
 
 		public static void ImportAtomicMap(string filepath)

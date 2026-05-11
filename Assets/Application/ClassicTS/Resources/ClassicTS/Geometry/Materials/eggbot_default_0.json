@@ -1,0 +1,12 @@
+{
+  "frames": [
+    { "texture": "eggbot_default_0", "duration": 3 },
+    { "texture": "eggbot_default_1", "duration": 0.05 },
+    { "texture": "eggbot_default_2", "duration": 0.1 },
+    { "texture": "eggbot_default_1", "duration": 0.05 },
+    { "texture": "eggbot_default_0", "duration": 5 },
+    { "texture": "eggbot_default_1", "duration": 0.05 },
+    { "texture": "eggbot_default_2", "duration": 0.15 },
+    { "texture": "eggbot_default_1", "duration": 0.05 }
+  ]
+}
