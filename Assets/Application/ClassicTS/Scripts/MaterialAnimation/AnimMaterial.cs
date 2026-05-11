@@ -24,13 +24,10 @@ namespace ClassicTilestorm
 	public class AnimMaterial
 	{
 		public string id;
-		public string name { get => id; }//future replacement for id - just the display name in the editor
+		public string name { get => id; }
 		public bool alphaTest = false;
 
-		// Canonical single texture (shorthand)
 		public string texture;
-
-		// Only used for real animated sequences
 		public TextureFrame[] frames;
 
 		private TextureFrame[] _resolvedFrames;
@@ -54,10 +51,7 @@ namespace ClassicTilestorm
 			}
 		}
 
-		internal void SetResolvedFrames(TextureFrame[] resolved)
-		{
-			_resolvedFrames = resolved;
-		}
+		internal void SetResolvedFrames(TextureFrame[] resolved) => _resolvedFrames = resolved;
 
 		[JsonIgnore] public Texture2D FirstTexture => ResolvedFrames.Length > 0 ? ResolvedFrames[0].texture : null;
 	}
@@ -70,7 +64,7 @@ namespace ClassicTilestorm
 		private float _timer;
 
 		public Material Material { get; }
-		public bool IsEmissive { get; }
+		public bool IsEmissive { get; private set; }
 		public bool IsAnimated => _frames != null && _frames.Length > 1;
 
 		public event Action<Texture2D> OnTextureChanged;
@@ -78,7 +72,10 @@ namespace ClassicTilestorm
 		internal AnimMaterialInstance(AnimMaterial definition, Material sourceMaterial, Material replacementMaterial)
 		{
 			_frames = definition?.ResolvedFrames ?? Array.Empty<TextureFrame>();
-			Material = new Material(replacementMaterial != null ? replacementMaterial : sourceMaterial)
+
+			// Create material
+			Material baseMat = replacementMaterial != null ? replacementMaterial : sourceMaterial;
+			Material = new Material(baseMat)
 			{
 				name = BuildName(definition, sourceMaterial, replacementMaterial),
 				hideFlags = HideFlags.DontSave
@@ -90,12 +87,43 @@ namespace ClassicTilestorm
 				Material.mainTextureScale = sourceMaterial.mainTextureScale;
 			}
 
-			IsEmissive = MaterialUtils.IsEmissive(Material);
-			_animateEmissionMap = replacementMaterial != null && IsEmissive;
+			// === IMPROVED EMISSIVE DETECTION ===
+			DetectAndSetupEmissive();
+
+			_animateEmissionMap = IsEmissive;
 			if (IsEmissive)
 				Material.EnableKeyword("_EMISSION");
 
 			ApplyFrame(0);
+		}
+
+		private void DetectAndSetupEmissive()
+		{
+			if (Material == null)
+			{
+				IsEmissive = false;
+				return;
+			}
+
+			// Check 1: Already has strong emission color
+			Color emissionColor = Material.GetColor("_EmissionColor");
+			bool hasEmissionColor = emissionColor.maxColorComponent > 0.01f;
+
+			// Check 2: Emission keyword or map
+			bool hasEmissionKeyword = Material.IsKeywordEnabled("_EMISSION");
+			bool hasEmissionMap = Material.GetTexture("_EmissionMap") != null;
+
+			IsEmissive = hasEmissionColor || hasEmissionKeyword || hasEmissionMap;
+
+			// If we found emission but intensity is low, boost it (important for OBJ imported materials)
+			if (IsEmissive && emissionColor.maxColorComponent < 1.0f)
+			{
+				Material.SetColor("_EmissionColor", emissionColor * 1.5f); // Boost if needed
+			}
+
+			// Make sure keyword is enabled
+			if (IsEmissive)
+				Material.EnableKeyword("_EMISSION");
 		}
 
 		public void Update(float deltaTime)
@@ -113,12 +141,14 @@ namespace ClassicTilestorm
 
 		public void ApplyFrame(int index)
 		{
-			if (Material == null || _frames == null || index < 0 || index >= _frames.Length) return;
+			if (Material == null || _frames == null || index < 0 || index >= _frames.Length)
+				return;
 
 			var texture = _frames[index].texture;
 			if (texture == null) return;
 
 			Material.mainTexture = texture;
+
 			if (_animateEmissionMap)
 				Material.SetTexture("_EmissionMap", texture);
 
@@ -135,7 +165,9 @@ namespace ClassicTilestorm
 
 		private static string BuildName(AnimMaterial definition, Material sourceMaterial, Material replacementMaterial)
 		{
-			var sourceName = replacementMaterial != null ? replacementMaterial.name : sourceMaterial != null ? sourceMaterial.name : "Material";
+			var sourceName = replacementMaterial != null ? replacementMaterial.name
+						 : sourceMaterial != null ? sourceMaterial.name
+						 : "Material";
 			return definition != null ? $"{sourceName} [{definition.id} AnimMaterial]" : $"{sourceName} [AnimMaterial]";
 		}
 	}

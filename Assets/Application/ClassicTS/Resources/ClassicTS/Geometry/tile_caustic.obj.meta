@@ -3,7 +3,12 @@ guid: 5d0e0d8e8e2b4d68a1f4e0a0a9dfc001
 ModelImporter:
   serializedVersion: 24200
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: tile_caustic
+    second: {fileID: 2100000, guid: 37d669498183a12438fed9d871eb5b8c, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0

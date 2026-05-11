@@ -40381,8 +40381,7 @@
     {
       "id": "2XfyDx",
       "name": "ind caustic",
-      "model": "tile_caustic",
-      "material": "toxic"
+      "model": "tile_caustic"
     },
     {
       "id": "3tNMCV",

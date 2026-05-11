@@ -6,6 +6,7 @@ namespace ClassicTilestorm
 	public sealed class AnimMaterialBinding : MonoBehaviour
 	{
 		private readonly List<AnimMaterialInstance> _materials = new();
+		public IEnumerable<AnimMaterialInstance> GetMaterials() => _materials;
 
 		internal void Add(AnimMaterialInstance material)
 		{

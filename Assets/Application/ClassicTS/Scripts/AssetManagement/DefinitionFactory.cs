@@ -42,9 +42,20 @@ namespace ClassicTilestorm
 				}
 			}
 
-			// Point light only if emissive and we have an animator (meaning texture was applied) - placeholder only
-			if (appliedVisuals && MaterialUtils.IsEmissive(replacement))
-				LightFactory.AddPointLight(gameObject, replacement.GetColor("_EmissionColor"));
+			//// Point light only if emissive and we have an animator (meaning texture was applied) - placeholder only
+			//if (appliedVisuals && MaterialUtils.IsEmissive(replacement))
+			//	LightFactory.AddPointLight(gameObject, replacement.GetColor("_EmissionColor"));
+
+			// === UPDATED POINT LIGHT LOGIC ===
+			if (appliedVisuals)
+			{
+				Color? emissiveColor = GetEmissiveColor(gameObject);
+				if (emissiveColor.HasValue)
+				{
+					LightFactory.AddPointLight(gameObject, emissiveColor.Value);
+				}
+			}
+
 
 			// Add collider for interactive tiles
 			if (definition.Drag)
@@ -216,6 +227,46 @@ namespace ClassicTilestorm
 			}
 
 			return applied;
+		}
+
+		/// <summary>
+		/// Checks the final materials on the GameObject (including AnimMaterialInstance) 
+		/// to see if any are emissive and returns the emission color if found.
+		/// </summary>
+		private static Color? GetEmissiveColor(GameObject gameObject)
+		{
+			if (gameObject == null) return null;
+
+			// 1. Check AnimMaterialBinding first (most common now)
+			var binding = gameObject.GetComponent<AnimMaterialBinding>();
+			if (binding != null)
+			{
+				foreach (var animMat in binding.GetMaterials()) // You'll need to expose this or access _materials
+				{
+					if (animMat != null && animMat.IsEmissive)
+					{
+						return animMat.Material.GetColor("_EmissionColor");
+					}
+				}
+			}
+
+			// 2. Fallback: Check all renderers directly
+			var renderers = gameObject.GetComponentsInChildren<Renderer>(true);
+			foreach (var renderer in renderers)
+			{
+				foreach (var mat in renderer.sharedMaterials)
+				{
+					if (mat == null) continue;
+
+					if (mat.IsKeywordEnabled("_EMISSION") ||
+						mat.GetColor("_EmissionColor").maxColorComponent > 0.01f)
+					{
+						return mat.GetColor("_EmissionColor");
+					}
+				}
+			}
+
+			return null;
 		}
 	}
 }
