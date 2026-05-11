@@ -40494,28 +40494,24 @@
       "id": "7J4P6c",
       "name": "egy tile static crossroads",
       "model": "egy_tile_crossroads_static",
-      "texture": "Egypt",
       "connections": "NSEW"
     },
     {
       "id": "DAUKG9",
       "name": "egy tile static straight",
       "model": "egy_tile_straight_static",
-      "texture": "Egypt",
       "connections": "NS"
     },
     {
       "id": "7kQ4Yu",
       "name": "egy tile static corner",
       "model": "egy_tile_corner_static",
-      "texture": "Egypt",
       "connections": "NE"
     },
     {
       "id": "3m9XNT",
       "name": "egy tile crossroads",
       "model": "egy_tile_crossroads",
-      "texture": "Egypt",
       "flags": "Move",
       "connections": "NSEW"
     },
@@ -40523,7 +40519,6 @@
       "id": "APAQMR",
       "name": "egy tile straight",
       "model": "egy_tile_straight",
-      "texture": "Egypt",
       "flags": "Move",
       "connections": "NS"
     },
@@ -40531,7 +40526,6 @@
       "id": "CNKtmM",
       "name": "egy tile corner corner",
       "model": "egy_tile_corner",
-      "texture": "Egypt",
       "flags": "Move",
       "connections": "NE"
     },
@@ -40857,8 +40851,7 @@
     {
       "id": "AMNtxe",
       "name": "Eggbot Default",
-      "model": "eggbot_default",
-      "texture": "Eggbot Default"
+      "model": "eggbot_default"
     },
     {
       "id": "443D4h",
@@ -40868,20 +40861,17 @@
     {
       "id": "528y34",
       "name": "Eggbot Egypt",
-      "model": "eggbot_egy",
-      "texture": "Eggbot Egypt"
+      "model": "eggbot_egy"
     },
     {
       "id": "4tEvrp",
       "name": "Eggbot Medieval",
-      "model": "eggbot_med",
-      "texture": "Eggbot Medieval"
+      "model": "eggbot_med"
     },
     {
       "id": "A44yj9",
       "name": "Eggbot Jungle",
-      "model": "eggbot_jun",
-      "texture": "Eggbot Jungle"
+      "model": "eggbot_jun"
     },
     {
       "id": "836V9t",
@@ -40909,26 +40899,22 @@
     {
       "id": "603Cit",
       "name": "legacy pyramid",
-      "model": "jun_tile_boundary_pyramid",
-      "texture": "Mud Pit"
+      "model": "jun_tile_boundary_pyramid"
     },
     {
       "id": "74Y092",
       "name": "ind tile boundary 2",
-      "model": "ind_tile_boundary_02",
-      "texture": "Toxic Pipes"
+      "model": "ind_tile_boundary_02"
     },
     {
       "id": "1u4HhK",
       "name": "ind tile boundary 3",
-      "model": "ind_tile_boundary_03",
-      "texture": "coin"
+      "model": "ind_tile_boundary_03"
     },
     {
       "id": "AEDTuj",
       "name": "test no nav slide",
       "model": "tile_trans",
-      "texture": "Marker",
       "flags": "Move"
     }
   ],
