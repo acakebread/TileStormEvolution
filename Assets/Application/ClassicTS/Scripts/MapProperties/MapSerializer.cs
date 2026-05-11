@@ -281,7 +281,8 @@ namespace ClassicTilestorm
 				//	parts.Add($"angle:{v.angle:F1}");
 				if (Math.Abs(v.angle) > 0.001f)
 				{
-					string angleStr = FormatAngle(v.angle);
+					//string angleStr = FormatAngle(v.angle);
+					string angleStr = v.angle.ToCleanString();
 					parts.Add($"angle:{angleStr}");
 				}
 
@@ -509,20 +510,20 @@ namespace ClassicTilestorm
 			writer.WriteValue("ClassicTilestorm");
 		}
 
-		private static string FormatAngle(float angle)
-		{
-			const float EPSILON = 0.0001f; // tolerance for floating point precision
+		//private static string FormatAngle(float angle)
+		//{
+		//	const float EPSILON = 0.0001f; // tolerance for floating point precision
 
-			// Check if it's very close to a whole number
-			float rounded = Mathf.Round(angle);
-			if (Mathf.Abs(angle - rounded) < EPSILON)
-			{
-				return rounded.ToString("0", System.Globalization.CultureInfo.InvariantCulture);
-			}
+		//	// Check if it's very close to a whole number
+		//	float rounded = Mathf.Round(angle);
+		//	if (Mathf.Abs(angle - rounded) < EPSILON)
+		//	{
+		//		return rounded.ToString("0", System.Globalization.CultureInfo.InvariantCulture);
+		//	}
 
-			// Otherwise keep one decimal place
-			return angle.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
-		}
+		//	// Otherwise keep one decimal place
+		//	return angle.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
+		//}
 
 		private static bool IsSuppressedInDatabaseFormat(string propertyName)
 		{
