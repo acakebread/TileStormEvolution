@@ -277,8 +277,13 @@ namespace ClassicTilestorm
 
 				var parts = new List<string> { HTB50Settings.ToString(v.hash) };
 
+				//if (Math.Abs(v.angle) > 0.001f)
+				//	parts.Add($"angle:{v.angle:F1}");
 				if (Math.Abs(v.angle) > 0.001f)
-					parts.Add($"angle:{v.angle:F1}");
+				{
+					string angleStr = FormatAngle(v.angle);
+					parts.Add($"angle:{angleStr}");
+				}
 
 				if (v.delta.sqrMagnitude > 0.000001f)
 				{
@@ -502,6 +507,21 @@ namespace ClassicTilestorm
 
 			writer.WritePropertyName("exportedFrom");
 			writer.WriteValue("ClassicTilestorm");
+		}
+
+		private static string FormatAngle(float angle)
+		{
+			const float EPSILON = 0.0001f; // tolerance for floating point precision
+
+			// Check if it's very close to a whole number
+			float rounded = Mathf.Round(angle);
+			if (Mathf.Abs(angle - rounded) < EPSILON)
+			{
+				return rounded.ToString("0", System.Globalization.CultureInfo.InvariantCulture);
+			}
+
+			// Otherwise keep one decimal place
+			return angle.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
 		}
 
 		private static bool IsSuppressedInDatabaseFormat(string propertyName)
