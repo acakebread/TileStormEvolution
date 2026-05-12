@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.IO;
 using Newtonsoft.Json;
 using UnityEngine;
@@ -74,31 +74,35 @@ namespace MassiveHadronLtd
 		private void CreateAndExportMaterial()
 		{
 			Material sourceMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-			sourceMat.name = "TestToxicMaterial";
+			sourceMat.name = "TestMaterial";
 
-			// Much more reasonable values
-			sourceMat.color = new Color(0.1f, 0.8f, 0.2f, 1f);        // nice green base
+			// Reasonable base color (not too bright)
+			sourceMat.color = new Color(0.4f, 0.8f, 0.4f, 1f);
 			sourceMat.SetFloat("_Smoothness", 0.7f);
 			sourceMat.SetFloat("_Metallic", 0.1f);
-
-			// Gentle emission
-			sourceMat.EnableKeyword("_EMISSION");
-			sourceMat.SetColor("_EmissionColor", new Color(0.2f, 1.2f, 0.3f, 1f)); // much softer
 
 			// Load texture
 			Texture2D testTex = Resources.Load<Texture2D>(TestTextureName);
 			if (testTex != null)
 			{
 				sourceMat.SetTexture("_BaseMap", testTex);
-				sourceMat.SetTexture("_MainTex", testTex);   // some shaders still use this
+				sourceMat.SetTexture("_MainTex", testTex);
 				sourceMat.mainTexture = testTex;
+
+				// Set same texture as emission map
+				sourceMat.SetTexture("_EmissionMap", testTex);
 			}
 			else
 			{
 				Debug.LogWarning($"Could not find Resources/{TestTextureName}.png");
 			}
 
-			var portable = new PortableMaterial(sourceMat, "TestToxicMaterial");
+			// Enable emission with moderate intensity
+			sourceMat.EnableKeyword("_EMISSION");
+			sourceMat.SetColor("_EmissionColor", new Color(0.6f, 1.2f, 0.6f, 1f));
+			sourceMat.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
+
+			var portable = new PortableMaterial(sourceMat, "TestMaterial");
 
 			// Apply to cube
 			if (testCube != null)
@@ -112,7 +116,7 @@ namespace MassiveHadronLtd
 			string json = JsonConvert.SerializeObject(portable, Formatting.Indented);
 			File.WriteAllText(SavePath, json);
 
-			Debug.Log($"Material exported successfully -> {SavePath}");
+			Debug.Log($"Material exported successfully → {SavePath}");
 			Debug.Log($"Texture used: {(testTex != null ? testTex.name : "none")}");
 		}
 
@@ -157,6 +161,7 @@ namespace MassiveHadronLtd
 			{
 				var mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
 				mat.color = Color.gray;
+				mat.globalIlluminationFlags = MaterialGlobalIlluminationFlags.EmissiveIsBlack;
 				currentMaterial = mat;
 				ApplyMaterialToCube(mat);
 			}

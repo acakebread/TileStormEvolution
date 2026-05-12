@@ -33,7 +33,9 @@ namespace MassiveHadronLtd
 			shader = mat.shader?.name ?? "Universal Render Pipeline/Lit";
 			renderQueue = mat.renderQueue;
 
-			enabledKeywords = mat.shaderKeywords?.Where(k => !string.IsNullOrEmpty(k)).ToList() ?? new List<string>();
+			enabledKeywords = mat.shaderKeywords?
+				.Where(k => !string.IsNullOrEmpty(k) && mat.IsKeywordEnabled(k))
+				.ToList() ?? new List<string>();
 
 			properties.Clear();
 
@@ -81,19 +83,24 @@ namespace MassiveHadronLtd
 							break;
 					}
 
-					if (ShouldSerialize(prop, propType))
+					if (ShouldSerialize(prop, propType, mat))
 						properties.Add(prop);
 				}
 				catch { }
 			}
 		}
 
-		private bool ShouldSerialize(PortableProperty p, UnityEngine.Rendering.ShaderPropertyType type)
+		private bool ShouldSerialize(PortableProperty p, UnityEngine.Rendering.ShaderPropertyType type, Material mat)
 		{
 			if (string.IsNullOrEmpty(p.name)) return false;
 			if (!string.IsNullOrEmpty(p.texture)) return true;
-			if (type == UnityEngine.Rendering.ShaderPropertyType.Color) return true;
-			if (Mathf.Abs(p.floatValue) > 0.001f) return true;
+
+			if (type == UnityEngine.Rendering.ShaderPropertyType.Color)
+				return p.colorR != 1f || p.colorG != 1f || p.colorB != 1f || p.colorA != 1f;
+
+			if (Mathf.Abs(p.floatValue) > 0.001f && Mathf.Abs(p.floatValue - 1f) > 0.001f)
+				return true;
+
 			return false;
 		}
 
@@ -116,15 +123,12 @@ namespace MassiveHadronLtd
 		{
 			if (target == null) return;
 
-			// Textures first
 			foreach (var p in properties.Where(p => !string.IsNullOrEmpty(p.texture)))
 				p.ApplyTo(target);
 
-			// Other properties
 			foreach (var p in properties.Where(p => string.IsNullOrEmpty(p.texture)))
 				p.ApplyTo(target);
 
-			// Keywords
 			if (enabledKeywords != null)
 			{
 				foreach (var kw in target.shaderKeywords)
@@ -133,6 +137,35 @@ namespace MassiveHadronLtd
 				foreach (var kw in enabledKeywords)
 					if (!string.IsNullOrEmpty(kw))
 						target.EnableKeyword(kw);
+			}
+
+			ApplyEmissionState(target);
+		}
+
+		private static void ApplyEmissionState(Material target)
+		{
+			if (target == null)
+				return;
+
+			bool hasEmissionKeyword = target.IsKeywordEnabled("_EMISSION");
+			bool hasEmissionMap = target.HasProperty("_EmissionMap") && target.GetTexture("_EmissionMap") != null;
+			bool hasEmissionColor = target.HasProperty("_EmissionColor") && target.GetColor("_EmissionColor").maxColorComponent > 0.001f;
+			bool emissive = hasEmissionKeyword || hasEmissionMap || hasEmissionColor;
+
+			if (emissive)
+			{
+				target.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
+				if (target.HasProperty("_EmissionColor"))
+				{
+					Color col = target.GetColor("_EmissionColor");
+					target.SetColor("_EmissionColor", col);
+				}
+				target.EnableKeyword("_EMISSION");
+			}
+			else
+			{
+				target.globalIlluminationFlags = MaterialGlobalIlluminationFlags.EmissiveIsBlack;
+				target.DisableKeyword("_EMISSION");
 			}
 		}
 	}
@@ -165,15 +198,12 @@ namespace MassiveHadronLtd
 					if (tex != null)
 					{
 						mat.SetTexture(name, tex);
-
-						// Critical sync for URP
 						if (name == "_BaseMap" || name == "_MainTex")
 						{
 							mat.mainTexture = tex;
 							if (name == "_BaseMap") mat.SetTexture("_MainTex", tex);
 							else mat.SetTexture("_BaseMap", tex);
 						}
-
 						mat.SetTextureScale(name, new Vector2(textureScaleX, textureScaleY));
 						mat.SetTextureOffset(name, new Vector2(textureOffsetX, textureOffsetY));
 					}

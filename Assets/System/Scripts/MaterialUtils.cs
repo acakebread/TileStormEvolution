@@ -736,16 +736,23 @@ namespace MassiveHadronLtd
 		{
 			if (mat == null) return;
 
-			var shader = mat.shader;
+			bool emissive =
+				mat.IsKeywordEnabled("_EMISSION") ||
+				(mat.HasProperty("_EmissionMap") && mat.GetTexture("_EmissionMap") != null) ||
+				(mat.HasProperty("_EmissionColor") && mat.GetColor("_EmissionColor").maxColorComponent > 0.001f);
 
-			// Force emission refresh
+			mat.globalIlluminationFlags = emissive
+				? MaterialGlobalIlluminationFlags.RealtimeEmissive
+				: MaterialGlobalIlluminationFlags.EmissiveIsBlack;
+
+			// 1. Force Emission (this is the most important part)
 			if (mat.HasProperty("_EmissionColor"))
 			{
-				Color col = mat.GetColor("_EmissionColor");
-				mat.SetColor("_EmissionColor", col);
+				Color emission = mat.GetColor("_EmissionColor");
+				mat.SetColor("_EmissionColor", emission);   // write it again
 			}
 
-			// Keep Unity's main texture alias in sync with URP and legacy texture slots.
+			// 2. Sync main texture aliases (very important for URP)
 			if (mat.HasProperty("_BaseMap"))
 			{
 				var baseMap = mat.GetTexture("_BaseMap");
@@ -760,14 +767,22 @@ namespace MassiveHadronLtd
 					mat.mainTexture = mainTex;
 			}
 
-			// Dirty the material to force Unity to re-evaluate
+			if (mat.HasProperty("_EmissionMap"))
+			{
+				var emissionMap = mat.GetTexture("_EmissionMap");
+				if (emissionMap != null)
+					mat.SetTexture("_EmissionMap", emissionMap);
+			}
+
+			// 3. Dirty the material to force Unity to update
 			if (mat.HasProperty("_Surface"))
 				mat.SetFloat("_Surface", mat.GetFloat("_Surface"));
 
 			if (mat.HasProperty("_Smoothness"))
 				mat.SetFloat("_Smoothness", mat.GetFloat("_Smoothness"));
 
-			// Reassign the shader last so Unity rebuilds the internal render state.
+			// 4. Re-assign shader (strongest refresh method)
+			var shader = mat.shader;
 			if (shader != null)
 				mat.shader = shader;
 		}
