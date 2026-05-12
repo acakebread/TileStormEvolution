@@ -99,15 +99,14 @@ namespace MassiveHadronLtd
 
 		public Material ToUnityMaterial()
 		{
-			Material template = Resources.Load<Material>("ForceInclude/URP lit opaque");
-			Material mat = template != null ? new Material(template) : new Material(Shader.Find(shader) ?? Shader.Find("Universal Render Pipeline/Lit"));
-
-			mat.name = name ?? "Portable Material";
-			mat.renderQueue = renderQueue;
+			var shaderObj = Shader.Find(shader) ?? Shader.Find("Universal Render Pipeline/Lit");
+			var mat = new Material(shaderObj)
+			{
+				name = name ?? "Portable Material",
+				renderQueue = renderQueue
+			};
 
 			ApplyTo(mat);
-
-			// Force refresh
 			MaterialUtils.ForceMaterialRefresh(mat);
 
 			return mat;
@@ -117,12 +116,15 @@ namespace MassiveHadronLtd
 		{
 			if (target == null) return;
 
+			// Textures first
 			foreach (var p in properties.Where(p => !string.IsNullOrEmpty(p.texture)))
 				p.ApplyTo(target);
 
+			// Other properties
 			foreach (var p in properties.Where(p => string.IsNullOrEmpty(p.texture)))
 				p.ApplyTo(target);
 
+			// Keywords
 			if (enabledKeywords != null)
 			{
 				foreach (var kw in target.shaderKeywords)
@@ -163,14 +165,15 @@ namespace MassiveHadronLtd
 					if (tex != null)
 					{
 						mat.SetTexture(name, tex);
+
+						// Critical sync for URP
 						if (name == "_BaseMap" || name == "_MainTex")
 						{
 							mat.mainTexture = tex;
-							if (name == "_BaseMap")
-								mat.SetTexture("_MainTex", tex);
-							else
-								mat.SetTexture("_BaseMap", tex);
+							if (name == "_BaseMap") mat.SetTexture("_MainTex", tex);
+							else mat.SetTexture("_BaseMap", tex);
 						}
+
 						mat.SetTextureScale(name, new Vector2(textureScaleX, textureScaleY));
 						mat.SetTextureOffset(name, new Vector2(textureOffsetX, textureOffsetY));
 					}
