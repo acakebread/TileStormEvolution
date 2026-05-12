@@ -77,7 +77,7 @@ namespace MassiveHadronLtd
 			sourceMat.name = "TestMaterial";
 
 			// Reasonable base color (not too bright)
-			sourceMat.color = new Color(0.4f, 0.8f, 0.4f, 1f);
+			sourceMat.color = new Color(0.1f, 0.1f, 0.1f, 1f);
 			sourceMat.SetFloat("_Smoothness", 0.7f);
 			sourceMat.SetFloat("_Metallic", 0.1f);
 
@@ -99,7 +99,7 @@ namespace MassiveHadronLtd
 
 			// Enable emission with moderate intensity
 			sourceMat.EnableKeyword("_EMISSION");
-			sourceMat.SetColor("_EmissionColor", new Color(0.6f, 1.2f, 0.6f, 1f));
+			sourceMat.SetColor("_EmissionColor", new Color(0.1f, 1f, 0.1f, 1f));
 			sourceMat.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
 
 			var portable = new PortableMaterial(sourceMat, "TestMaterial");
