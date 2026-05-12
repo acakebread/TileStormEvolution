@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
-using MassiveHadronLtd;
 using ClassicTilestorm.Assets;
+using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
@@ -23,39 +23,17 @@ namespace ClassicTilestorm
 			if (null == gameObject)
 				return null;
 
-			//Apply Definition Properties
-			var replacement = MaterialAssets.Find(definition.material);
+			// Apply animated material data when present on the prefab/material name.
 			var animMaterialName = GetPrimaryTextureName(gameObject);
+			var sequence = AnimMaterialInfoManager.GetAnimMaterial(animMaterialName);
+			var appliedVisuals = sequence != null && AnimMaterialManager.Apply(gameObject, sequence);
 
-			// Apply texture animation and / or material replacement
-			var appliedVisuals = false;
-			if (!IsHD(gameObject))
-			{
-				var sequence = AnimMaterialInfoManager.GetAnimMaterial(animMaterialName);
-				if (sequence != null)
-					appliedVisuals = AnimMaterialManager.Apply(gameObject, sequence, replacement);
-				else
-				{
-					var texture = ResolveTexture(definition.texture);
-					if (texture != null || replacement != null)
-						appliedVisuals = ApplyStaticVisuals(gameObject, texture, replacement);
-				}
-			}
-
-			//// Point light only if emissive and we have an animator (meaning texture was applied) - placeholder only
-			//if (appliedVisuals && MaterialUtils.IsEmissive(replacement))
-			//	LightFactory.AddPointLight(gameObject, replacement.GetColor("_EmissionColor"));
-
-			// === UPDATED POINT LIGHT LOGIC ===
 			if (appliedVisuals)
 			{
 				Color? emissiveColor = GetEmissiveColor(gameObject);
 				if (emissiveColor.HasValue)
-				{
 					LightFactory.AddPointLight(gameObject, emissiveColor.Value);
-				}
 			}
-
 
 			// Add collider for interactive tiles
 			if (definition.Drag)
@@ -92,70 +70,17 @@ namespace ClassicTilestorm
 			if (gameObject == null)
 				return null;
 
-			ApplySimplifiedVisuals(gameObject, definition);
 			return gameObject;
 		}
 #if DEBUG
 		private class RTTI : MonoBehaviour { public Definition definition; }//debug class so Definition data can be seen in the inspector
 #endif
 
-		//temporary provision to suppress texture replacement on loaded HD models
+		// Preserve the HD detector for future use, but do not gate runtime replacement logic on it.
 		public static bool IsHD(GameObject gameObject)
 		{
 			var meshRenderers = gameObject.GetComponentsInChildren<MeshRenderer>(true);
 			return null != meshRenderers && ((meshRenderers.Length == 1 && meshRenderers[0].sharedMaterials.Length >= 2) || meshRenderers.Length >= 2);
-		}
-
-		private static void ApplySimplifiedVisuals(GameObject gameObject, Definition definition)
-		{
-			if (gameObject == null || definition == null || IsHD(gameObject)) return;
-
-			var texture = AnimMaterialInfoManager.GetFrameZero(GetPrimaryTextureName(gameObject)) ?? ResolveTexture(definition.texture);
-			var material = MaterialAssets.Find(definition.material);
-			if (!MaterialUtils.IsEmissive(material)) material = null;
-			var emissive = MaterialUtils.EmissiiveColour(material, Color.white * 1.2f);
-
-			var meshRenderers = gameObject.GetComponentsInChildren<MeshRenderer>(true);
-			for (int i = 0; i < meshRenderers.Length; i++)
-				ReplaceRendererMaterials(meshRenderers[i], texture, material, emissive);
-
-			var skinnedRenderers = gameObject.GetComponentsInChildren<SkinnedMeshRenderer>(true);
-			for (int i = 0; i < skinnedRenderers.Length; i++)
-				ReplaceRendererMaterials(skinnedRenderers[i], texture, material, emissive);
-		}
-
-		private static void ReplaceRendererMaterials(Renderer renderer, Texture2D texture, Material replacementMaterial, Color emissive)
-		{
-			if (renderer == null) return;
-
-			var sharedMaterials = renderer.sharedMaterials;
-			if (sharedMaterials == null || sharedMaterials.Length == 0) return;
-
-			var replacementArray = new Material[sharedMaterials.Length];
-			for (int i = 0; i < sharedMaterials.Length; i++)
-			{
-				var source = sharedMaterials[i];
-				if (source == null) continue;
-
-				var copy = new Material(source);
-				if (texture) copy.mainTexture = texture;
-				if (replacementMaterial) copy.color = emissive;
-				replacementArray[i] = copy;
-			}
-
-			renderer.materials = replacementArray;
-		}
-
-		public static Texture2D ResolveTexture(string id)
-		{
-			var legacyTexture = ResourceManager.GetTextureInfo(id);
-			if (legacyTexture == null)
-				return Texture2DAssets.Find(id);
-
-			if (!string.IsNullOrEmpty(legacyTexture.texture))
-				return Texture2DAssets.Find(legacyTexture.texture);
-
-			return null;
 		}
 
 		public static string GetPrimaryTextureName(GameObject gameObject)
@@ -203,54 +128,23 @@ namespace ClassicTilestorm
 				: clean;
 		}
 
-		private static bool ApplyStaticVisuals(GameObject gameObject, Texture2D texture, Material replacement)
-		{
-			if (gameObject == null) return false;
-
-			var material = replacement;
-			if (!MaterialUtils.IsEmissive(material)) material = null;
-			var emissive = MaterialUtils.EmissiiveColour(material, Color.white * 1.2f);
-
-			var applied = false;
-			var meshRenderers = gameObject.GetComponentsInChildren<MeshRenderer>(true);
-			for (var i = 0; i < meshRenderers.Length; i++)
-			{
-				ReplaceRendererMaterials(meshRenderers[i], texture, replacement, emissive);
-				applied = true;
-			}
-
-			var skinnedRenderers = gameObject.GetComponentsInChildren<SkinnedMeshRenderer>(true);
-			for (var i = 0; i < skinnedRenderers.Length; i++)
-			{
-				ReplaceRendererMaterials(skinnedRenderers[i], texture, replacement, emissive);
-				applied = true;
-			}
-
-			return applied;
-		}
-
 		/// <summary>
-		/// Checks the final materials on the GameObject (including AnimMaterialInstance) 
-		/// to see if any are emissive and returns the emission color if found.
+		/// Checks whether the final applied materials are emissive and returns the emission color if found.
 		/// </summary>
 		private static Color? GetEmissiveColor(GameObject gameObject)
 		{
 			if (gameObject == null) return null;
 
-			// 1. Check AnimMaterialBinding first (most common now)
 			var binding = gameObject.GetComponent<AnimMaterialBinding>();
 			if (binding != null)
 			{
-				foreach (var animMat in binding.GetMaterials()) // You'll need to expose this or access _materials
+				foreach (var animMat in binding.GetMaterials())
 				{
 					if (animMat != null && animMat.IsEmissive)
-					{
 						return animMat.Material.GetColor("_EmissionColor");
-					}
 				}
 			}
 
-			// 2. Fallback: Check all renderers directly
 			var renderers = gameObject.GetComponentsInChildren<Renderer>(true);
 			foreach (var renderer in renderers)
 			{
