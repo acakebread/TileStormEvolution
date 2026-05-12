@@ -86,13 +86,6 @@ namespace ClassicTilestorm
 		private class RTTI : MonoBehaviour { public Definition definition; }//debug class so Definition data can be seen in the inspector
 #endif
 
-		// Preserve the HD detector for future use, but do not gate runtime replacement logic on it.
-		public static bool IsHD(GameObject gameObject)
-		{
-			var meshRenderers = gameObject.GetComponentsInChildren<MeshRenderer>(true);
-			return null != meshRenderers && ((meshRenderers.Length == 1 && meshRenderers[0].sharedMaterials.Length >= 2) || meshRenderers.Length >= 2);
-		}
-
 		public static string GetPrimaryTextureName(GameObject gameObject)
 		{
 			if (gameObject == null)
