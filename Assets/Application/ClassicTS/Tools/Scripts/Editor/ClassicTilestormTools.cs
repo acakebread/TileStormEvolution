@@ -110,7 +110,8 @@ namespace ClassicTilestorm.Editor
 				{
 					name = old.szType?.Trim(),
 					model = !string.IsNullOrEmpty(old.szGeom) ? old.szGeom.Replace(".x", "").Trim() : null,
-					texture = !string.IsNullOrEmpty(old.szBank) ? old.szBank.Trim() : "Default"
+					//texture = !string.IsNullOrEmpty(old.szBank) ? old.szBank.Trim() : "Default"
+					material = null
 				};
 
 				var flags = new List<string>();

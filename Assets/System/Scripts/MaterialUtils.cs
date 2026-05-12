@@ -731,5 +731,45 @@ namespace MassiveHadronLtd
 
 			return false;
 		}
+
+		public static void ForceMaterialRefresh(Material mat)
+		{
+			if (mat == null) return;
+
+			var shader = mat.shader;
+
+			// Force emission refresh
+			if (mat.HasProperty("_EmissionColor"))
+			{
+				Color col = mat.GetColor("_EmissionColor");
+				mat.SetColor("_EmissionColor", col);
+			}
+
+			// Keep Unity's main texture alias in sync with URP and legacy texture slots.
+			if (mat.HasProperty("_BaseMap"))
+			{
+				var baseMap = mat.GetTexture("_BaseMap");
+				if (baseMap != null)
+					mat.mainTexture = baseMap;
+			}
+
+			if (mat.HasProperty("_MainTex"))
+			{
+				var mainTex = mat.GetTexture("_MainTex");
+				if (mainTex != null)
+					mat.mainTexture = mainTex;
+			}
+
+			// Dirty the material to force Unity to re-evaluate
+			if (mat.HasProperty("_Surface"))
+				mat.SetFloat("_Surface", mat.GetFloat("_Surface"));
+
+			if (mat.HasProperty("_Smoothness"))
+				mat.SetFloat("_Smoothness", mat.GetFloat("_Smoothness"));
+
+			// Reassign the shader last so Unity rebuilds the internal render state.
+			if (shader != null)
+				mat.shader = shader;
+		}
 	}
 }

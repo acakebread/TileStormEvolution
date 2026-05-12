@@ -40,5 +40,13 @@ namespace ClassicTilestorm
 			// No remap — return original
 			return clean;
 		}
+
+
+		// HD detector - possible use when detecting legacy models
+		public static bool IsHD(GameObject gameObject)
+		{
+			var meshRenderers = gameObject.GetComponentsInChildren<MeshRenderer>(true);
+			return null != meshRenderers && ((meshRenderers.Length == 1 && meshRenderers[0].sharedMaterials.Length >= 2) || meshRenderers.Length >= 2);
+		}
 	}
 }

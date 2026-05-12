@@ -11,22 +11,20 @@ namespace ClassicTilestorm
 			var prefab = ModelAssets.Find(definition?.model);
 			if (null == prefab)
 			{
-				Debug.LogWarning($"RenderModelFactory: Model not found: {definition.model}");
+				Debug.LogWarning($"RenderModelFactory: Model not found: {definition?.model}");
 				return null;
 			}
 
-			//temporary provision to suppress texture replacement on loaded HD models
-			var textureName = DefinitionFactory.GetPrimaryTextureName(prefab);
-			var texture = DefinitionFactory.IsHD(prefab)
+			var replacementMaterial = DefinitionFactory.ResolveMaterialOverride(definition);
+			var texture = replacementMaterial != null
 				? null
-				: AnimMaterialInfoManager.GetFrameZero(textureName) ?? DefinitionFactory.ResolveTexture(definition.texture);
-			var material = MaterialAssets.Find(definition.material);
+				: AnimMaterialInfoManager.GetFrameZero(DefinitionFactory.GetPrimaryTextureName(prefab));
 			var matrix = Matrix4x4.TRS(position, rotation, scale == default ? Vector3.one : scale);
 
-			return CollectMeshRenderers(prefab, texture, material, matrix);
+			return CollectMeshRenderers(prefab, replacementMaterial, texture, matrix);
 		}
 
-		private static CommandRenderModelData CollectMeshRenderers(GameObject prefab, Texture2D texture, Material material, Matrix4x4 matrix)
+		private static CommandRenderModelData CollectMeshRenderers(GameObject prefab, Material replacementMaterial, Texture2D texture, Matrix4x4 matrix)
 		{
 			// We need the mesh(es) and materials from the prefab
 			// This is the tricky part — we have to traverse the prefab hierarchy without instantiating
@@ -50,7 +48,7 @@ namespace ClassicTilestorm
 
 				var worldMatrix = matrix * filter.transform.localToWorldMatrix;
 				var mats = renderer.sharedMaterials;
-				target.AddMeshInstance(filter.sharedMesh, ReplacementMaterials(mats, texture, material), worldMatrix);
+				target.AddMeshInstance(filter.sharedMesh, ReplacementMaterials(mats, replacementMaterial, texture), worldMatrix);
 			}
 
 			// Process SkinnedMeshRenderers
@@ -60,28 +58,34 @@ namespace ClassicTilestorm
 
 				var worldMatrix = matrix * skinned.transform.localToWorldMatrix;
 				var mats = skinned.sharedMaterials;
-				target.AddMeshInstance(skinned.sharedMesh, ReplacementMaterials(mats, texture, material), worldMatrix);
+				target.AddMeshInstance(skinned.sharedMesh, ReplacementMaterials(mats, replacementMaterial, texture), worldMatrix);
 			}
 
 			return target;
 
-			static Material[] ReplacementMaterials(Material[] mats, Texture2D texture, Material material)
+			static Material[] ReplacementMaterials(Material[] mats, Material replacementMaterial, Texture2D texture)
 			{
-				if (!MaterialUtils.IsEmissive(material)) material = null;
-				var emissive = MaterialUtils.EmissiiveColour(material, Color.white * 1.2f);
+				if (mats == null || mats.Length == 0)
+					return System.Array.Empty<Material>();
 
 				var result = new Material[mats.Length];
 				for (var m = 0; m < mats.Length; m++)
 				{
-					if (mats[m] == null) continue;
-					var copy = new Material(mats[m]);
+					var source = mats[m];
+					if (source == null) continue;
+
+					var copy = replacementMaterial != null
+						? new Material(replacementMaterial)
+						: new Material(source);
+
+					copy.mainTextureOffset = source.mainTextureOffset;
+					copy.mainTextureScale = source.mainTextureScale;
+
 					if (texture) copy.mainTexture = texture;
-					if (material) copy.color = emissive;
 					result[m] = copy;
 				}
 				return result;
 			}
-
 		}
 	}
 }

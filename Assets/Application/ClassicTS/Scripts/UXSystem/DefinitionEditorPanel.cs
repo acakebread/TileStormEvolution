@@ -38,8 +38,8 @@ namespace ClassicTilestorm
 		[SerializeField] private TMP_Dropdown modelDropdown;
 		[SerializeField] private string noneModelOptionText = "— None —";
 
-		[SerializeField] private TMP_Dropdown textureSequenceDropdown;
-		[SerializeField] private string noneTextureOptionText = "— None —";
+		//[SerializeField] private TMP_Dropdown textureSequenceDropdown;
+		//[SerializeField] private string noneTextureOptionText = "— None —";
 
 		[SerializeField] private TMP_Dropdown materialDropdown;
 		[SerializeField] private string noneMaterialOptionText = "— None —";
@@ -198,8 +198,8 @@ namespace ClassicTilestorm
 			if (modelDropdown != null)
 				modelDropdown.onValueChanged.AddListener(OnModelDropdownValueChanged);
 
-			if (textureSequenceDropdown != null)
-				textureSequenceDropdown.onValueChanged.AddListener(OnTextureDropdownValueChanged);
+			//if (textureSequenceDropdown != null)
+			//	textureSequenceDropdown.onValueChanged.AddListener(OnTextureDropdownValueChanged);
 
 			if (materialDropdown != null)
 				materialDropdown.onValueChanged.AddListener(OnMaterialDropdownValueChanged);
@@ -211,11 +211,11 @@ namespace ClassicTilestorm
 		private void PopulateAndSyncDropdowns()
 		{
 			PopulateModelDropdown();
-			PopulateTextureDropdown();
+			//PopulateTextureDropdown();
 			PopulateMaterialDropdown();
 
 			SyncModelDropdown();
-			SyncTextureDropdown();
+			//SyncTextureDropdown();
 			SyncMaterialDropdown();
 		}
 
@@ -251,14 +251,14 @@ namespace ClassicTilestorm
 		private void PopulateModelDropdown() =>
 			PopulateDropdown(modelDropdown, ProjectAssets.GetModelNames(), noneModelOptionText);
 
-		private void PopulateTextureDropdown() =>
-			PopulateDropdown(textureSequenceDropdown,
-				ResourceManager.TextureInfos
-					.Where(ts => !string.IsNullOrEmpty(ts.id))
-					.Select(ts => ts.id)
-					.Distinct(StringComparer.OrdinalIgnoreCase)
-					.OrderBy(n => n, StringComparer.OrdinalIgnoreCase),
-				noneTextureOptionText);
+		//private void PopulateTextureDropdown() =>
+		//	PopulateDropdown(textureSequenceDropdown,
+		//		ResourceManager.TextureInfos
+		//			.Where(ts => !string.IsNullOrEmpty(ts.id))
+		//			.Select(ts => ts.id)
+		//			.Distinct(StringComparer.OrdinalIgnoreCase)
+		//			.OrderBy(n => n, StringComparer.OrdinalIgnoreCase),
+		//		noneTextureOptionText);
 
 		private void PopulateMaterialDropdown() =>
 			PopulateDropdown(materialDropdown, ProjectAssets.GetMaterialNames(), noneMaterialOptionText);
@@ -266,8 +266,8 @@ namespace ClassicTilestorm
 		private void SyncModelDropdown() =>
 			SyncDropdown(modelDropdown, CurrentDefinition?.model, noneModelOptionText);
 
-		private void SyncTextureDropdown() =>
-			SyncDropdown(textureSequenceDropdown, CurrentDefinition?.texture, noneTextureOptionText);
+		//private void SyncTextureDropdown() =>
+		//	SyncDropdown(textureSequenceDropdown, CurrentDefinition?.texture, noneTextureOptionText);
 
 		private void SyncMaterialDropdown() =>
 			SyncDropdown(materialDropdown, CurrentDefinition?.material, noneMaterialOptionText);
@@ -311,30 +311,30 @@ namespace ClassicTilestorm
 			if (newModel != def.model)
 			{
 				def.model = newModel;
-				def.texture = null;
+				//def.texture = null;
 				def.material = null;
 				UpdatePreview(lastSelectedDefinitionIndex);
-				SyncTextureDropdown();
+				//SyncTextureDropdown();
 				SyncMaterialDropdown();
 			}
 		}
 
-		private void OnTextureDropdownValueChanged(int index)
-		{
-			var def = CurrentDefinition;
-			if (def == null) return;
+		//private void OnTextureDropdownValueChanged(int index)
+		//{
+		//	var def = CurrentDefinition;
+		//	if (def == null) return;
 
-			string selected = index >= 0 && index < textureSequenceDropdown.options.Count
-				? textureSequenceDropdown.options[index].text : null;
+		//	string selected = index >= 0 && index < textureSequenceDropdown.options.Count
+		//		? textureSequenceDropdown.options[index].text : null;
 
-			string newTexture = (selected == noneTextureOptionText) ? null : selected;
+		//	string newTexture = (selected == noneTextureOptionText) ? null : selected;
 
-			if (newTexture != def.texture)
-			{
-				def.texture = newTexture;
-				UpdatePreview(lastSelectedDefinitionIndex);
-			}
-		}
+		//	if (newTexture != def.texture)
+		//	{
+		//		def.texture = newTexture;
+		//		UpdatePreview(lastSelectedDefinitionIndex);
+		//	}
+		//}
 
 		private void OnMaterialDropdownValueChanged(int index)
 		{
@@ -421,7 +421,7 @@ namespace ClassicTilestorm
 			SyncAllProperties();
 			UpdatePreview(index);
 			SyncModelDropdown();
-			SyncTextureDropdown();
+			//SyncTextureDropdown();
 			SyncMaterialDropdown();
 			UpdateDeleteButtonState();
 

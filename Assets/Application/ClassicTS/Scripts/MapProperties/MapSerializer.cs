@@ -484,21 +484,29 @@ namespace ClassicTilestorm
 				serializer.Serialize(writer, usedDefs);
 			}
 
+			//var usedBanks = usedDefs
+			//	.Where(d => !string.IsNullOrEmpty(d?.texture))
+			//	.Select(d => d.texture)
+			//	.Distinct()
+			//	.ToArray();
+
 			var usedBanks = usedDefs
-				.Where(d => !string.IsNullOrEmpty(d?.texture))
-				.Select(d => d.texture)
+				.Where(d => !string.IsNullOrEmpty(d?.material))
+				.Select(d => d.material)
 				.Distinct()
 				.ToArray();
 
-			var usedTextures = ResourceManager.TextureInfos
-				.Where(ts => usedBanks.Contains(ts.id))
-				.ToArray();
+			//var usedTextures = ResourceManager.TextureInfos
+			//	.Where(ts => usedBanks.Contains(ts.id))
+			//	.ToArray();
 
-			if (usedTextures.Length > 0)
-			{
-				writer.WritePropertyName("textures");
-				serializer.Serialize(writer, usedTextures);
-			}
+			//if (usedTextures.Length > 0)
+			//{
+			//	writer.WritePropertyName("textures");
+			//	serializer.Serialize(writer, usedTextures);
+			//}
+
+			//ToDo - implement material serialisation - similar to legacy texture system
 
 			writer.WritePropertyName("version");
 			writer.WriteValue("1.0");
