@@ -163,6 +163,14 @@ namespace MassiveHadronLtd
 					if (tex != null)
 					{
 						mat.SetTexture(name, tex);
+						if (name == "_BaseMap" || name == "_MainTex")
+						{
+							mat.mainTexture = tex;
+							if (name == "_BaseMap")
+								mat.SetTexture("_MainTex", tex);
+							else
+								mat.SetTexture("_BaseMap", tex);
+						}
 						mat.SetTextureScale(name, new Vector2(textureScaleX, textureScaleY));
 						mat.SetTextureOffset(name, new Vector2(textureOffsetX, textureOffsetY));
 					}

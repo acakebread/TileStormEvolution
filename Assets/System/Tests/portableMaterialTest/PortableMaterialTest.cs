@@ -1,4 +1,5 @@
-﻿using System.IO;
+using System.Collections;
+using System.IO;
 using Newtonsoft.Json;
 using UnityEngine;
 
@@ -36,7 +37,7 @@ namespace MassiveHadronLtd
 			// Initial plain material
 			currentMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit"));
 			currentMaterial.color = Color.gray;
-			testCube.GetComponent<Renderer>().material = currentMaterial;
+			ApplyMaterialToCube(currentMaterial);
 		}
 
 		private void Update()
@@ -90,6 +91,7 @@ namespace MassiveHadronLtd
 			{
 				sourceMat.SetTexture("_BaseMap", testTex);
 				sourceMat.SetTexture("_MainTex", testTex);   // some shaders still use this
+				sourceMat.mainTexture = testTex;
 			}
 			else
 			{
@@ -103,14 +105,14 @@ namespace MassiveHadronLtd
 			{
 				if (currentMaterial != null) Destroy(currentMaterial);
 				currentMaterial = portable.ToUnityMaterial();
-				testCube.GetComponent<Renderer>().material = currentMaterial;
+				ApplyMaterialToCube(currentMaterial);
 			}
 
 			// Export
 			string json = JsonConvert.SerializeObject(portable, Formatting.Indented);
 			File.WriteAllText(SavePath, json);
 
-			Debug.Log($"Material exported successfully → {SavePath}");
+			Debug.Log($"Material exported successfully -> {SavePath}");
 			Debug.Log($"Texture used: {(testTex != null ? testTex.name : "none")}");
 		}
 
@@ -132,7 +134,7 @@ namespace MassiveHadronLtd
 					if (currentMaterial != null) Destroy(currentMaterial);
 
 					currentMaterial = portable.ToUnityMaterial();
-					testCube.GetComponent<Renderer>().material = currentMaterial;
+					ApplyMaterialToCube(currentMaterial);
 
 					Debug.Log($"Material loaded and applied: {portable.name}");
 				}
@@ -153,9 +155,10 @@ namespace MassiveHadronLtd
 
 			if (testCube != null)
 			{
-				var rend = testCube.GetComponent<Renderer>();
-				rend.material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-				rend.material.color = Color.gray;
+				var mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+				mat.color = Color.gray;
+				currentMaterial = mat;
+				ApplyMaterialToCube(mat);
 			}
 
 			Debug.Log("Cube reset to plain material.");
@@ -165,6 +168,33 @@ namespace MassiveHadronLtd
 		{
 			if (currentMaterial != null)
 				Destroy(currentMaterial);
+		}
+
+		private void ApplyMaterialToCube(Material mat)
+		{
+			if (testCube == null || mat == null)
+				return;
+
+			var rend = testCube.GetComponent<Renderer>();
+			if (rend == null)
+				return;
+
+			rend.sharedMaterial = mat;
+			rend.SetPropertyBlock(null);
+			rend.UpdateGIMaterials();
+
+			StartCoroutine(RebindMaterialNextFrame(rend, mat));
+		}
+
+		private IEnumerator RebindMaterialNextFrame(Renderer rend, Material mat)
+		{
+			yield return null;
+
+			if (rend == null || mat == null)
+				yield break;
+
+			rend.sharedMaterial = mat;
+			rend.SetPropertyBlock(null);
 		}
 	}
 }
