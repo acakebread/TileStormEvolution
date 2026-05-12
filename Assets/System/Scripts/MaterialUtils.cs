@@ -731,5 +731,23 @@ namespace MassiveHadronLtd
 
 			return false;
 		}
+
+		public static void ForceMaterialRefresh(Material mat)
+		{
+			if (mat == null) return;
+
+			// Force emission refresh
+			if (mat.HasProperty("_EmissionColor"))
+			{
+				Color col = mat.GetColor("_EmissionColor");
+				mat.SetColor("_EmissionColor", col);
+			}
+
+			// Dirty the material to force Unity to re-evaluate
+			if (mat.HasProperty("_Surface"))
+				mat.SetFloat("_Surface", mat.GetFloat("_Surface"));
+
+			mat.SetFloat("_Smoothness", mat.GetFloat("_Smoothness"));
+		}
 	}
 }
