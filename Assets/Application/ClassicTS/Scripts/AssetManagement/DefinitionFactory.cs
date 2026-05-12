@@ -23,10 +23,20 @@ namespace ClassicTilestorm
 			if (null == gameObject)
 				return null;
 
-			// Apply animated material data when present on the prefab/material name.
-			var animMaterialName = GetPrimaryTextureName(gameObject);
-			var sequence = AnimMaterialInfoManager.GetAnimMaterial(animMaterialName);
-			var appliedVisuals = sequence != null && AnimMaterialManager.Apply(gameObject, sequence);
+			var replacementMaterial = ResolveMaterialOverride(definition);
+			var appliedVisuals = false;
+
+			if (replacementMaterial != null)
+			{
+				appliedVisuals = ApplyMaterialOverride(gameObject, replacementMaterial);
+			}
+			else
+			{
+				// Fall back to animated material data on the original prefab/material name.
+				var animMaterialName = GetPrimaryTextureName(gameObject);
+				var sequence = AnimMaterialInfoManager.GetAnimMaterial(animMaterialName);
+				appliedVisuals = sequence != null && AnimMaterialManager.Apply(gameObject, sequence);
+			}
 
 			if (appliedVisuals)
 			{
@@ -116,6 +126,62 @@ namespace ClassicTilestorm
 			return null;
 		}
 
+		public static Material ResolveMaterialOverride(Definition definition)
+		{
+			if (definition == null || string.IsNullOrWhiteSpace(definition.material))
+				return null;
+
+			return MaterialAssets.Find(definition.material);
+		}
+
+		public static bool ApplyMaterialOverride(GameObject gameObject, Material replacementMaterial)
+		{
+			if (gameObject == null || replacementMaterial == null)
+				return false;
+
+			var applied = false;
+			var renderers = gameObject.GetComponentsInChildren<Renderer>(true);
+			for (var i = 0; i < renderers.Length; i++)
+			{
+				var renderer = renderers[i];
+				if (renderer == null)
+					continue;
+
+				var materials = renderer.sharedMaterials;
+				if (materials == null || materials.Length == 0)
+					continue;
+
+				renderer.sharedMaterials = BuildReplacementMaterials(materials, replacementMaterial);
+				applied = true;
+			}
+
+			return applied;
+		}
+
+		public static Material[] BuildReplacementMaterials(Material[] sourceMaterials, Material replacementMaterial)
+		{
+			if (sourceMaterials == null || sourceMaterials.Length == 0 || replacementMaterial == null)
+				return System.Array.Empty<Material>();
+
+			var result = new Material[sourceMaterials.Length];
+			for (var i = 0; i < sourceMaterials.Length; i++)
+			{
+				var source = sourceMaterials[i];
+				if (source == null)
+					continue;
+
+				var copy = new Material(replacementMaterial)
+				{
+					name = $"{replacementMaterial.name} ({source.name})"
+				};
+				copy.mainTextureOffset = source.mainTextureOffset;
+				copy.mainTextureScale = source.mainTextureScale;
+				result[i] = copy;
+			}
+
+			return result;
+		}
+
 		private static string NormalizeTextureName(string name)
 		{
 			if (string.IsNullOrWhiteSpace(name))
@@ -141,7 +207,11 @@ namespace ClassicTilestorm
 				foreach (var animMat in binding.GetMaterials())
 				{
 					if (animMat != null && animMat.IsEmissive)
-						return animMat.Material.GetColor("_EmissionColor");
+					{
+						var emission = GetEmissionColor(animMat.Material);
+						if (emission.HasValue)
+							return emission;
+					}
 				}
 			}
 
@@ -152,15 +222,26 @@ namespace ClassicTilestorm
 				{
 					if (mat == null) continue;
 
-					if (mat.IsKeywordEnabled("_EMISSION") ||
-						mat.GetColor("_EmissionColor").maxColorComponent > 0.01f)
+					var emission = GetEmissionColor(mat);
+					if (emission.HasValue)
 					{
-						return mat.GetColor("_EmissionColor");
+						return emission.Value;
 					}
 				}
 			}
 
 			return null;
+		}
+
+		private static Color? GetEmissionColor(Material material)
+		{
+			if (material == null || !material.HasProperty("_EmissionColor"))
+				return null;
+
+			var emissionColor = material.GetColor("_EmissionColor");
+			return material.IsKeywordEnabled("_EMISSION") || emissionColor.maxColorComponent > 0.01f
+				? emissionColor
+				: null;
 		}
 	}
 }

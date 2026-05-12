@@ -11,18 +11,20 @@ namespace ClassicTilestorm
 			var prefab = ModelAssets.Find(definition?.model);
 			if (null == prefab)
 			{
-				Debug.LogWarning($"RenderModelFactory: Model not found: {definition.model}");
+				Debug.LogWarning($"RenderModelFactory: Model not found: {definition?.model}");
 				return null;
 			}
 
-			var textureName = DefinitionFactory.GetPrimaryTextureName(prefab);
-			var texture = AnimMaterialInfoManager.GetFrameZero(textureName);
+			var replacementMaterial = DefinitionFactory.ResolveMaterialOverride(definition);
+			var texture = replacementMaterial != null
+				? null
+				: AnimMaterialInfoManager.GetFrameZero(DefinitionFactory.GetPrimaryTextureName(prefab));
 			var matrix = Matrix4x4.TRS(position, rotation, scale == default ? Vector3.one : scale);
 
-			return CollectMeshRenderers(prefab, texture, matrix);
+			return CollectMeshRenderers(prefab, replacementMaterial, texture, matrix);
 		}
 
-		private static CommandRenderModelData CollectMeshRenderers(GameObject prefab, Texture2D texture, Matrix4x4 matrix)
+		private static CommandRenderModelData CollectMeshRenderers(GameObject prefab, Material replacementMaterial, Texture2D texture, Matrix4x4 matrix)
 		{
 			// We need the mesh(es) and materials from the prefab
 			// This is the tricky part — we have to traverse the prefab hierarchy without instantiating
@@ -46,7 +48,7 @@ namespace ClassicTilestorm
 
 				var worldMatrix = matrix * filter.transform.localToWorldMatrix;
 				var mats = renderer.sharedMaterials;
-				target.AddMeshInstance(filter.sharedMesh, ReplacementMaterials(mats, texture), worldMatrix);
+				target.AddMeshInstance(filter.sharedMesh, ReplacementMaterials(mats, replacementMaterial, texture), worldMatrix);
 			}
 
 			// Process SkinnedMeshRenderers
@@ -56,20 +58,29 @@ namespace ClassicTilestorm
 
 				var worldMatrix = matrix * skinned.transform.localToWorldMatrix;
 				var mats = skinned.sharedMaterials;
-				target.AddMeshInstance(skinned.sharedMesh, ReplacementMaterials(mats, texture), worldMatrix);
+				target.AddMeshInstance(skinned.sharedMesh, ReplacementMaterials(mats, replacementMaterial, texture), worldMatrix);
 			}
 
 			return target;
 
-			static Material[] ReplacementMaterials(Material[] mats, Texture2D texture)
+			static Material[] ReplacementMaterials(Material[] mats, Material replacementMaterial, Texture2D texture)
 			{
-				if (mats == null) return System.Array.Empty<Material>();
+				if (mats == null || mats.Length == 0)
+					return System.Array.Empty<Material>();
 
 				var result = new Material[mats.Length];
 				for (var m = 0; m < mats.Length; m++)
 				{
-					if (mats[m] == null) continue;
-					var copy = new Material(mats[m]);
+					var source = mats[m];
+					if (source == null) continue;
+
+					var copy = replacementMaterial != null
+						? new Material(replacementMaterial)
+						: new Material(source);
+
+					copy.mainTextureOffset = source.mainTextureOffset;
+					copy.mainTextureScale = source.mainTextureScale;
+
 					if (texture) copy.mainTexture = texture;
 					result[m] = copy;
 				}
