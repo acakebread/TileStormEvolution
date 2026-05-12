@@ -13,27 +13,27 @@ namespace ClassicTilestorm
 		public static string ToString(int value, int length = -1, bool appendFlavor = false, char padChar = '0') => HTB50.EncodeFixed(value, length != -1 ? length : FixedLength, appendFlavor, padChar);
 	}
 
-	[Serializable]
-	public class TextureInfo
-	{
-		public string id;
-		[JsonIgnore]
-		public string name { get => id; }//future replacement for id - just the display name in the editor
-		public bool alphaTest = false;
+	//[Serializable]
+	//public class TextureInfo
+	//{
+	//	public string id;
+	//	[JsonIgnore]
+	//	public string name { get => id; }//future replacement for id - just the display name in the editor
+	//	public bool alphaTest = false;
 
-		// Canonical single texture (shorthand)
-		public string texture;
+	//	// Canonical single texture (shorthand)
+	//	public string texture;
 
-		public bool ShouldSerializealphaTest()
-			=> alphaTest;
-	}
+	//	public bool ShouldSerializealphaTest()
+	//		=> alphaTest;
+	//}
 
 	[Serializable]
 	public class DatabaseData
 	{
 		public Map[] maps;
 		public Definition[] definitions;
-		public TextureInfo[] textures;
+		//public TextureInfo[] textures;
 	}
 
 	public static class ResourceManager
@@ -43,14 +43,14 @@ namespace ClassicTilestorm
 
 		public static IList<Map> Maps => _db?.maps ?? Array.Empty<Map>();
 		public static IList<Definition> Definitions => _db?.definitions ?? Array.Empty<Definition>();
-		public static IList<TextureInfo> TextureInfos => _db?.textures ?? Array.Empty<TextureInfo>();
+		//public static IList<TextureInfo> TextureInfos => _db?.textures ?? Array.Empty<TextureInfo>();
 
 		public static bool HasDefinition(int id) => Definitions.Any(def => def.HashID == id);
 
 		public static Definition GetDefinition(HashId id) => Definitions.FirstOrDefault(d => d.HashID == id);
 
-		public static TextureInfo GetTextureInfo(string id)
-			=> string.IsNullOrEmpty(id) ? null : TextureInfos.FirstOrDefault(ts => ts.id == id);
+		//public static TextureInfo GetTextureInfo(string id)
+		//	=> string.IsNullOrEmpty(id) ? null : TextureInfos.FirstOrDefault(ts => ts.id == id);
 
 		// ── DEFINITION CREATION WITH OPTIONAL UNIQUENESS CHECK ────────────────
 
@@ -80,14 +80,16 @@ namespace ClassicTilestorm
 		public static Definition CreateDefinition(
 			string _name = null,
 			string model = "tile_flat",
-			string texture = "Default",
+			//string texture = "Default",
+			string material = null,
 			bool ensureUniqueHash = false)
 		{
 			var def = new Definition
 			{
 				name = _name ?? StringUtil.GenerateAssetId(),
 				model = model,
-				texture = texture
+				//texture = texture
+				material = material
 			};
 
 			// Full-range 32-bit hash (no modulus)

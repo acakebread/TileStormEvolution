@@ -535,7 +535,7 @@ namespace ClassicTilestorm
 
 			var secondary = new List<string>();
 			if (!string.IsNullOrEmpty(def.model)) secondary.Add($"M:{def.model}");
-			if (!string.IsNullOrEmpty(def.texture)) secondary.Add($"T:{def.texture}");
+			//if (!string.IsNullOrEmpty(def.texture)) secondary.Add($"T:{def.texture}");
 			if (!string.IsNullOrEmpty(def.material)) secondary.Add($"Mat:{def.material}");
 
 			return secondary.Count > 0 ? string.Join("  ", secondary) : "";

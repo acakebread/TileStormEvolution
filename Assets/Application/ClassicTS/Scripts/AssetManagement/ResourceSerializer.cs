@@ -87,9 +87,9 @@ namespace ClassicTilestorm
 						? serializer.Deserialize<Definition[]>(root["definitions"].CreateReader())
 						: Array.Empty<Definition>(),
 
-					textures = root["textures"] != null
-						? serializer.Deserialize<TextureInfo[]>(root["textures"].CreateReader())
-						: Array.Empty<TextureInfo>(),
+					//textures = root["textures"] != null
+					//	? serializer.Deserialize<TextureInfo[]>(root["textures"].CreateReader())
+					//	: Array.Empty<TextureInfo>(),
 				};
 
 				if (data.maps == null || data.definitions == null ||
@@ -137,8 +137,8 @@ namespace ClassicTilestorm
 			if (data.definitions != null && data.definitions.Length > 0)
 				root["definitions"] = JArray.FromObject(data.definitions, JsonSerializer.Create(settings));
 
-			if (data.textures != null && data.textures.Length > 0)
-				root["textures"] = JArray.FromObject(data.textures, JsonSerializer.Create(settings));
+			//if (data.textures != null && data.textures.Length > 0)
+			//	root["textures"] = JArray.FromObject(data.textures, JsonSerializer.Create(settings));
 
 			string json = root.ToString(verbose ? Formatting.Indented : Formatting.None);
 
@@ -149,10 +149,14 @@ namespace ClassicTilestorm
 			EnsureFolder(Path.GetDirectoryName(path));
 			File.WriteAllText(path, json);
 
+			//Debug.Log($"Database saved → {path} " +
+			//		  $"(maps: {mapsToSave?.Length ?? 0}, " +
+			//		  $"definitions: {data.definitions?.Length ?? 0}, " +
+			//		  $"textures: {data.textures?.Length ?? 0}");
+
 			Debug.Log($"Database saved → {path} " +
 					  $"(maps: {mapsToSave?.Length ?? 0}, " +
-					  $"definitions: {data.definitions?.Length ?? 0}, " +
-					  $"textures: {data.textures?.Length ?? 0}");
+					  $"definitions: {data.definitions?.Length ?? 0}");
 		}
 
 		public static void ImportAtomicMap(string filepath)

@@ -72,7 +72,7 @@ namespace ClassicTilestorm
 
 		public string name;
 		public string model;
-		public string texture;
+		//public string texture;
 		public string material;
 
 		[JsonIgnore] private int flags;
@@ -134,7 +134,7 @@ namespace ClassicTilestorm
 			HashID = 0,
 			name = "default",
 			model = null,
-			texture = null,
+			//texture = null,
 			material = null,
 		};
 
@@ -143,7 +143,7 @@ namespace ClassicTilestorm
 		public bool IsDefaultEquivalent() =>
 			flags == 0 &&
 			string.IsNullOrWhiteSpace(model) &&
-			string.IsNullOrWhiteSpace(texture) &&
+			//string.IsNullOrWhiteSpace(texture) &&
 			string.IsNullOrWhiteSpace(material);
 	}
 
@@ -195,7 +195,7 @@ namespace ClassicTilestorm
 
 			if (!string.IsNullOrEmpty(def.name)) { writer.WritePropertyName("name"); serializer.Serialize(writer, def.name); }
 			if (!string.IsNullOrEmpty(def.model)) { writer.WritePropertyName("model"); serializer.Serialize(writer, def.model); }
-			if (!string.IsNullOrEmpty(def.texture)) { writer.WritePropertyName("texture"); serializer.Serialize(writer, def.texture); }
+			//if (!string.IsNullOrEmpty(def.texture)) { writer.WritePropertyName("texture"); serializer.Serialize(writer, def.texture); }
 			if (!string.IsNullOrEmpty(def.material)) { writer.WritePropertyName("material"); serializer.Serialize(writer, def.material); }
 
 			// Gameplay flags
