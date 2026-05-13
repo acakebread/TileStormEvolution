@@ -61,11 +61,11 @@ namespace MassiveHadronLtd
 				switch (parts[0].ToLowerInvariant())
 				{
 					case "mtllib":
-						if (parts.Length > 1) materialLibrary = parts[1];
+						if (parts.Length > 1) materialLibrary = string.Join(" ", parts, 1, parts.Length - 1);
 						break;
 
 					case "usemtl":
-						if (parts.Length > 1) materialName = parts[1];
+						if (parts.Length > 1) materialName = string.Join(" ", parts, 1, parts.Length - 1);
 						break;
 
 					case "v":

@@ -183,9 +183,7 @@ namespace MassiveHadronLtd
 				Path.Combine(baseDirectory, textureName),
 				Path.Combine(baseDirectory, textureName + ".png"),
 				Path.Combine(baseDirectory, textureName + ".jpg"),
-				Path.Combine(baseDirectory, "Materials", textureName),
-				Path.Combine(baseDirectory, "Materials", textureName + ".png"),
-				Path.Combine(baseDirectory, "Materials", textureName + ".jpg")
+				Path.Combine(baseDirectory, textureName + ".jpeg")
 			};
 
 			foreach (string path in candidates)
@@ -228,7 +226,7 @@ namespace MassiveHadronLtd
 			if (spaceIndex == -1) return null;
 			string rest = line.Substring(spaceIndex + 1).Trim();
 			var parts = rest.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
-			return parts.Length > 0 ? Path.GetFileNameWithoutExtension(parts[^1]) : null;
+			return parts.Length > 0 ? parts[^1] : null;
 		}
 
 		private void AddColorProperty(string propName, Color color)

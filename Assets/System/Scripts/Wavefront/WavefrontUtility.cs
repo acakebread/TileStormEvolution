@@ -24,36 +24,30 @@ namespace MassiveHadronLtd
 
 			mf.sharedMesh = mesh;
 
-			Material mat = TryLoadMaterial(directory, wavefrontMesh.materialName);
+			Material mat = TryLoadMaterial(directory, wavefrontMesh.materialLibrary, wavefrontMesh.materialName);
 			mr.sharedMaterial = mat ?? new Material(Shader.Find("Universal Render Pipeline/Lit"));
 
 			Debug.Log($"✅ Loaded {go.name} | Material: {(mat != null ? mat.name : "default")}");
 			return go;
 		}
 
-		private static Material TryLoadMaterial(string baseDirectory, string materialName)
+		private static Material TryLoadMaterial(string baseDirectory, string materialLibrary, string materialName)
 		{
-			if (string.IsNullOrEmpty(materialName)) return null;
-
-			string mtlFileName = materialName + ".mtl";
-			string mtlPath = Path.Combine(baseDirectory, mtlFileName);
-
-			if (!File.Exists(mtlPath))
-			{
-				string altPath = Path.Combine(baseDirectory, "Materials", mtlFileName);
-				if (File.Exists(altPath)) mtlPath = altPath;
-			}
+			string mtlPath = ResolveRelativePath(baseDirectory, materialLibrary);
+			if (string.IsNullOrEmpty(mtlPath) && !string.IsNullOrEmpty(materialName))
+				mtlPath = Path.Combine(baseDirectory, materialName + ".mtl");
 
 			if (!File.Exists(mtlPath))
 			{
-				Debug.LogWarning($"MTL not found: {mtlFileName}");
+				string mtlLabel = !string.IsNullOrEmpty(materialLibrary) ? materialLibrary : materialName + ".mtl";
+				Debug.LogWarning($"MTL not found: {mtlLabel}");
 				return null;
 			}
 
 			var wMat = new WavefrontMaterial(mtlPath);
 			Material mat = wMat.ToUnityMaterial();
 
-			PatchTexturesFromDisk(mat, wMat, baseDirectory);
+			PatchTexturesFromDisk(mat, wMat, Path.GetDirectoryName(mtlPath));
 			return mat;
 		}
 
@@ -87,6 +81,17 @@ namespace MassiveHadronLtd
 					Debug.Log($"Patched texture '{prop.texture}' on property {prop.name}");
 				}
 			}
+		}
+
+		private static string ResolveRelativePath(string baseDirectory, string relativePath)
+		{
+			if (string.IsNullOrEmpty(baseDirectory) || string.IsNullOrEmpty(relativePath))
+				return relativePath;
+
+			if (Path.IsPathRooted(relativePath))
+				return relativePath;
+
+			return Path.GetFullPath(Path.Combine(baseDirectory, relativePath));
 		}
 	}
 }
