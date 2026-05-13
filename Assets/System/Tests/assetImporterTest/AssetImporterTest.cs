@@ -8,6 +8,8 @@ namespace MassiveHadronLtd
 		[Header("Asset Importer Test")]
 		[Tooltip("Last successfully imported model folder")]
 		public string lastImportedPath;
+		[Tooltip("How imported Wavefront assets are organized on disk")]
+		public AssetImporter.ImportOption importOption = AssetImporter.ImportOption.HashIdFolder;
 
 		private void OnGUI()
 		{
@@ -44,7 +46,7 @@ namespace MassiveHadronLtd
 
 			if (!string.IsNullOrEmpty(path))
 			{
-				lastImportedPath = AssetImporter.ImportWavefrontModel(path);
+				lastImportedPath = AssetImporter.ImportWavefrontModel(path, importOption);
 
 				if (!string.IsNullOrEmpty(lastImportedPath))
 				{

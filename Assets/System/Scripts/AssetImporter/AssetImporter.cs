@@ -1,18 +1,26 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
+using ClassicTilestorm;
 using UnityEngine;
 
 namespace MassiveHadronLtd
 {
 	public static class AssetImporter
 	{
+		public enum ImportOption
+		{
+			Root = 0,
+			AssetFileNameFolder = 1,
+			HashIdFolder = 2
+		}
+
 		/// <summary>
 		/// Imports a Wavefront .obj file and its dependencies.
 		/// </summary>
 		/// <param name="sourceObjPath">Full path to the source .obj file</param>
-		/// <param name="createDedicatedFolder">If true, creates a subfolder per model (old behavior)</param>
-		public static string ImportWavefrontModel(string sourceObjPath, bool createDedicatedFolder = false)
+		/// <param name="importOption">Folder strategy for the imported asset set.</param>
+		public static string ImportWavefrontModel(string sourceObjPath, ImportOption importOption = ImportOption.HashIdFolder)
 		{
 			if (string.IsNullOrEmpty(sourceObjPath) || !File.Exists(sourceObjPath))
 			{
@@ -22,10 +30,11 @@ namespace MassiveHadronLtd
 
 			string objFileName = Path.GetFileName(sourceObjPath);
 			string modelName = Path.GetFileNameWithoutExtension(sourceObjPath);
+			string importFolderName = GetImportFolderName(sourceObjPath, modelName, importOption);
 
-			string importRoot = createDedicatedFolder
-				? Path.Combine(Application.persistentDataPath, "Imported", modelName)
-				: Path.Combine(Application.persistentDataPath, "Imported");
+			string importRoot = string.IsNullOrEmpty(importFolderName)
+				? Path.Combine(Application.persistentDataPath, "Imported")
+				: Path.Combine(Application.persistentDataPath, "Imported", importFolderName);
 
 			Directory.CreateDirectory(importRoot);
 
@@ -38,6 +47,46 @@ namespace MassiveHadronLtd
 
 			Debug.Log($"✅ Import completed: {importRoot}");
 			return destObjPath;
+		}
+
+		private static string GetImportFolderName(string sourceObjPath, string modelName, ImportOption importOption)
+		{
+			switch (importOption)
+			{
+				case ImportOption.AssetFileNameFolder:
+					return SanitizeFolderName(modelName);
+
+				case ImportOption.HashIdFolder:
+				{
+					string normalizedSource = Path.GetFullPath(sourceObjPath)
+						.Replace('\\', '/')
+						.ToLowerInvariant();
+
+					int hash32 = RadixHash.GetStableHash32(normalizedSource);
+					return HTB50Settings.ToString(hash32);
+				}
+
+				case ImportOption.Root:
+				default:
+					return null;
+			}
+		}
+
+		private static string SanitizeFolderName(string folderName)
+		{
+			if (string.IsNullOrWhiteSpace(folderName))
+				return null;
+
+			char[] invalidChars = Path.GetInvalidFileNameChars();
+			char[] chars = folderName.Trim().ToCharArray();
+
+			for (int i = 0; i < chars.Length; i++)
+			{
+				if (Array.IndexOf(invalidChars, chars[i]) >= 0)
+					chars[i] = '_';
+			}
+
+			return new string(chars);
 		}
 
 		private static void CopyDependenciesWithStructure(string sourceObjPath, string importRoot)
