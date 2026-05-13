@@ -7,7 +7,12 @@ namespace MassiveHadronLtd
 {
 	public static class AssetImporter
 	{
-		public static string ImportWavefrontModel(string sourceObjPath)
+		/// <summary>
+		/// Imports a Wavefront .obj file and its dependencies.
+		/// </summary>
+		/// <param name="sourceObjPath">Full path to the source .obj file</param>
+		/// <param name="createDedicatedFolder">If true, creates a subfolder per model (old behavior)</param>
+		public static string ImportWavefrontModel(string sourceObjPath, bool createDedicatedFolder = false)
 		{
 			if (string.IsNullOrEmpty(sourceObjPath) || !File.Exists(sourceObjPath))
 			{
@@ -15,12 +20,16 @@ namespace MassiveHadronLtd
 				return null;
 			}
 
+			string objFileName = Path.GetFileName(sourceObjPath);
 			string modelName = Path.GetFileNameWithoutExtension(sourceObjPath);
-			string importRoot = Path.Combine(Application.persistentDataPath, "Imported", modelName);
+
+			string importRoot = createDedicatedFolder
+				? Path.Combine(Application.persistentDataPath, "Imported", modelName)
+				: Path.Combine(Application.persistentDataPath, "Imported");
 
 			Directory.CreateDirectory(importRoot);
 
-			string destObjPath = Path.Combine(importRoot, Path.GetFileName(sourceObjPath));
+			string destObjPath = Path.Combine(importRoot, objFileName);
 			File.Copy(sourceObjPath, destObjPath, true);
 
 			Debug.Log($"Imported OBJ to: {destObjPath}");
@@ -49,7 +58,7 @@ namespace MassiveHadronLtd
 				return;
 			}
 
-			// Copy MTL
+			// Copy MTL (preserving relative path like "Materials/xxx.mtl")
 			string destMtlPath = Path.Combine(importRoot, mtlRelative);
 			Directory.CreateDirectory(Path.GetDirectoryName(destMtlPath));
 			File.Copy(sourceMtlPath, destMtlPath, true);
@@ -57,9 +66,8 @@ namespace MassiveHadronLtd
 
 			string mtlDestDir = Path.GetDirectoryName(destMtlPath);
 
-			// Extract and copy textures relative to the .mtl location
+			// Copy textures next to the .mtl
 			var textureRefs = ExtractTextureReferencesFromMtl(destMtlPath);
-
 			string mtlSourceDir = Path.GetDirectoryName(sourceMtlPath);
 
 			foreach (string texRef in textureRefs)
@@ -69,11 +77,10 @@ namespace MassiveHadronLtd
 				string sourceTexPath = FindTextureFile(mtlSourceDir, texRef);
 				if (string.IsNullOrEmpty(sourceTexPath))
 				{
-					Debug.LogWarning($"Could not find texture file for: {texRef}");
+					Debug.LogWarning($"Could not find texture: {texRef}");
 					continue;
 				}
 
-				// Place texture next to the .mtl file (important!)
 				string destTexPath = Path.Combine(mtlDestDir, Path.GetFileName(texRef));
 
 				File.Copy(sourceTexPath, destTexPath, true);
@@ -120,7 +127,6 @@ namespace MassiveHadronLtd
 			string fullPath = Path.Combine(baseDir, texReference);
 			if (File.Exists(fullPath)) return fullPath;
 
-			// Try common extensions
 			string dir = Path.GetDirectoryName(fullPath);
 			string nameNoExt = Path.GetFileNameWithoutExtension(fullPath);
 
