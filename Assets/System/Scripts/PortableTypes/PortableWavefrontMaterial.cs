@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using UnityEngine;
 
 namespace MassiveHadronLtd
@@ -15,6 +16,7 @@ namespace MassiveHadronLtd
 
 		public PortableWavefrontMaterial() { }
 
+		// === Import from MTL ===
 		public PortableWavefrontMaterial(string mtlPath)
 		{
 			FromMtlFile(mtlPath);
@@ -30,6 +32,26 @@ namespace MassiveHadronLtd
 
 			string[] lines = File.ReadAllLines(mtlPath);
 			ParseMtlLines(lines);
+		}
+
+		// === NEW: Import from Unity Material (for export pipeline) ===
+		public void FromUnityMaterial(Material mat, string materialName = null)
+		{
+			if (mat == null) return;
+
+			name = materialName ?? mat.name ?? "TestMaterial";
+			shader = mat.shader?.name ?? "Universal Render Pipeline/Lit";
+
+			properties.Clear();
+			enabledKeywords.Clear();
+
+			// Reuse existing PortableMaterial logic to extract properties
+			var tempPortable = new PortableMaterial(mat, name);
+
+			properties = tempPortable.properties;
+			enabledKeywords = tempPortable.enabledKeywords;
+
+			Debug.Log($"Converted Unity Material '{name}' to PortableWavefrontMaterial with {properties.Count} properties.");
 		}
 
 		private void ParseMtlLines(string[] lines)
@@ -53,16 +75,14 @@ namespace MassiveHadronLtd
 				{
 					case "newmtl":
 						currentMaterialName = tokens.Length > 1 ? tokens[1] : "default";
-						// We currently take the first material defined
 						break;
 
-					// === Colors ===
-					case "kd": // Diffuse / Albedo
+					case "kd":
 						if (tokens.Length >= 4)
 							AddColorProperty("_BaseColor", ParseColor(tokens));
 						break;
 
-					case "ke": // Emission
+					case "ke":
 						if (tokens.Length >= 4)
 						{
 							Color emission = ParseColor(tokens);
@@ -74,19 +94,13 @@ namespace MassiveHadronLtd
 						}
 						break;
 
-					case "ks": // Specular
+					case "ks":
 						if (tokens.Length >= 4)
 							AddColorProperty("_SpecColor", ParseColor(tokens));
 						break;
 
-					case "ka": // Ambient (often ignored)
-						break;
-
-					// === Scalars ===
-					case "ns": // Specular exponent → Smoothness
-						if (tokens.Length > 1 && float.TryParse(tokens[1],
-							System.Globalization.NumberStyles.Float,
-							System.Globalization.CultureInfo.InvariantCulture, out float ns))
+					case "ns":
+						if (tokens.Length > 1 && float.TryParse(tokens[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float ns))
 						{
 							float smoothness = Mathf.Clamp01(ns / 1000f);
 							AddFloatProperty("_Smoothness", smoothness);
@@ -94,21 +108,17 @@ namespace MassiveHadronLtd
 						break;
 
 					case "d":
-					case "tr": // Transparency / Dissolve
-						if (tokens.Length > 1 && float.TryParse(tokens[1],
-							System.Globalization.NumberStyles.Float,
-							System.Globalization.CultureInfo.InvariantCulture, out float val))
+					case "tr":
+						if (tokens.Length > 1 && float.TryParse(tokens[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float val))
 						{
 							float alpha = (cmd == "tr") ? 1f - val : val;
-							// For now we just set base color alpha. Full transparency setup can be extended later.
 							AddColorAlpha("_BaseColor", alpha);
 						}
 						break;
 
-					// === Texture Maps ===
 					case "map_kd":
 						AddTextureProperty("_BaseMap", ExtractTextureName(line));
-						AddTextureProperty("_MainTex", ExtractTextureName(line)); // alias
+						AddTextureProperty("_MainTex", ExtractTextureName(line));
 						break;
 
 					case "map_ke":
@@ -117,7 +127,7 @@ namespace MassiveHadronLtd
 						break;
 
 					case "map_ks":
-						AddTextureProperty("_SpecGlossMap", ExtractTextureName(line)); // or _MetallicGlossMap depending on workflow
+						AddTextureProperty("_SpecGlossMap", ExtractTextureName(line));
 						break;
 
 					case "map_bump":
@@ -127,21 +137,80 @@ namespace MassiveHadronLtd
 						break;
 
 					case "map_d":
-						AddTextureProperty("_BaseMap", ExtractTextureName(line)); // alpha in diffuse
+						AddTextureProperty("_BaseMap", ExtractTextureName(line));
 						break;
-
-						// You can easily extend this list later
 				}
 			}
 
 			name = currentMaterialName;
-
-			// Clean up duplicates (in case map_Kd and map_d both hit _BaseMap)
 			RemoveDuplicateProperties();
 		}
 
-		private Color ParseColor(string[] tokens)
+		// === Export to MTL ===
+		public void ExportToMtl(string filePath)
 		{
+			StringBuilder sb = new StringBuilder();
+			sb.AppendLine($"# Wavefront MTL exported by PortableWavefrontMaterial");
+			sb.AppendLine($"# Material: {name}");
+			sb.AppendLine();
+
+			sb.AppendLine($"newmtl {name}");
+
+			// Colors
+			WriteColor(sb, "Kd", GetColor("_BaseColor", Color.white));
+			WriteColor(sb, "Ke", GetColor("_EmissionColor", Color.black));
+			WriteColor(sb, "Ks", GetColor("_SpecColor", new Color(0.2f, 0.2f, 0.2f)));
+
+			// Scalars
+			float smoothness = GetFloat("_Smoothness", 0.5f);
+			sb.AppendLine($"Ns {(int)(smoothness * 1000f)}");
+
+			float alpha = GetColor("_BaseColor", Color.white).a;
+			if (alpha < 0.999f)
+				sb.AppendLine($"d {alpha}");
+
+			// Textures
+			WriteTexture(sb, "map_Kd", GetTextureName("_BaseMap"));
+			WriteTexture(sb, "map_Ke", GetTextureName("_EmissionMap"));
+			WriteTexture(sb, "map_Ks", GetTextureName("_SpecGlossMap"));
+			WriteTexture(sb, "map_bump", GetTextureName("_BumpMap"));
+
+			File.WriteAllText(filePath, sb.ToString());
+			Debug.Log($"✅ Material exported to Wavefront MTL: {filePath}");
+		}
+
+		private void WriteColor(StringBuilder sb, string mtlKey, Color color)
+		{
+			sb.AppendLine($"{mtlKey} {color.r:F4} {color.g:F4} {color.b:F4}");
+		}
+
+		private void WriteTexture(StringBuilder sb, string mtlKey, string textureName)
+		{
+			if (!string.IsNullOrEmpty(textureName))
+				sb.AppendLine($"{mtlKey} {textureName}.png");
+		}
+
+		private Color GetColor(string propName, Color defaultColor)
+		{
+			var prop = properties.Find(p => p.name == propName);
+			return prop != null ? new Color(prop.colorR, prop.colorG, prop.colorB, prop.colorA) : defaultColor;
+		}
+
+		private float GetFloat(string propName, float defaultValue)
+		{
+			var prop = properties.Find(p => p.name == propName);
+			return prop != null ? prop.floatValue : defaultValue;
+		}
+
+		private string GetTextureName(string propName)
+		{
+			var prop = properties.Find(p => p.name == propName && !string.IsNullOrEmpty(p.texture));
+			return prop?.texture;
+		}
+
+		// Helper methods (same as before)
+		private Color ParseColor(string[] tokens)
+		{ /* ... same as previous version ... */
 			float r = tokens.Length > 1 ? ParseFloat(tokens[1]) : 1f;
 			float g = tokens.Length > 2 ? ParseFloat(tokens[2]) : r;
 			float b = tokens.Length > 3 ? ParseFloat(tokens[3]) : r;
@@ -150,23 +219,16 @@ namespace MassiveHadronLtd
 
 		private float ParseFloat(string s)
 		{
-			return float.TryParse(s, System.Globalization.NumberStyles.Float,
-				System.Globalization.CultureInfo.InvariantCulture, out float f) ? f : 0f;
+			return float.TryParse(s, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float f) ? f : 0f;
 		}
 
 		private string ExtractTextureName(string line)
 		{
 			int spaceIndex = line.IndexOfAny(new[] { ' ', '\t' });
 			if (spaceIndex == -1) return null;
-
 			string rest = line.Substring(spaceIndex + 1).Trim();
 			var parts = rest.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
-
-			if (parts.Length == 0) return null;
-
-			// Take the last token (handles MTL options like -o, -s, -mm etc.)
-			string filename = parts[^1];
-			return Path.GetFileNameWithoutExtension(filename);
+			return parts.Length > 0 ? Path.GetFileNameWithoutExtension(parts[^1]) : null;
 		}
 
 		private void AddColorProperty(string propName, Color color)
@@ -179,10 +241,8 @@ namespace MassiveHadronLtd
 		private void AddColorAlpha(string propName, float alpha)
 		{
 			var existing = properties.Find(p => p.name == propName);
-			if (existing != null)
-				existing.colorA = alpha;
-			else
-				AddColorProperty(propName, new Color(1, 1, 1, alpha));
+			if (existing != null) existing.colorA = alpha;
+			else AddColorProperty(propName, new Color(1, 1, 1, alpha));
 		}
 
 		private void AddFloatProperty(string propName, float value)
@@ -193,26 +253,21 @@ namespace MassiveHadronLtd
 		private void AddTextureProperty(string propName, string texName)
 		{
 			if (string.IsNullOrEmpty(texName)) return;
+			if (properties.Exists(p => p.name == propName && p.texture == texName)) return;
 
-			// Avoid adding exact duplicate
-			if (properties.Exists(p => p.name == propName && p.texture == texName))
-				return;
-
-			var prop = new PortableProperty
+			properties.Add(new PortableProperty
 			{
 				name = propName,
 				texture = texName,
 				textureScaleX = 1f,
 				textureScaleY = 1f
-			};
-			properties.Add(prop);
+			});
 		}
 
 		private void RemoveDuplicateProperties()
 		{
 			var unique = new List<PortableProperty>();
 			var seen = new HashSet<string>();
-
 			foreach (var p in properties)
 			{
 				string key = p.name + "|" + (p.texture ?? "");
