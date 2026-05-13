@@ -279,21 +279,35 @@ namespace MassiveHadronLtd
 				Path.Combine(baseDirectory, textureName),
 				Path.Combine(baseDirectory, textureName + ".png"),
 				Path.Combine(baseDirectory, textureName + ".jpg"),
-				Path.Combine(baseDirectory, textureName + ".jpeg")
+				Path.Combine(baseDirectory, textureName + ".jpeg"),
+				Path.Combine(baseDirectory, textureName + ".tga")
 			};
 
 			foreach (string path in candidates)
 			{
-				if (File.Exists(path))
+				if (!File.Exists(path)) continue;
+
+				byte[] data = File.ReadAllBytes(path);
+				Texture2D tex = null;
+
+				string ext = Path.GetExtension(path).ToLowerInvariant();
+
+				if (ext == ".tga")
 				{
-					byte[] data = File.ReadAllBytes(path);
-					Texture2D tex = new Texture2D(2, 2);
-					if (tex.LoadImage(data))
-					{
-						tex.name = textureName;
-						Debug.Log($"[Wavefront] Loaded texture from disk: {path}");
-						return tex;
-					}
+					tex = TgaLoader.LoadTGA(data);
+				}
+				else
+				{
+					tex = new Texture2D(2, 2);
+					if (!tex.LoadImage(data))
+						tex = null;
+				}
+
+				if (tex != null)
+				{
+					tex.name = textureName;
+					Debug.Log($"[Wavefront] Loaded texture: {path}");
+					return tex;
 				}
 			}
 
