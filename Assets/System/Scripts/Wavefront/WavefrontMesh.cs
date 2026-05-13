@@ -10,6 +10,13 @@ namespace MassiveHadronLtd
 	[Serializable]
 	public class WavefrontMesh
 	{
+		private struct FaceVertex
+		{
+			public int vertexIndex;
+			public int uvIndex;
+			public int normalIndex;
+		}
+
 		public string name = "Mesh";
 		public string materialLibrary = "";   // mtllib line
 		public string materialName = "";      // usemtl line
@@ -18,6 +25,7 @@ namespace MassiveHadronLtd
 		public List<Vector3> normals = new List<Vector3>();
 		public List<Vector2> uvs = new List<Vector2>();
 		public List<int> triangles = new List<int>();
+		private readonly List<FaceVertex> faceVertices = new List<FaceVertex>();
 
 		public WavefrontMesh() { }
 
@@ -45,6 +53,7 @@ namespace MassiveHadronLtd
 			normals.Clear();
 			uvs.Clear();
 			triangles.Clear();
+			faceVertices.Clear();
 			materialLibrary = "";
 			materialName = "";
 
@@ -106,14 +115,52 @@ namespace MassiveHadronLtd
 		{
 			Mesh mesh = new Mesh { name = name };
 
-			mesh.SetVertices(vertices);
-			mesh.SetTriangles(triangles, 0);
-			mesh.SetUVs(0, uvs);
+			if (faceVertices.Count > 0)
+			{
+				var unityVertices = new List<Vector3>(faceVertices.Count);
+				var unityUvs = new List<Vector2>(faceVertices.Count);
+				var unityNormals = new List<Vector3>(faceVertices.Count);
+				var remap = new Dictionary<string, int>();
+				var rebuiltTriangles = new List<int>(triangles.Count);
 
-			if (normals.Count > 0)
-				mesh.SetNormals(normals);
+				for (int i = 0; i < faceVertices.Count; i++)
+				{
+					var fv = faceVertices[i];
+					string key = $"{fv.vertexIndex}|{fv.uvIndex}|{fv.normalIndex}";
+
+					if (!remap.TryGetValue(key, out int newIndex))
+					{
+						newIndex = unityVertices.Count;
+						remap[key] = newIndex;
+
+						unityVertices.Add(GetVertex(vertices, fv.vertexIndex));
+						unityUvs.Add(GetUv(uvs, fv.uvIndex));
+						unityNormals.Add(GetNormal(normals, fv.normalIndex));
+					}
+
+					rebuiltTriangles.Add(newIndex);
+				}
+
+				mesh.SetVertices(unityVertices);
+				mesh.SetTriangles(rebuiltTriangles, 0);
+				mesh.SetUVs(0, unityUvs);
+
+				if (unityNormals.Count > 0 && HasAnyNormalIndex(faceVertices))
+					mesh.SetNormals(unityNormals);
+				else
+					mesh.RecalculateNormals();
+			}
 			else
-				mesh.RecalculateNormals();
+			{
+				mesh.SetVertices(vertices);
+				mesh.SetTriangles(triangles, 0);
+				mesh.SetUVs(0, uvs);
+
+				if (normals.Count > 0)
+					mesh.SetNormals(normals);
+				else
+					mesh.RecalculateNormals();
+			}
 
 			mesh.RecalculateBounds();
 			mesh.Optimize();
@@ -146,13 +193,23 @@ namespace MassiveHadronLtd
 
 			sb.AppendLine();
 
-			for (int i = 0; i < triangles.Count; i += 3)
+			if (faceVertices.Count > 0)
 			{
-				int a = triangles[i] + 1;
-				int b = triangles[i + 1] + 1;
-				int c = triangles[i + 2] + 1;
+				for (int i = 0; i < faceVertices.Count; i += 3)
+				{
+					sb.AppendLine($"f {FormatFaceVertex(faceVertices[i])} {FormatFaceVertex(faceVertices[i + 1])} {FormatFaceVertex(faceVertices[i + 2])}");
+				}
+			}
+			else
+			{
+				for (int i = 0; i < triangles.Count; i += 3)
+				{
+					int a = triangles[i] + 1;
+					int b = triangles[i + 1] + 1;
+					int c = triangles[i + 2] + 1;
 
-				sb.AppendLine($"f {a} {b} {c}");
+					sb.AppendLine($"f {a} {b} {c}");
+				}
 			}
 
 			File.WriteAllText(filePath, sb.ToString());
@@ -176,21 +233,82 @@ namespace MassiveHadronLtd
 
 		private void ParseFace(string[] parts)
 		{
-			var indices = new List<int>();
+			var face = new List<FaceVertex>();
 			for (int i = 1; i < parts.Length; i++)
 			{
 				if (string.IsNullOrEmpty(parts[i])) continue;
 				var comps = parts[i].Split('/');
-				if (comps.Length > 0 && !string.IsNullOrEmpty(comps[0]))
-					indices.Add(int.Parse(comps[0]) - 1);
+				int v = comps.Length > 0 && !string.IsNullOrEmpty(comps[0]) ? ParseObjIndex(comps[0], vertices.Count) : -1;
+				int vt = comps.Length > 1 && !string.IsNullOrEmpty(comps[1]) ? ParseObjIndex(comps[1], uvs.Count) : -1;
+				int vn = comps.Length > 2 && !string.IsNullOrEmpty(comps[2]) ? ParseObjIndex(comps[2], normals.Count) : -1;
+
+				if (v >= 0)
+					face.Add(new FaceVertex { vertexIndex = v, uvIndex = vt, normalIndex = vn });
 			}
 
-			for (int i = 1; i < indices.Count - 1; i++)
+			for (int i = 1; i < face.Count - 1; i++)
 			{
-				triangles.Add(indices[0]);
-				triangles.Add(indices[i]);
-				triangles.Add(indices[i + 1]);
+				AddFaceVertex(face[0]);
+				AddFaceVertex(face[i]);
+				AddFaceVertex(face[i + 1]);
 			}
+		}
+
+		private void AddFaceVertex(FaceVertex faceVertex)
+		{
+			faceVertices.Add(faceVertex);
+			triangles.Add(faceVertices.Count - 1);
+		}
+
+		private static int ParseObjIndex(string token, int count)
+		{
+			if (!int.TryParse(token, NumberStyles.Integer, CultureInfo.InvariantCulture, out int index))
+				return -1;
+
+			return index > 0 ? index - 1 : count + index;
+		}
+
+		private static Vector3 GetVertex(List<Vector3> source, int index)
+		{
+			return index >= 0 && index < source.Count ? source[index] : Vector3.zero;
+		}
+
+		private static Vector2 GetUv(List<Vector2> source, int index)
+		{
+			return index >= 0 && index < source.Count ? source[index] : Vector2.zero;
+		}
+
+		private static Vector3 GetNormal(List<Vector3> source, int index)
+		{
+			return index >= 0 && index < source.Count ? source[index] : Vector3.zero;
+		}
+
+		private static bool HasAnyNormalIndex(List<FaceVertex> faceVertices)
+		{
+			for (int i = 0; i < faceVertices.Count; i++)
+			{
+				if (faceVertices[i].normalIndex >= 0)
+					return true;
+			}
+			return false;
+		}
+
+		private static string FormatFaceVertex(FaceVertex faceVertex)
+		{
+			int v = faceVertex.vertexIndex + 1;
+			bool hasUv = faceVertex.uvIndex >= 0;
+			bool hasNormal = faceVertex.normalIndex >= 0;
+
+			if (hasUv && hasNormal)
+				return $"{v}/{faceVertex.uvIndex + 1}/{faceVertex.normalIndex + 1}";
+
+			if (hasUv)
+				return $"{v}/{faceVertex.uvIndex + 1}";
+
+			if (hasNormal)
+				return $"{v}//{faceVertex.normalIndex + 1}";
+
+			return v.ToString(CultureInfo.InvariantCulture);
 		}
 	}
 }
