@@ -53,34 +53,38 @@ namespace MassiveHadronLtd
 			var wMat = new WavefrontMaterial(mtlPath);
 			Material mat = wMat.ToUnityMaterial();
 
-			PatchTexturesFromDisk(mat, baseDirectory);
+			PatchTexturesFromDisk(mat, wMat, baseDirectory);
 			return mat;
 		}
 
-		private static void PatchTexturesFromDisk(Material mat, string baseDirectory)
+		private static void PatchTexturesFromDisk(Material mat, WavefrontMaterial wavefrontMaterial, string baseDirectory)
 		{
-			if (mat == null) return;
+			if (mat == null || wavefrontMaterial?.properties == null) return;
 
-			string[] textureProps = { "_BaseMap", "_MainTex", "_EmissionMap", "_BumpMap" };
-
-			foreach (string prop in textureProps)
+			foreach (var prop in wavefrontMaterial.properties)
 			{
-				if (!mat.HasProperty(prop)) continue;
+				if (string.IsNullOrEmpty(prop?.name) || string.IsNullOrEmpty(prop.texture))
+					continue;
 
-				// Get the texture name that was stored in the MTL
-				Texture current = mat.GetTexture(prop);
-				string texName = current != null ? current.name : null;
+				if (!mat.HasProperty(prop.name))
+					continue;
 
-				if (string.IsNullOrEmpty(texName)) continue;
-
-				Texture2D diskTex = WavefrontMaterial.TryLoadTexture(baseDirectory, texName);
+				Texture2D diskTex = WavefrontMaterial.TryLoadTexture(baseDirectory, prop.texture);
 				if (diskTex != null)
 				{
-					mat.SetTexture(prop, diskTex);
-					if (prop == "_BaseMap" || prop == "_MainTex")
+					mat.SetTexture(prop.name, diskTex);
+					mat.SetTextureScale(prop.name, new Vector2(prop.textureScaleX, prop.textureScaleY));
+					mat.SetTextureOffset(prop.name, new Vector2(prop.textureOffsetX, prop.textureOffsetY));
+
+					if (prop.name == "_BaseMap" || prop.name == "_MainTex")
 						mat.mainTexture = diskTex;
 
-					Debug.Log($"Patched texture '{texName}' on property {prop}");
+					if (prop.name == "_BaseMap" && mat.HasProperty("_MainTex"))
+						mat.SetTexture("_MainTex", diskTex);
+					else if (prop.name == "_MainTex" && mat.HasProperty("_BaseMap"))
+						mat.SetTexture("_BaseMap", diskTex);
+
+					Debug.Log($"Patched texture '{prop.texture}' on property {prop.name}");
 				}
 			}
 		}
