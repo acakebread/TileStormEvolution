@@ -316,7 +316,7 @@ namespace MassiveHadronLtd
 				System.Globalization.CultureInfo.InvariantCulture, out float f) ? f : 0f;
 		}
 
-		private string ExtractTextureName(string line)
+		public static string ExtractTextureName(string line)
 		{
 			int spaceIndex = line.IndexOfAny(new[] { ' ', '\t' });
 			if (spaceIndex == -1) return null;
