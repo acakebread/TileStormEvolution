@@ -1,0 +1,10 @@
+# Wavefront MTL exported by WavefrontMaterial
+# Material: TestMaterial
+
+newmtl TestMaterial
+Kd 0.1000 0.1000 0.1000
+Ke 0.1000 1.0000 0.1000
+Ks 0.2000 0.2000 0.2000
+Ns 699
+map_Kd test.png
+map_Ke test.png

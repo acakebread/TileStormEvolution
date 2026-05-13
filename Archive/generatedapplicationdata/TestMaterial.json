@@ -1,0 +1,62 @@
+{
+  "name": "TestMaterial",
+  "shader": "Universal Render Pipeline/Lit",
+  "enabledKeywords": [
+    "_EMISSION"
+  ],
+  "properties": [
+    {
+      "name": "_BaseMap",
+      "texture": "test"
+    },
+    {
+      "name": "_BaseColor",
+      "colorR": 0.1,
+      "colorG": 0.1,
+      "colorB": 0.1,
+      "colorA": 1.0
+    },
+    {
+      "name": "_Cutoff",
+      "floatValue": 0.5
+    },
+    {
+      "name": "_Smoothness",
+      "floatValue": 0.7
+    },
+    {
+      "name": "_Metallic",
+      "floatValue": 0.1
+    },
+    {
+      "name": "_SpecColor",
+      "colorR": 0.2,
+      "colorG": 0.2,
+      "colorB": 0.2,
+      "colorA": 1.0
+    },
+    {
+      "name": "_Parallax",
+      "floatValue": 0.005
+    },
+    {
+      "name": "_EmissionColor",
+      "colorR": 0.1,
+      "colorG": 1.0,
+      "colorB": 0.1,
+      "colorA": 1.0
+    },
+    {
+      "name": "_EmissionMap",
+      "texture": "test"
+    },
+    {
+      "name": "_Cull",
+      "floatValue": 2.0
+    },
+    {
+      "name": "_MainTex",
+      "texture": "test"
+    }
+  ]
+}

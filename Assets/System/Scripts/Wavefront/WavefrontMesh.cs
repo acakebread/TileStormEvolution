@@ -11,7 +11,9 @@ namespace MassiveHadronLtd
 	public class WavefrontMesh
 	{
 		public string name = "Mesh";
-		public string materialName = "";                    // NEW: For usemtl
+		public string materialLibrary = "";   // mtllib line
+		public string materialName = "";      // usemtl line
+
 		public List<Vector3> vertices = new List<Vector3>();
 		public List<Vector3> normals = new List<Vector3>();
 		public List<Vector2> uvs = new List<Vector2>();
@@ -33,7 +35,7 @@ namespace MassiveHadronLtd
 			}
 
 			string text = File.ReadAllText(objPath);
-			FromObjText(text);
+			FromObjText(text, Path.GetFileNameWithoutExtension(objPath));
 		}
 
 		public void FromObjText(string objText, string meshName = "LoadedOBJ")
@@ -43,6 +45,7 @@ namespace MassiveHadronLtd
 			normals.Clear();
 			uvs.Clear();
 			triangles.Clear();
+			materialLibrary = "";
 			materialName = "";
 
 			var lines = objText.Split('\n');
@@ -53,20 +56,37 @@ namespace MassiveHadronLtd
 				if (string.IsNullOrEmpty(line) || line.StartsWith("#")) continue;
 
 				var parts = line.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+				if (parts.Length == 0) continue;
 
-				switch (parts[0])
+				switch (parts[0].ToLowerInvariant())
 				{
-					case "v": vertices.Add(ParseVec3(parts)); break;
-					case "vn": normals.Add(ParseVec3(parts)); break;
-					case "vt": uvs.Add(ParseVec2(parts)); break;
+					case "mtllib":
+						if (parts.Length > 1) materialLibrary = parts[1];
+						break;
+
 					case "usemtl":
 						if (parts.Length > 1) materialName = parts[1];
 						break;
+
+					case "v":
+						vertices.Add(ParseVec3(parts));
+						break;
+
+					case "vn":
+						normals.Add(ParseVec3(parts));
+						break;
+
+					case "vt":
+						uvs.Add(ParseVec2(parts));
+						break;
+
 					case "f":
 						ParseFace(parts);
 						break;
 				}
 			}
+
+			Debug.Log($"[WavefrontMesh] Loaded '{name}' | usemtl='{materialName}' | mtllib='{materialLibrary}'");
 		}
 
 		public void FromUnityMesh(Mesh unityMesh, string meshName = null, string matName = "")
@@ -115,7 +135,6 @@ namespace MassiveHadronLtd
 			if (!string.IsNullOrEmpty(materialName))
 				sb.AppendLine($"usemtl {materialName}");
 
-			// Vertices
 			foreach (var v in vertices)
 				sb.AppendLine($"v {v.x:F6} {v.y:F6} {v.z:F6}");
 
@@ -127,28 +146,19 @@ namespace MassiveHadronLtd
 
 			sb.AppendLine();
 
-			// Faces
 			for (int i = 0; i < triangles.Count; i += 3)
 			{
 				int a = triangles[i] + 1;
 				int b = triangles[i + 1] + 1;
 				int c = triangles[i + 2] + 1;
 
-				if (normals.Count > 0 && uvs.Count > 0)
-					sb.AppendLine($"f {a}/{a}/{a} {b}/{b}/{b} {c}/{c}/{c}");
-				else if (uvs.Count > 0)
-					sb.AppendLine($"f {a}/{a} {b}/{b} {c}/{c}");
-				else if (normals.Count > 0)
-					sb.AppendLine($"f {a}//{a} {b}//{b} {c}//{c}");
-				else
-					sb.AppendLine($"f {a} {b} {c}");
+				sb.AppendLine($"f {a} {b} {c}");
 			}
 
 			File.WriteAllText(filePath, sb.ToString());
 			Debug.Log($"✅ Exported Wavefront OBJ: {filePath}");
 		}
 
-		// ... (ParseVec3, ParseVec2, ParseFace, AddVertex methods remain the same as previous version)
 		private static Vector3 ParseVec3(string[] p)
 		{
 			return new Vector3(
@@ -170,7 +180,9 @@ namespace MassiveHadronLtd
 			for (int i = 1; i < parts.Length; i++)
 			{
 				if (string.IsNullOrEmpty(parts[i])) continue;
-				indices.Add(GetVertexIndex(parts[i]));
+				var comps = parts[i].Split('/');
+				if (comps.Length > 0 && !string.IsNullOrEmpty(comps[0]))
+					indices.Add(int.Parse(comps[0]) - 1);
 			}
 
 			for (int i = 1; i < indices.Count - 1; i++)
@@ -179,12 +191,6 @@ namespace MassiveHadronLtd
 				triangles.Add(indices[i]);
 				triangles.Add(indices[i + 1]);
 			}
-		}
-
-		private int GetVertexIndex(string token)
-		{
-			var comps = token.Split('/');
-			return int.Parse(comps[0]) - 1;
 		}
 	}
 }
