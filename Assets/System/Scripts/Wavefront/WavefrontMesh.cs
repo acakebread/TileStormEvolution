@@ -109,6 +109,21 @@ namespace MassiveHadronLtd
 			normals = unityMesh.normals != null ? new List<Vector3>(unityMesh.normals) : new List<Vector3>();
 			uvs = unityMesh.uv != null ? new List<Vector2>(unityMesh.uv) : new List<Vector2>();
 			triangles = new List<int>(unityMesh.triangles);
+			faceVertices.Clear();
+
+			bool hasMatchingUvs = uvs.Count == vertices.Count;
+			bool hasMatchingNormals = normals.Count == vertices.Count;
+
+			for (int i = 0; i < triangles.Count; i++)
+			{
+				int vertexIndex = triangles[i];
+				faceVertices.Add(new FaceVertex
+				{
+					vertexIndex = vertexIndex,
+					uvIndex = hasMatchingUvs ? vertexIndex : -1,
+					normalIndex = hasMatchingNormals ? vertexIndex : -1
+				});
+			}
 		}
 
 		public Mesh ToUnityMesh()
