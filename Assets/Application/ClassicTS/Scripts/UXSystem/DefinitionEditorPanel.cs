@@ -273,7 +273,7 @@ namespace ClassicTilestorm
 			PopulateDropdown(materialDropdown, ProjectAssets.GetMaterialNames(), noneMaterialOptionText);
 
 		private void SyncModelDropdown() =>
-			SyncDropdown(modelDropdown, ModelAssets.ResolveDisplayName(CurrentDefinition?.model), noneModelOptionText);
+			SyncDropdown(modelDropdown, ModelAssets.GetDisplayNameForHash(CurrentDefinition?.model), noneModelOptionText);
 
 		//private void SyncTextureDropdown() =>
 		//	SyncDropdown(textureSequenceDropdown, CurrentDefinition?.texture, noneTextureOptionText);
