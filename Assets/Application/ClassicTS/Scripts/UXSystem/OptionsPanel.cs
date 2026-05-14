@@ -16,6 +16,7 @@ namespace ClassicTilestorm
 		[SerializeField] private Button SaveDatabaseButton;
 		[SerializeField] private Button ImportMapButton;
 		[SerializeField] private Button ExportMapButton;
+		[SerializeField] private Button ImportModelButton;
 
 		[SerializeField] private Toggle difficultyToggle;
 		[SerializeField] private Toggle musicToggle;
@@ -67,6 +68,11 @@ namespace ClassicTilestorm
 				{
 					ExportMapButton.onClick.AddListener(() => mainController.ExportMapAsAtomic());
 					ExportMapButton.interactable = Application.isEditor;
+				}
+				if (null != ImportModelButton)
+				{
+					//ImportModelButton.onClick.AddListener(() => //ToDo implement import system - implement new system in place of UnityEditor.EditorUtility.OpenFilePanel
+					ImportModelButton.interactable = Application.isEditor;
 				}
 			}
 
