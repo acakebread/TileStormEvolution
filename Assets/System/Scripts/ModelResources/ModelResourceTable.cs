@@ -35,7 +35,7 @@ namespace MassiveHadronLtd
 			public string FilePath => Kind == EntryKind.File ? ResolveImportedPath(HashId, Value) : null;
 		}
 
-		private const string InternalTableResourcePath = "AssetManifests/ModelResourceTable";
+		private const string InternalTableResourcePath = "AssetManifests/Models";
 		private const string ImportedTableFileName = "ImportedModelTable.tsv";
 		private const string ImportedRootFolder = "Imported";
 
@@ -44,8 +44,6 @@ namespace MassiveHadronLtd
 		private static readonly Dictionary<string, string> PathToHash = new(StringComparer.OrdinalIgnoreCase);
 		private static readonly List<Entry> CachedEntries = new();
 		private static bool loaded;
-
-		public static Func<IEnumerable<string>> InternalModelNamesProvider { get; set; }
 
 		public static string ImportedTablePath => Path.Combine(Application.persistentDataPath, ImportedTableFileName);
 
@@ -153,9 +151,6 @@ namespace MassiveHadronLtd
 			LoadInternalResourceTable();
 			LoadImportedTable();
 
-			if (CachedEntries.Count == 0)
-				BootstrapFromProvider();
-
 			SaveImportedTable();
 			loaded = true;
 		}
@@ -166,7 +161,7 @@ namespace MassiveHadronLtd
 			if (table == null || string.IsNullOrWhiteSpace(table.text))
 				return;
 
-			foreach (var entry in ParseTableLines(table.text, EntryKind.Resource, fromDisk: false))
+			foreach (var entry in ParseTableLines(table.text, EntryKind.Resource))
 				Upsert(entry, persist: false);
 		}
 
@@ -177,7 +172,7 @@ namespace MassiveHadronLtd
 
 			try
 			{
-				foreach (var entry in ParseTableLines(File.ReadAllText(ImportedTablePath), EntryKind.File, fromDisk: true))
+				foreach (var entry in ParseTableLines(File.ReadAllText(ImportedTablePath), EntryKind.File))
 					Upsert(entry, persist: false);
 			}
 			catch (Exception ex)
@@ -186,7 +181,7 @@ namespace MassiveHadronLtd
 			}
 		}
 
-		private static IEnumerable<Entry> ParseTableLines(string content, EntryKind defaultKind, bool fromDisk)
+		private static IEnumerable<Entry> ParseTableLines(string content, EntryKind kind)
 		{
 			foreach (var rawLine in content.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
 			{
@@ -202,37 +197,12 @@ namespace MassiveHadronLtd
 				if (string.IsNullOrWhiteSpace(hash))
 					continue;
 
-				EntryKind kind = defaultKind;
-				string value = parts[1];
-
-				if (parts.Length >= 3 && Enum.TryParse(parts[1], true, out EntryKind parsedKind))
-				{
-					kind = parsedKind;
-					value = parts[2];
-				}
-				else if (fromDisk && parts.Length >= 3 && !string.Equals(parts[1], "Resource", StringComparison.OrdinalIgnoreCase) && !string.Equals(parts[1], "File", StringComparison.OrdinalIgnoreCase))
-				{
-					// Legacy three/four column imported rows: hash, kind, path, displayName
-					value = parts[parts.Length >= 4 ? 2 : 1];
-				}
+				string value = parts[parts.Length - 1];
 
 				if (kind == EntryKind.File)
 					value = Path.GetFileName(value);
 
 				yield return new Entry(hash, NormalizeValue(value), kind);
-			}
-		}
-
-		private static void BootstrapFromProvider()
-		{
-			IEnumerable<string> names = InternalModelNamesProvider?.Invoke();
-			if (names == null)
-				return;
-
-			foreach (var name in names.Where(n => !string.IsNullOrWhiteSpace(n)).Select(n => n.Trim()).Distinct(StringComparer.OrdinalIgnoreCase))
-			{
-				string hash = HTB50.EncodeFixed(RadixHash.GetStableHash32(name), 6);
-				Upsert(new Entry(hash, name, EntryKind.Resource), persist: false);
 			}
 		}
 

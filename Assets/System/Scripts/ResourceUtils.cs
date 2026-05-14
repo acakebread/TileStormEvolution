@@ -211,6 +211,12 @@ namespace MassiveHadronLtd
 
 			return ta.text.Split(new[] { '\r', '\n' }, System.StringSplitOptions.RemoveEmptyEntries)
 						  .Select(n => n.Trim())
+						  .Where(n => !string.IsNullOrEmpty(n) && !n.StartsWith("#"))
+						  .Select(n =>
+						  {
+							  var parts = n.Split('\t');
+							  return parts[parts.Length - 1].Trim();
+						  })
 						  .Where(n => !string.IsNullOrEmpty(n));
 		}
 

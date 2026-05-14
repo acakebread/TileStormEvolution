@@ -35,14 +35,11 @@ public class AssetManifestGenerator : IPreprocessBuildWithReport
 		// 🔴 Register all roots
 		AssetConfiguration.Initialize();
 
-		WriteModelResourceTable(ProjectAssets.GetModelNames(forceRefresh: true));
-
 		foreach (var (manifestName, assetType, getRoots) in AssetManifestConfig.GetAllManifestDefinitions())
 		{
 			var roots = getRoots().ToArray();
 
 			var names = GetAssetNames(assetType, roots);
-
 			WriteManifest(manifestName, names);
 
 			Debug.Log($"Generated {manifestName}: {names.Count} assets");
@@ -52,30 +49,27 @@ public class AssetManifestGenerator : IPreprocessBuildWithReport
 		Debug.Log("<color=cyan>Asset Manifests generated successfully.</color>");
 	}
 
-	private static void WriteModelResourceTable(IEnumerable<string> names)
+	private static void WriteManifest(string manifestName, IEnumerable<string> names)
 	{
-		const string tableFolder = "Assets/Resources/" + AssetManifestConfig.ManifestRootFolder;
-		if (!Directory.Exists(tableFolder))
-			Directory.CreateDirectory(tableFolder);
-
-		string path = $"Assets/Resources/{AssetManifestConfig.ManifestRootFolder}/ModelResourceTable.txt";
-		var lines = names
+		string path = $"Assets/Resources/{AssetManifestConfig.ManifestRootFolder}/{manifestName}.txt";
+		var sorted = names
 			.Where(n => !string.IsNullOrWhiteSpace(n))
 			.Select(n => n.Trim())
 			.Distinct(StringComparer.OrdinalIgnoreCase)
 			.OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
-			.Select(n => $"{HTB50.EncodeFixed(RadixHash.GetStableHash32(n), 6)}\t{n}")
 			.ToList();
 
-		lines.Insert(0, "# hashId<TAB>resourceName");
-		File.WriteAllLines(path, lines);
-	}
+		if (string.Equals(manifestName, "Models", StringComparison.OrdinalIgnoreCase))
+		{
+			var lines = sorted
+				.Select(n => $"{HTB50.EncodeFixed(RadixHash.GetStableHash32(n), 6)}\t{n}")
+				.ToList();
+			lines.Insert(0, "# hashId<TAB>resourceName");
+			File.WriteAllLines(path, lines);
+			return;
+		}
 
-	private static void WriteManifest(string manifestName, IEnumerable<string> names)
-	{
-		string path = $"Assets/Resources/{AssetManifestConfig.ManifestRootFolder}/{manifestName}.txt";
-
-		File.WriteAllLines(path, names.OrderBy(n => n, StringComparer.OrdinalIgnoreCase));
+		File.WriteAllLines(path, sorted);
 	}
 
 	private static List<string> GetAssetNames(Type assetType, string[] roots)
