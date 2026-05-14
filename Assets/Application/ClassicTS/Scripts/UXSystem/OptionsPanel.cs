@@ -1,4 +1,5 @@
-﻿using MassiveHadronLtd;
+using MassiveHadronLtd;
+using MassiveHadronLtd.FileBrowserUtil;
 using System;
 using TMPro;
 using UnityEngine;
@@ -6,7 +7,7 @@ using UnityEngine.UI;
 
 namespace ClassicTilestorm
 {
-    public class OptionsPanel : UIPanel
+	public class OptionsPanel : UIPanel
 	{
 		[Header("UI References")]
 		[SerializeField] private Button closeButton;
@@ -62,7 +63,7 @@ namespace ClassicTilestorm
 				if (null != ImportMapButton)
 				{
 					ImportMapButton.onClick.AddListener(() => mainController.ImportMapAsAtomic());
-					ImportMapButton.interactable = Application.isEditor;
+					ImportMapButton.interactable = true;
 				}
 				if (null != ExportMapButton)
 				{
@@ -71,8 +72,22 @@ namespace ClassicTilestorm
 				}
 				if (null != ImportModelButton)
 				{
-					//ImportModelButton.onClick.AddListener(() => //ToDo implement import system - implement new system in place of UnityEditor.EditorUtility.OpenFilePanel
-					ImportModelButton.interactable = Application.isEditor;
+					ImportModelButton.onClick.AddListener(() =>
+					{
+						RuntimeFileBrowser.OpenObjFile(
+							"Import Wavefront Model",
+							path =>
+							{
+								var importedPath = AssetImporter.ImportWavefrontModel(path);
+								if (!string.IsNullOrEmpty(importedPath))
+								{
+									ClassicTilestorm.Assets.ModelAssets.RefreshRegistry(true);
+									ClassicTilestorm.Assets.ProjectAssets.RefreshAllNameCaches();
+								}
+							},
+							RuntimeFileBrowser.GetDefaultRootFolder());
+					});
+					ImportModelButton.interactable = true;
 				}
 			}
 

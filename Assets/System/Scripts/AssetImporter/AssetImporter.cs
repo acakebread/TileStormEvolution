@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using ClassicTilestorm;
 using UnityEngine;
 
 namespace MassiveHadronLtd
@@ -63,7 +62,7 @@ namespace MassiveHadronLtd
 						.ToLowerInvariant();
 
 					int hash32 = RadixHash.GetStableHash32(normalizedSource);
-					return HTB50Settings.ToString(hash32);
+					return HTB50.EncodeFixed(hash32, 6);
 				}
 
 				case ImportOption.Root:

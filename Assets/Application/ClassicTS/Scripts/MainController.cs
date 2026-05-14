@@ -1,6 +1,7 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Linq;
 using MassiveHadronLtd;
+using MassiveHadronLtd.FileBrowserUtil;
 using UnityEngine.EventSystems;
 using UnityEditor;
 using ClassicTilestorm.Assets;
@@ -227,7 +228,7 @@ namespace ClassicTilestorm
 			}
 
 			string fullPath = System.IO.Path.GetFullPath(assetPath);
-			ResourceSerializer.SaveDatabase(ResourceManager.database, fullPath, verbose:true);
+			ResourceSerializer.SaveDatabase(ResourceManager.database, fullPath, verbose: true);
 #else
 			Debug.Log("Save Database only works in Editor");
 #endif
@@ -235,19 +236,19 @@ namespace ClassicTilestorm
 
 		public void ImportMapAsAtomic()
 		{
-#if UNITY_EDITOR
-			string path = EditorUtility.OpenFilePanel("Import Atomic Map", ApplicationSettings.ExportFolder, "json");
-			if (!string.IsNullOrEmpty(path))
-			{
-				ResourceSerializer.ImportAtomicMap(path);
-				string importedName = System.IO.Path.GetFileNameWithoutExtension(path);
+			RuntimeFileBrowser.OpenFile(
+				"Import Atomic Map",
+				".json",
+				path =>
+				{
+					ResourceSerializer.ImportAtomicMap(path);
+					string importedName = System.IO.Path.GetFileNameWithoutExtension(path);
 
-				if (CurrentMap != null && CurrentMap.name == importedName)
-					OnChangeMapRequested?.Invoke(0);
-			}
-#else
-			Debug.Log("Import currently only available in Unity Editor");
-#endif
+					if (CurrentMap != null && CurrentMap.name == importedName)
+						OnChangeMapRequested?.Invoke(0);
+				},
+				ApplicationSettings.ExportFolder,
+				ApplicationSettings.ExportFolder);
 		}
 
 		public void ExportMapAsAtomic()
