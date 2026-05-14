@@ -88,7 +88,7 @@ namespace ClassicTilestorm
 			var def = new Definition
 			{
 				name = _name ?? StringUtil.GenerateAssetId(),
-				model = ModelAssets.NormalizeStoredReference(model),
+				model = ModelAssets.GetHashForDisplayName(model) ?? model,
 				//texture = texture
 				material = material
 			};
