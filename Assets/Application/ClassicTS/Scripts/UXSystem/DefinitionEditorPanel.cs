@@ -76,6 +76,7 @@ namespace ClassicTilestorm
 
 		// Runtime state
 		private readonly List<Toggle> spawnedDefinitionToggles = new();
+		private readonly List<string> modelOptionHashes = new();
 		private ToggleGroup toggleGroup;
 
 		private static int lastSelectedDefinitionIndex = 0;
@@ -248,8 +249,16 @@ namespace ClassicTilestorm
 			dropdown.SetValueWithoutNotify(index >= 0 ? index : 0);
 		}
 
-		private void PopulateModelDropdown() =>
-			PopulateDropdown(modelDropdown, ProjectAssets.GetModelNames(), noneModelOptionText);
+		private void PopulateModelDropdown()
+		{
+			modelOptionHashes.Clear();
+			modelOptionHashes.Add(null);
+
+			var entries = ModelAssets.GetModelEntries(forceRefresh: true);
+			modelOptionHashes.AddRange(entries.Select(e => e.HashId));
+
+			PopulateDropdown(modelDropdown, entries.Select(e => e.DisplayName), noneModelOptionText);
+		}
 
 		//private void PopulateTextureDropdown() =>
 		//	PopulateDropdown(textureSequenceDropdown,
@@ -264,7 +273,7 @@ namespace ClassicTilestorm
 			PopulateDropdown(materialDropdown, ProjectAssets.GetMaterialNames(), noneMaterialOptionText);
 
 		private void SyncModelDropdown() =>
-			SyncDropdown(modelDropdown, CurrentDefinition?.model, noneModelOptionText);
+			SyncDropdown(modelDropdown, ModelAssets.ResolveDisplayName(CurrentDefinition?.model), noneModelOptionText);
 
 		//private void SyncTextureDropdown() =>
 		//	SyncDropdown(textureSequenceDropdown, CurrentDefinition?.texture, noneTextureOptionText);
@@ -303,10 +312,9 @@ namespace ClassicTilestorm
 			var def = CurrentDefinition;
 			if (def == null) return;
 
-			string selected = index >= 0 && index < modelDropdown.options.Count
-				? modelDropdown.options[index].text : null;
-
-			string newModel = (selected == noneModelOptionText) ? null : selected;
+			string newModel = index > 0 && index < modelOptionHashes.Count
+				? modelOptionHashes[index]
+				: null;
 
 			if (newModel != def.model)
 			{

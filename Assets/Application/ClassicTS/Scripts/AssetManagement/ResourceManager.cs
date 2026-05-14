@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Newtonsoft.Json;
 using MassiveHadronLtd;
 using UnityEngine;
+using ClassicTilestorm.Assets;
 
 namespace ClassicTilestorm
 {
@@ -87,7 +88,7 @@ namespace ClassicTilestorm
 			var def = new Definition
 			{
 				name = _name ?? StringUtil.GenerateAssetId(),
-				model = model,
+				model = ModelAssets.NormalizeStoredReference(model),
 				//texture = texture
 				material = material
 			};

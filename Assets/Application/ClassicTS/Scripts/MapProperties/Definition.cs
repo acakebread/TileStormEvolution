@@ -5,6 +5,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 using MassiveHadronLtd;
+using ClassicTilestorm.Assets;
 
 namespace ClassicTilestorm
 {
@@ -194,7 +195,8 @@ namespace ClassicTilestorm
 			writer.WriteValue(HTB50Settings.ToString(def.HashID));
 
 			if (!string.IsNullOrEmpty(def.name)) { writer.WritePropertyName("name"); serializer.Serialize(writer, def.name); }
-			if (!string.IsNullOrEmpty(def.model)) { writer.WritePropertyName("model"); serializer.Serialize(writer, def.model); }
+			var modelRef = ModelAssets.NormalizeStoredReference(def.model);
+			if (!string.IsNullOrEmpty(modelRef)) { writer.WritePropertyName("model"); serializer.Serialize(writer, modelRef); }
 			//if (!string.IsNullOrEmpty(def.texture)) { writer.WritePropertyName("texture"); serializer.Serialize(writer, def.texture); }
 			if (!string.IsNullOrEmpty(def.material)) { writer.WritePropertyName("material"); serializer.Serialize(writer, def.material); }
 
@@ -254,6 +256,7 @@ namespace ClassicTilestorm
 			}
 
 			serializer.Populate(jo.CreateReader(), def);
+			def.model = ModelAssets.NormalizeStoredReference(def.model);
 
 			// Gameplay flags
 			if (jo["flags"]?.Value<string>() is { } flagsStr && !string.IsNullOrEmpty(flagsStr))

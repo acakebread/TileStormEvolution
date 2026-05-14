@@ -3,6 +3,7 @@ using UnityEngine;
 using MassiveHadronLtd;
 using System.Collections.Generic;
 using System.Linq;
+using System.IO;
 
 namespace ClassicTilestorm.Assets
 {
@@ -11,9 +12,192 @@ namespace ClassicTilestorm.Assets
 	/// </summary>
 	public static class ModelAssets
 	{
+		public enum ModelSourceKind
+		{
+			Internal,
+			Imported
+		}
+
+		public readonly struct ModelEntry
+		{
+			public readonly string DisplayName;
+			public readonly string HashId;
+			public readonly ModelSourceKind Source;
+			public readonly string ResourcePath;
+			public readonly string FilePath;
+
+			public ModelEntry(string displayName, string hashId, ModelSourceKind source, string resourcePath = null, string filePath = null)
+			{
+				DisplayName = displayName;
+				HashId = hashId;
+				Source = source;
+				ResourcePath = resourcePath;
+				FilePath = filePath;
+			}
+		}
+
+		private static readonly Dictionary<string, string> DisplayNameToHash = new(StringComparer.OrdinalIgnoreCase);
+		private static readonly Dictionary<string, ModelEntry> HashToEntry = new(StringComparer.OrdinalIgnoreCase);
+		private static readonly Dictionary<string, GameObject> ReferenceCache = new(StringComparer.OrdinalIgnoreCase);
+		private static readonly Dictionary<string, GameObject> ImportedInstanceCache = new(StringComparer.OrdinalIgnoreCase);
+		private static readonly List<ModelEntry> CachedEntries = new();
+		private static bool registryReady;
+
 		public static void RegisterRoot(string root) => AssetRegistry<GameObject>.RegisterModelRoot(root);
-		public static void ClearCache() => AssetRegistry<GameObject>.ClearModelCache();
-		public static GameObject Find(string modelName) => AssetRegistry<GameObject>.FindModel(modelName);
+		public static void ClearCache()
+		{
+			AssetRegistry<GameObject>.ClearModelCache();
+			DisplayNameToHash.Clear();
+			HashToEntry.Clear();
+			ReferenceCache.Clear();
+			foreach (var go in ImportedInstanceCache.Values)
+				DestroyLoadedObject(go);
+			ImportedInstanceCache.Clear();
+			CachedEntries.Clear();
+			registryReady = false;
+		}
+
+		public static void RefreshRegistry(bool forceRefresh = false)
+		{
+			if (registryReady && !forceRefresh && CachedEntries.Count > 0)
+				return;
+
+			DisplayNameToHash.Clear();
+			HashToEntry.Clear();
+			ReferenceCache.Clear();
+			CachedEntries.Clear();
+
+			var importedEntries = GetImportedModelEntries().ToList();
+			var usedHashes = new HashSet<string>(
+				importedEntries.Select(e => e.HashId),
+				StringComparer.OrdinalIgnoreCase);
+
+			var internalEntries = ProjectAssets.GetModelNames(forceRefresh: true)
+				.Where(n => !string.IsNullOrWhiteSpace(n))
+				.Select(n => n.Trim())
+				.Distinct(StringComparer.OrdinalIgnoreCase)
+				.Select(name =>
+				{
+					string hash = CreateStableHashForName(name, usedHashes);
+					usedHashes.Add(hash);
+					return new ModelEntry(name, hash, ModelSourceKind.Internal, resourcePath: name);
+				});
+
+			foreach (var entry in internalEntries.Concat(importedEntries).OrderBy(e => e.DisplayName, StringComparer.OrdinalIgnoreCase))
+			{
+				DisplayNameToHash[entry.DisplayName] = entry.HashId;
+				HashToEntry[entry.HashId] = entry;
+				CachedEntries.Add(entry);
+			}
+
+			registryReady = true;
+		}
+
+		public static IReadOnlyList<ModelEntry> GetModelEntries(bool forceRefresh = false)
+		{
+			RefreshRegistry(forceRefresh);
+			return CachedEntries;
+		}
+
+		public static IReadOnlyList<string> GetModelDisplayNames(bool forceRefresh = false)
+			=> GetModelEntries(forceRefresh).Select(e => e.DisplayName).ToArray();
+
+		public static bool TryGetHashForModelName(string modelName, out string hash)
+		{
+			if (string.IsNullOrWhiteSpace(modelName))
+			{
+				hash = null;
+				return false;
+			}
+
+			RefreshRegistry(false);
+			string key = modelName.Trim();
+			if (DisplayNameToHash.TryGetValue(key, out hash))
+				return true;
+
+			RefreshRegistry(true);
+			return DisplayNameToHash.TryGetValue(key, out hash);
+		}
+
+		public static string ResolveDisplayName(string modelReference)
+		{
+			if (string.IsNullOrWhiteSpace(modelReference))
+				return null;
+
+			RefreshRegistry(false);
+
+			string key = modelReference.Trim();
+			if (HashToEntry.TryGetValue(key, out var entry))
+				return entry.DisplayName;
+
+			if (DisplayNameToHash.ContainsKey(key))
+				return key;
+
+			RefreshRegistry(true);
+			if (HashToEntry.TryGetValue(key, out entry))
+				return entry.DisplayName;
+
+			if (DisplayNameToHash.ContainsKey(key))
+				return key;
+
+			return key;
+		}
+
+		public static string NormalizeStoredReference(string modelReference)
+		{
+			if (string.IsNullOrWhiteSpace(modelReference))
+				return null;
+
+			RefreshRegistry(false);
+
+			string key = modelReference.Trim();
+
+			if (DisplayNameToHash.TryGetValue(key, out var hash))
+				return hash;
+
+			if (HashToEntry.ContainsKey(key))
+				return key;
+
+			RefreshRegistry(true);
+
+			if (DisplayNameToHash.TryGetValue(key, out hash))
+				return hash;
+
+			if (HashToEntry.ContainsKey(key))
+				return key;
+
+			if (LooksLikeCanonicalHash(key))
+				return key;
+
+			return HTB50Settings.ToString(RadixHash.GetStableHash32(key));
+		}
+
+		public static GameObject Find(string modelName)
+		{
+			if (string.IsNullOrWhiteSpace(modelName))
+				return null;
+
+			RefreshRegistry(false);
+
+			string key = modelName.Trim();
+			if (ReferenceCache.TryGetValue(key, out var cached))
+				return cached;
+
+			var asset = TryLoadExactReference(key);
+
+			if (asset == null)
+			{
+				RefreshRegistry(true);
+				asset = TryLoadExactReference(key);
+			}
+
+			if (asset != null)
+			{
+				ReferenceCache[key] = asset;
+			}
+
+			return asset;
+		}
 
 		public static GameObject Instantiate(string modelName, Transform parent = null)
 		{
@@ -21,7 +205,8 @@ namespace ClassicTilestorm.Assets
 			if (asset == null) return null;
 
 			var instance = UnityEngine.Object.Instantiate(asset, parent);
-			instance.name = System.IO.Path.GetFileNameWithoutExtension(modelName);
+			PrepareInstanceForScene(instance, asset);
+			instance.name = ResolveDisplayName(modelName) ?? System.IO.Path.GetFileNameWithoutExtension(modelName);
 			return instance;
 		}
 
@@ -48,6 +233,120 @@ namespace ClassicTilestorm.Assets
 		{
 			get => AssetRegistry<GameObject>.NameRemapper;
 			set => AssetRegistry<GameObject>.NameRemapper = value;
+		}
+
+		private static string CreateStableHashForName(string modelName, HashSet<string> usedHashes)
+		{
+			for (int attempt = 0; attempt < 2048; attempt++)
+			{
+				string seed = attempt == 0 ? modelName : $"{modelName}#{attempt}";
+				string hash = HTB50Settings.ToString(RadixHash.GetStableHash32(seed));
+
+				if (!usedHashes.Contains(hash))
+					return hash;
+			}
+
+			return HTB50Settings.ToString(RadixHash.GetStableHash32($"{modelName}#{Guid.NewGuid():N}"));
+		}
+
+		private static IEnumerable<ModelEntry> GetImportedModelEntries()
+		{
+			string importedRoot = Path.Combine(Application.persistentDataPath, "Imported");
+			if (!Directory.Exists(importedRoot))
+				yield break;
+
+			foreach (var objPath in Directory.EnumerateFiles(importedRoot, "*.obj", SearchOption.AllDirectories))
+			{
+				string folderName = Path.GetFileName(Path.GetDirectoryName(objPath));
+				if (string.IsNullOrWhiteSpace(folderName))
+					continue;
+
+				string displayBase = Path.GetFileNameWithoutExtension(objPath);
+				if (string.IsNullOrWhiteSpace(displayBase))
+					displayBase = folderName;
+
+				yield return new ModelEntry(
+					displayName: $"{displayBase} [{folderName}]",
+					hashId: folderName,
+					source: ModelSourceKind.Imported,
+					filePath: objPath);
+			}
+		}
+
+		private static GameObject TryLoadExactReference(string key)
+		{
+			if (HashToEntry.TryGetValue(key, out var entry))
+				return LoadEntry(entry);
+
+			if (DisplayNameToHash.TryGetValue(key, out var hash) && HashToEntry.TryGetValue(hash, out entry))
+				return LoadEntry(entry);
+
+			if (LooksLikeCanonicalHash(key) && HashToEntry.TryGetValue(key, out entry))
+				return LoadEntry(entry);
+
+			return AssetRegistry<GameObject>.FindModel(key);
+		}
+
+		private static GameObject LoadEntry(ModelEntry entry)
+		{
+			if (entry.Source == ModelSourceKind.Internal)
+				return AssetRegistry<GameObject>.FindModel(entry.ResourcePath ?? entry.DisplayName);
+
+			if (ImportedInstanceCache.TryGetValue(entry.HashId, out var cached) && cached != null)
+				return cached;
+
+			if (string.IsNullOrWhiteSpace(entry.FilePath) || !File.Exists(entry.FilePath))
+				return null;
+
+			var go = WavefrontUtility.Load(
+				entry.FilePath,
+				Path.GetFileNameWithoutExtension(entry.FilePath),
+				asTemplate: true);
+			if (go != null)
+				ImportedInstanceCache[entry.HashId] = go;
+			return go;
+		}
+
+		private static void PrepareInstanceForScene(GameObject instance, GameObject source)
+		{
+			if (instance == null) return;
+
+			bool needsSanitizing = source != null &&
+				((source.hideFlags & HideFlags.HideAndDontSave) != 0 || !source.activeSelf);
+
+			if (!needsSanitizing)
+				return;
+
+			instance.hideFlags = HideFlags.None;
+			instance.SetActive(true);
+
+			foreach (var child in instance.GetComponentsInChildren<Transform>(true))
+				child.gameObject.hideFlags = HideFlags.None;
+		}
+
+		private static void DestroyLoadedObject(UnityEngine.Object obj)
+		{
+			if (obj == null) return;
+
+			if (Application.isPlaying)
+				UnityEngine.Object.Destroy(obj);
+			else
+				UnityEngine.Object.DestroyImmediate(obj);
+		}
+
+		private static bool LooksLikeCanonicalHash(string value)
+		{
+			try
+			{
+				return string.Equals(
+					HTB50Settings.ToString(HTB50.Decode(value)),
+					value,
+					StringComparison.OrdinalIgnoreCase);
+			}
+			catch
+			{
+				return false;
+			}
 		}
 	}
 
