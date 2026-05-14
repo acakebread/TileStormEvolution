@@ -18,7 +18,11 @@ namespace MassiveHadronLtd.FileBrowserUtil
 
 		public static void OpenObjFile(string title, Action<string> onSelected, string rootFolder = null, string startFolder = null, Action onCancelled = null)
 		{
+#if UNITY_WEBGL && !UNITY_EDITOR
+			WebGLRuntimeFileBrowser.OpenObjFile(title, onSelected, rootFolder, onCancelled);
+#else
 			OpenFile(title, new[] { ".obj" }, onSelected, rootFolder, startFolder, onCancelled);
+#endif
 		}
 
 		public static void OpenFile(string title, string extension, Action<string> onSelected, string rootFolder = null, string startFolder = null, Action onCancelled = null)
@@ -31,6 +35,9 @@ namespace MassiveHadronLtd.FileBrowserUtil
 			if (onSelected == null)
 				throw new ArgumentNullException(nameof(onSelected));
 
+#if UNITY_WEBGL && !UNITY_EDITOR
+			WebGLRuntimeFileBrowser.OpenFile(title, extensions, onSelected, rootFolder, onCancelled);
+#else
 			EnsureHost().Open(new FileBrowserRequest
 			{
 				Title = string.IsNullOrWhiteSpace(title) ? "Select File" : title,
@@ -40,6 +47,7 @@ namespace MassiveHadronLtd.FileBrowserUtil
 				OnSelected = onSelected,
 				OnCancelled = onCancelled
 			});
+#endif
 		}
 
 		private static FileBrowserHost EnsureHost()
