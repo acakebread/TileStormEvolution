@@ -17,25 +17,28 @@ namespace MassiveHadronLtd
 		public readonly struct Entry
 		{
 			public readonly string HashId;
-			public readonly string ResourcePath;
-			public readonly string FilePath;
-			public readonly string DisplayName;
+			public readonly string Value;
 			public readonly EntryKind Kind;
 
-			public Entry(string hashId, string resourcePath, string filePath, string displayName, EntryKind kind)
+			public Entry(string hashId, string value, EntryKind kind)
 			{
 				HashId = hashId;
-				ResourcePath = resourcePath;
-				FilePath = filePath;
-				DisplayName = displayName;
+				Value = value;
 				Kind = kind;
 			}
 
-			public bool IsImported => Kind == EntryKind.File;
+			public string DisplayName => string.IsNullOrWhiteSpace(Value)
+				? null
+				: Path.GetFileNameWithoutExtension(Value);
+
+			public string ResourcePath => Kind == EntryKind.Resource ? Value : null;
+			public string FilePath => Kind == EntryKind.File ? ResolveImportedPath(HashId, Value) : null;
 		}
 
-		private const string TableFileName = "ModelResourceTable.tsv";
+		private const string InternalTableResourcePath = "AssetManifests/ModelResourceTable";
+		private const string ImportedTableFileName = "ImportedModelTable.tsv";
 		private const string ImportedRootFolder = "Imported";
+
 		private static readonly Dictionary<string, Entry> HashToEntry = new(StringComparer.OrdinalIgnoreCase);
 		private static readonly Dictionary<string, string> DisplayToHash = new(StringComparer.OrdinalIgnoreCase);
 		private static readonly Dictionary<string, string> PathToHash = new(StringComparer.OrdinalIgnoreCase);
@@ -44,14 +47,14 @@ namespace MassiveHadronLtd
 
 		public static Func<IEnumerable<string>> InternalModelNamesProvider { get; set; }
 
-		public static string TablePath => Path.Combine(Application.persistentDataPath, TableFileName);
+		public static string ImportedTablePath => Path.Combine(Application.persistentDataPath, ImportedTableFileName);
 
 		public static void Refresh(bool forceRefresh = false)
 		{
 			if (loaded && !forceRefresh && CachedEntries.Count > 0)
 				return;
 
-			LoadOrBootstrap();
+			LoadTables();
 		}
 
 		public static IReadOnlyList<Entry> GetEntries(bool forceRefresh = false)
@@ -98,7 +101,7 @@ namespace MassiveHadronLtd
 			if (PathToHash.TryGetValue(normalized, out var hash))
 				return hash;
 
-			string resolved = ResolveImportedPath(normalized);
+			string resolved = ResolveImportedPathFromAny(normalized);
 			return !string.IsNullOrWhiteSpace(resolved) && PathToHash.TryGetValue(resolved, out hash)
 				? hash
 				: null;
@@ -107,30 +110,28 @@ namespace MassiveHadronLtd
 		public static string GetPathForHash(string hashId)
 		{
 			return TryGetEntry(hashId, out var entry)
-				? (!string.IsNullOrWhiteSpace(entry.FilePath) ? entry.FilePath : entry.ResourcePath)
+				? (entry.Kind == EntryKind.File ? entry.FilePath : entry.ResourcePath)
 				: null;
 		}
 
-		public static void RegisterInternal(string hashId, string resourcePath, string displayName = null)
+		public static void RegisterInternal(string hashId, string resourceKey)
 		{
 			Upsert(new Entry(
 				hashId: NormalizeHash(hashId),
-				resourcePath: NormalizePath(resourcePath),
-				filePath: null,
-				displayName: NormalizeDisplay(displayName ?? Path.GetFileNameWithoutExtension(resourcePath)),
+				value: NormalizeValue(resourceKey),
 				kind: EntryKind.Resource),
 				persist: false);
 		}
 
-		public static void RegisterImported(string hashId, string filePath, string displayName = null)
+		public static void RegisterImported(string hashId, string filePath)
 		{
+			string fileName = NormalizeValue(Path.GetFileName(filePath));
 			Upsert(new Entry(
 				hashId: NormalizeHash(hashId),
-				resourcePath: null,
-				filePath: ResolveImportedPath(filePath),
-				displayName: NormalizeDisplay(displayName ?? Path.GetFileNameWithoutExtension(filePath)),
+				value: fileName,
 				kind: EntryKind.File),
-				persist: true);
+				persist: true,
+				absoluteImportedPath: ResolveImportedPath(hashId, fileName, filePath));
 		}
 
 		public static void ClearRuntimeCache()
@@ -142,106 +143,100 @@ namespace MassiveHadronLtd
 			loaded = false;
 		}
 
-		private static void LoadOrBootstrap()
+		private static void LoadTables()
 		{
 			HashToEntry.Clear();
 			DisplayToHash.Clear();
 			PathToHash.Clear();
 			CachedEntries.Clear();
 
-			LoadFromDisk();
-			BootstrapInternalModels();
-			SaveToDisk();
+			LoadInternalResourceTable();
+			LoadImportedTable();
 
+			if (CachedEntries.Count == 0)
+				BootstrapFromProvider();
+
+			SaveImportedTable();
 			loaded = true;
 		}
 
-		private static void LoadFromDisk()
+		private static void LoadInternalResourceTable()
 		{
-			if (!File.Exists(TablePath))
+			var table = Resources.Load<TextAsset>(InternalTableResourcePath);
+			if (table == null || string.IsNullOrWhiteSpace(table.text))
+				return;
+
+			foreach (var entry in ParseTableLines(table.text, EntryKind.Resource, fromDisk: false))
+				Upsert(entry, persist: false);
+		}
+
+		private static void LoadImportedTable()
+		{
+			if (!File.Exists(ImportedTablePath))
 				return;
 
 			try
 			{
-				foreach (var rawLine in File.ReadAllLines(TablePath))
-				{
-					if (string.IsNullOrWhiteSpace(rawLine))
-						continue;
-
-					string line = rawLine.Trim();
-					if (line.StartsWith("#"))
-						continue;
-
-					var parts = line.Split('\t');
-					if (parts.Length < 3)
-						continue;
-
-					if (!Enum.TryParse(parts[1], true, out EntryKind kind))
-						kind = EntryKind.Resource;
-
-					var entry = new Entry(
-						hashId: NormalizeHash(parts[0]),
-						resourcePath: kind == EntryKind.Resource ? NormalizePath(parts[2]) : null,
-						filePath: kind == EntryKind.File ? ResolveImportedPath(parts[2]) : null,
-						displayName: parts.Length > 3 ? NormalizeDisplay(parts[3]) : null,
-						kind: kind);
-
+				foreach (var entry in ParseTableLines(File.ReadAllText(ImportedTablePath), EntryKind.File, fromDisk: true))
 					Upsert(entry, persist: false);
-				}
 			}
 			catch (Exception ex)
 			{
-				Debug.LogWarning($"ModelResourceTable: failed to load table '{TablePath}': {ex.Message}");
+				Debug.LogWarning($"ModelResourceTable: failed to load imported table '{ImportedTablePath}': {ex.Message}");
 			}
 		}
 
-		private static void BootstrapInternalModels()
+		private static IEnumerable<Entry> ParseTableLines(string content, EntryKind defaultKind, bool fromDisk)
 		{
-			var internalEntries = EnumerateCurrentInternalModels();
-			foreach (var entry in internalEntries)
+			foreach (var rawLine in content.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
 			{
-				if (!HashToEntry.ContainsKey(entry.HashId))
-					Upsert(entry, persist: false);
+				string line = rawLine.Trim();
+				if (string.IsNullOrWhiteSpace(line) || line.StartsWith("#", StringComparison.Ordinal))
+					continue;
+
+				var parts = line.Split('\t');
+				if (parts.Length < 2)
+					continue;
+
+				string hash = NormalizeHash(parts[0]);
+				if (string.IsNullOrWhiteSpace(hash))
+					continue;
+
+				EntryKind kind = defaultKind;
+				string value = parts[1];
+
+				if (parts.Length >= 3 && Enum.TryParse(parts[1], true, out EntryKind parsedKind))
+				{
+					kind = parsedKind;
+					value = parts[2];
+				}
+				else if (fromDisk && parts.Length >= 3 && !string.Equals(parts[1], "Resource", StringComparison.OrdinalIgnoreCase) && !string.Equals(parts[1], "File", StringComparison.OrdinalIgnoreCase))
+				{
+					// Legacy three/four column imported rows: hash, kind, path, displayName
+					value = parts[parts.Length >= 4 ? 2 : 1];
+				}
+
+				if (kind == EntryKind.File)
+					value = Path.GetFileName(value);
+
+				yield return new Entry(hash, NormalizeValue(value), kind);
 			}
 		}
 
-		private static IEnumerable<Entry> EnumerateCurrentInternalModels()
+		private static void BootstrapFromProvider()
 		{
 			IEnumerable<string> names = InternalModelNamesProvider?.Invoke();
-
 			if (names == null)
-			{
-				var roots = AssetRegistry<GameObject>.GetRegisteredModelRoots()
-					.Where(r => !string.IsNullOrWhiteSpace(r))
-					.Select(r => r.Trim('/').Trim())
-					.Where(r => !string.IsNullOrWhiteSpace(r))
-					.Distinct(StringComparer.OrdinalIgnoreCase)
-					.ToArray();
+				return;
 
-				if (roots.Length == 0)
-					yield break;
-
-				names = ResourceUtils.GetAssetNamesFromResources<GameObject>(roots, string.Empty);
-			}
-
-			names = names
-				.Where(n => !string.IsNullOrWhiteSpace(n))
-				.Select(n => n.Trim())
-				.Distinct(StringComparer.OrdinalIgnoreCase);
-
-			foreach (var name in names)
+			foreach (var name in names.Where(n => !string.IsNullOrWhiteSpace(n)).Select(n => n.Trim()).Distinct(StringComparer.OrdinalIgnoreCase))
 			{
 				string hash = HTB50.EncodeFixed(RadixHash.GetStableHash32(name), 6);
-				yield return new Entry(
-					hashId: hash,
-					resourcePath: name,
-					filePath: null,
-					displayName: name,
-					kind: EntryKind.Resource);
+				Upsert(new Entry(hash, name, EntryKind.Resource), persist: false);
 			}
 		}
 
-		private static void Upsert(Entry entry, bool persist)
+		private static void Upsert(Entry entry, bool persist, string absoluteImportedPath = null)
 		{
 			if (string.IsNullOrWhiteSpace(entry.HashId))
 				return;
@@ -251,9 +246,12 @@ namespace MassiveHadronLtd
 			if (!string.IsNullOrWhiteSpace(entry.DisplayName))
 				DisplayToHash[entry.DisplayName] = entry.HashId;
 
-			string path = entry.Kind == EntryKind.File ? entry.FilePath : entry.ResourcePath;
+			string path = entry.Kind == EntryKind.File
+				? (string.IsNullOrWhiteSpace(absoluteImportedPath) ? ResolveImportedPath(entry.HashId, entry.Value) : absoluteImportedPath)
+				: entry.ResourcePath;
+
 			if (!string.IsNullOrWhiteSpace(path))
-				PathToHash[NormalizeLookupPath(path)] = entry.HashId;
+				PathToHash[NormalizePath(path)] = entry.HashId;
 
 			int idx = CachedEntries.FindIndex(e => e.HashId.Equals(entry.HashId, StringComparison.OrdinalIgnoreCase));
 			if (idx >= 0)
@@ -262,53 +260,63 @@ namespace MassiveHadronLtd
 				CachedEntries.Add(entry);
 
 			if (persist)
-				SaveToDisk();
+				SaveImportedTable();
 		}
 
-		private static void SaveToDisk()
+		private static void SaveImportedTable()
 		{
 			try
 			{
-				Directory.CreateDirectory(Path.GetDirectoryName(TablePath) ?? Application.persistentDataPath);
+				Directory.CreateDirectory(Path.GetDirectoryName(ImportedTablePath) ?? Application.persistentDataPath);
 
 				var lines = new List<string>
 				{
-					"# MassiveHadron model resource table",
-					"# hashId<TAB>kind<TAB>path<TAB>displayName"
+					"# MassiveHadron imported model table",
+					"# hashId<TAB>filename"
 				};
 
-				foreach (var entry in CachedEntries.OrderBy(e => e.DisplayName, StringComparer.OrdinalIgnoreCase))
+				foreach (var entry in CachedEntries
+					.Where(e => e.Kind == EntryKind.File)
+					.OrderBy(e => e.HashId, StringComparer.OrdinalIgnoreCase))
 				{
-					string path = entry.Kind == EntryKind.File
-						? ToPersistedImportedPath(entry.FilePath)
-						: entry.ResourcePath;
 					lines.Add(string.Join("\t", new[]
 					{
 						entry.HashId ?? string.Empty,
-						entry.Kind.ToString(),
-						path ?? string.Empty,
-						entry.DisplayName ?? string.Empty
+						entry.Value ?? string.Empty
 					}));
 				}
 
-				File.WriteAllLines(TablePath, lines);
+				File.WriteAllLines(ImportedTablePath, lines);
 			}
 			catch (Exception ex)
 			{
-				Debug.LogWarning($"ModelResourceTable: failed to save table '{TablePath}': {ex.Message}");
+				Debug.LogWarning($"ModelResourceTable: failed to save imported table '{ImportedTablePath}': {ex.Message}");
 			}
 		}
 
 		private static string NormalizeHash(string hashId)
 			=> string.IsNullOrWhiteSpace(hashId) ? null : hashId.Trim();
 
-		private static string NormalizeDisplay(string value)
-			=> string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+		private static string NormalizeValue(string value)
+			=> string.IsNullOrWhiteSpace(value) ? null : value.Replace('\\', '/').Trim();
 
 		private static string NormalizePath(string value)
 			=> string.IsNullOrWhiteSpace(value) ? null : value.Replace('\\', '/').Trim();
 
-		private static string ResolveImportedPath(string value)
+		private static string ResolveImportedPath(string hashId, string fileName, string absolutePath = null)
+		{
+			if (!string.IsNullOrWhiteSpace(absolutePath) && Path.IsPathRooted(absolutePath))
+				return NormalizePath(absolutePath);
+
+			string safeHash = NormalizeHash(hashId);
+			string safeFile = NormalizeValue(fileName);
+			if (string.IsNullOrWhiteSpace(safeHash) || string.IsNullOrWhiteSpace(safeFile))
+				return null;
+
+			return NormalizePath(Path.Combine(Application.persistentDataPath, ImportedRootFolder, safeHash, safeFile));
+		}
+
+		private static string ResolveImportedPathFromAny(string value)
 		{
 			string normalized = NormalizePath(value);
 			if (string.IsNullOrWhiteSpace(normalized))
@@ -317,43 +325,7 @@ namespace MassiveHadronLtd
 			if (Path.IsPathRooted(normalized))
 				return normalized;
 
-			string importedRelative = normalized;
-			if (importedRelative.StartsWith(ImportedRootFolder + "/", StringComparison.OrdinalIgnoreCase))
-				importedRelative = importedRelative.Substring(ImportedRootFolder.Length + 1);
-
-			return NormalizePath(Path.Combine(Application.persistentDataPath, ImportedRootFolder, importedRelative));
-		}
-
-		private static string ToPersistedImportedPath(string value)
-		{
-			string normalized = NormalizePath(value);
-			if (string.IsNullOrWhiteSpace(normalized))
-				return null;
-
-			string importedRoot = NormalizePath(Path.Combine(Application.persistentDataPath, ImportedRootFolder));
-			if (normalized.StartsWith(importedRoot + "/", StringComparison.OrdinalIgnoreCase))
-				return normalized.Substring(importedRoot.Length + 1);
-
-			if (normalized.StartsWith(ImportedRootFolder + "/", StringComparison.OrdinalIgnoreCase))
-				return normalized.Substring(ImportedRootFolder.Length + 1);
-
-			return normalized;
-		}
-
-		private static string NormalizeLookupPath(string value)
-		{
-			string normalized = NormalizePath(value);
-			if (string.IsNullOrWhiteSpace(normalized))
-				return null;
-
-			if (Path.IsPathRooted(normalized))
-				return normalized;
-
-			string importedRelative = normalized;
-			if (importedRelative.StartsWith(ImportedRootFolder + "/", StringComparison.OrdinalIgnoreCase))
-				importedRelative = importedRelative.Substring(ImportedRootFolder.Length + 1);
-
-			return NormalizePath(Path.Combine(Application.persistentDataPath, ImportedRootFolder, importedRelative));
+			return NormalizePath(Path.Combine(Application.persistentDataPath, normalized));
 		}
 	}
 }

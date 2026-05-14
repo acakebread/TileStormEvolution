@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using ClassicTilestorm;
 using ClassicTilestorm.Assets;
+using MassiveHadronLtd;
 
 public class AssetManifestGenerator : IPreprocessBuildWithReport
 {
@@ -34,6 +35,8 @@ public class AssetManifestGenerator : IPreprocessBuildWithReport
 		// 🔴 Register all roots
 		AssetConfiguration.Initialize();
 
+		WriteModelResourceTable(ProjectAssets.GetModelNames(forceRefresh: true));
+
 		foreach (var (manifestName, assetType, getRoots) in AssetManifestConfig.GetAllManifestDefinitions())
 		{
 			var roots = getRoots().ToArray();
@@ -47,6 +50,25 @@ public class AssetManifestGenerator : IPreprocessBuildWithReport
 
 		AssetDatabase.Refresh();
 		Debug.Log("<color=cyan>Asset Manifests generated successfully.</color>");
+	}
+
+	private static void WriteModelResourceTable(IEnumerable<string> names)
+	{
+		const string tableFolder = "Assets/Resources/" + AssetManifestConfig.ManifestRootFolder;
+		if (!Directory.Exists(tableFolder))
+			Directory.CreateDirectory(tableFolder);
+
+		string path = $"Assets/Resources/{AssetManifestConfig.ManifestRootFolder}/ModelResourceTable.txt";
+		var lines = names
+			.Where(n => !string.IsNullOrWhiteSpace(n))
+			.Select(n => n.Trim())
+			.Distinct(StringComparer.OrdinalIgnoreCase)
+			.OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
+			.Select(n => $"{HTB50.EncodeFixed(RadixHash.GetStableHash32(n), 6)}\t{n}")
+			.ToList();
+
+		lines.Insert(0, "# hashId<TAB>resourceName");
+		File.WriteAllLines(path, lines);
 	}
 
 	private static void WriteManifest(string manifestName, IEnumerable<string> names)
