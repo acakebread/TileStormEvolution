@@ -1,9 +1,12 @@
+using MassiveHadronLtd;
+
 namespace ClassicTilestorm.Assets
 {
 	public static class AssetConfiguration
 	{
 		public static void Initialize()
 		{
+			ModelResourceTable.InternalModelNamesProvider = () => ProjectAssets.GetModelNames(forceRefresh: true);
 			ModelAssets.NameRemapper = ClassicTileStormAssetRemapHelper.RemapName;
 
 			// FIX: Trim and normalize the path - this is critical
