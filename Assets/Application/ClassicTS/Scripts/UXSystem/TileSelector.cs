@@ -5,6 +5,7 @@ using UnityEngine.UI;
 using TMPro;
 using MassiveHadronLtd;
 using System.Collections;
+using ClassicTilestorm.Assets;
 
 namespace ClassicTilestorm
 {
@@ -534,7 +535,8 @@ namespace ClassicTilestorm
 			if (def == null) return "";
 
 			var secondary = new List<string>();
-			if (!string.IsNullOrEmpty(def.model)) secondary.Add($"M:{def.model}");
+			if (!string.IsNullOrEmpty(def.model))
+				secondary.Add($"M:{ModelAssets.ResolveDisplayName(def.model)}");
 			//if (!string.IsNullOrEmpty(def.texture)) secondary.Add($"T:{def.texture}");
 			if (!string.IsNullOrEmpty(def.material)) secondary.Add($"Mat:{def.material}");
 

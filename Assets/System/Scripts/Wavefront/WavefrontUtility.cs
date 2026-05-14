@@ -5,7 +5,7 @@ namespace MassiveHadronLtd
 {
 	public static class WavefrontUtility
 	{
-		public static GameObject Load(string objPath, string objectName = null)
+		public static GameObject Load(string objPath, string objectName = null, bool asTemplate = false)
 		{
 			if (!File.Exists(objPath))
 			{
@@ -26,6 +26,12 @@ namespace MassiveHadronLtd
 
 			Material mat = TryLoadMaterial(directory, wavefrontMesh.materialLibrary, wavefrontMesh.materialName);
 			mr.sharedMaterial = mat ?? new Material(Shader.Find("Universal Render Pipeline/Lit"));
+
+			if (asTemplate)
+			{
+				go.hideFlags = HideFlags.HideAndDontSave;
+				go.SetActive(false);
+			}
 
 			Debug.Log($"✅ Loaded {go.name} | Material: {(mat != null ? mat.name : "default")}");
 			return go;

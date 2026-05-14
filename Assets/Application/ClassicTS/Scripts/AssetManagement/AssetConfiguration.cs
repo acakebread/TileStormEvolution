@@ -17,6 +17,7 @@ namespace ClassicTilestorm.Assets
 			SkyboxAssets.RegisterRoot(AssetPath.SkycubesPath?.Trim('/').Trim());
 			SoundAssets.RegisterRoot(AssetPath.SoundPath?.Trim('/').Trim()); // e.g. "ClassicTS/Sounds/"
 			MusicAssets.RegisterRoot(AssetPath.MusicPath?.Trim('/').Trim()); // e.g. "ClassicTS/Music/"
+			ModelAssets.RefreshRegistry(forceRefresh: true);
 		}
 
 		public static void ClearAllCaches()
