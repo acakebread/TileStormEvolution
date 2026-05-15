@@ -123,5 +123,22 @@ mergeInto(LibraryManager.library, {
 
     document.body.appendChild(input);
     input.click();
+  },
+
+  MassiveHadron_DownloadText: function (filenamePtr, textPtr, mimeTypePtr) {
+    var filename = UTF8ToString(filenamePtr);
+    var text = UTF8ToString(textPtr);
+    var mimeType = UTF8ToString(mimeTypePtr) || 'text/plain;charset=utf-8';
+
+    var blob = new Blob([text], { type: mimeType });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = filename || 'download.txt';
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 });

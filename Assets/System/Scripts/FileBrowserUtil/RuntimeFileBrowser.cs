@@ -11,7 +11,11 @@ namespace MassiveHadronLtd.FileBrowserUtil
 
 		public static string GetDefaultRootFolder()
 		{
+#if UNITY_WEBGL && !UNITY_EDITOR
+			return EnsureFolder(Path.Combine(Application.persistentDataPath, "Downloads"));
+#else
 			return EnsureFolder(Path.Combine(Application.persistentDataPath, DefaultExternalFolderName));
+#endif
 		}
 
 		public static void OpenObjFile(string title, Action<string> onSelected, string rootFolder = null, string startFolder = null, Action onCancelled = null)

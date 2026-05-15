@@ -68,12 +68,17 @@ namespace ClassicTilestorm
 				if (null != ExportMapButton)
 				{
 					ExportMapButton.onClick.AddListener(() => mainController.ExportMapAsAtomic());
-					ExportMapButton.interactable = Application.isEditor;
+					ExportMapButton.interactable = true;
 				}
 				if (null != ImportModelButton)
 				{
 					ImportModelButton.onClick.AddListener(() =>
 					{
+#if UNITY_WEBGL && !UNITY_EDITOR
+						string importRoot = RuntimeFileBrowser.GetDefaultRootFolder();
+#else
+						string importRoot = RuntimeFileBrowser.GetDefaultRootFolder();
+#endif
 						RuntimeFileBrowser.OpenObjFile(
 							"Import Wavefront Model",
 							path =>
@@ -85,7 +90,7 @@ namespace ClassicTilestorm
 									ClassicTilestorm.Assets.ProjectAssets.RefreshAllNameCaches();
 								}
 							},
-							RuntimeFileBrowser.GetDefaultRootFolder());
+							importRoot);
 					});
 					ImportModelButton.interactable = true;
 				}
