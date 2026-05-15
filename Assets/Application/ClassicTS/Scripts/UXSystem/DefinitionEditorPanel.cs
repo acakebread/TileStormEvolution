@@ -279,7 +279,7 @@ namespace ClassicTilestorm
 		//	SyncDropdown(textureSequenceDropdown, CurrentDefinition?.texture, noneTextureOptionText);
 
 		private void SyncMaterialDropdown() =>
-			SyncDropdown(materialDropdown, CurrentDefinition?.material, noneMaterialOptionText);
+			SyncDropdown(materialDropdown, Assets.MaterialResourceTable.GetDisplayName(CurrentDefinition?.material) ?? CurrentDefinition?.material, noneMaterialOptionText);
 
 		// ── Event Handlers ──────────────────────────────────────────────────────────────────
 
@@ -352,7 +352,7 @@ namespace ClassicTilestorm
 			string selected = index >= 0 && index < materialDropdown.options.Count
 				? materialDropdown.options[index].text : null;
 
-			string newMaterial = (selected == noneMaterialOptionText) ? null : selected;
+			string newMaterial = (selected == noneMaterialOptionText) ? null : Assets.MaterialResourceTable.GetHashForDisplayName(selected) ?? selected;
 
 			if (newMaterial != def.material)
 			{

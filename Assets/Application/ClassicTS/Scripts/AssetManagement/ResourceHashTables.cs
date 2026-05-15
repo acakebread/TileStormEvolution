@@ -3,11 +3,36 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using MassiveHadronLtd;
-using Newtonsoft.Json;
 using UnityEngine;
 
 namespace ClassicTilestorm.Assets
 {
+	public static class ResourceIdUtil
+	{
+		public static bool TryParseCanonicalHash(string value, out HashId hash)
+		{
+			hash = 0;
+			if (string.IsNullOrWhiteSpace(value))
+				return false;
+
+			var trimmed = value.Trim();
+			if (trimmed.Length != HTB50Settings.FixedLength)
+				return false;
+
+			try
+			{
+				hash = HTB50.Decode(trimmed);
+			}
+			catch
+			{
+				hash = 0;
+				return false;
+			}
+
+			return string.Equals(HTB50Settings.ToString(hash), trimmed, StringComparison.Ordinal);
+		}
+	}
+
 	internal sealed class ManifestHashTable
 	{
 		internal readonly struct Entry
@@ -76,10 +101,15 @@ namespace ClassicTilestorm.Assets
 				return null;
 
 			Refresh(false);
-			if (TryResolveHash(identifier, out var hash) && hashToEntry.TryGetValue(hash, out var entry))
+
+			var trimmed = identifier.Trim();
+			if (displayToHash.ContainsKey(trimmed))
+				return trimmed;
+
+			if (TryResolveHash(trimmed, out var hash) && hashToEntry.TryGetValue(hash, out var entry))
 				return entry.DisplayName;
 
-			return displayToHash.ContainsKey(identifier.Trim()) ? identifier.Trim() : null;
+			return null;
 		}
 
 		public string ToHashOrOriginal(string identifier)
@@ -88,11 +118,12 @@ namespace ClassicTilestorm.Assets
 				return identifier;
 
 			Refresh(false);
-			if (TryResolveHash(identifier, out var hash))
-				return HTB50Settings.ToString(hash);
 
 			var trimmed = identifier.Trim();
-			return displayToHash.TryGetValue(trimmed, out hash)
+			if (displayToHash.TryGetValue(trimmed, out var hash))
+				return HTB50Settings.ToString(hash);
+
+			return TryResolveHash(trimmed, out hash)
 				? HTB50Settings.ToString(hash)
 				: identifier;
 		}
@@ -105,16 +136,20 @@ namespace ClassicTilestorm.Assets
 
 			Refresh(false);
 
-			if (TryResolveHash(identifier, out var hash) && hashToEntry.TryGetValue(hash, out var entry) && !string.IsNullOrWhiteSpace(entry.ResourceKey))
+			var trimmed = identifier.Trim();
+			if (displayToHash.TryGetValue(trimmed, out var hash) &&
+				hashToEntry.TryGetValue(hash, out var byDisplay) &&
+				!string.IsNullOrWhiteSpace(byDisplay.ResourceKey))
 			{
-				resourceKey = entry.ResourceKey;
+				resourceKey = byDisplay.ResourceKey;
 				return true;
 			}
 
-			var trimmed = identifier.Trim();
-			if (displayToHash.TryGetValue(trimmed, out hash) && hashToEntry.TryGetValue(hash, out var byDisplay) && !string.IsNullOrWhiteSpace(byDisplay.ResourceKey))
+			if (TryResolveHash(trimmed, out hash) &&
+				hashToEntry.TryGetValue(hash, out var entry) &&
+				!string.IsNullOrWhiteSpace(entry.ResourceKey))
 			{
-				resourceKey = byDisplay.ResourceKey;
+				resourceKey = entry.ResourceKey;
 				return true;
 			}
 
@@ -127,7 +162,7 @@ namespace ClassicTilestorm.Assets
 			if (string.IsNullOrWhiteSpace(hashId) || string.IsNullOrWhiteSpace(resourceKey))
 				return;
 
-			if (!TryParseHash(hashId, out var hash))
+			if (!ResourceIdUtil.TryParseCanonicalHash(hashId, out var hash))
 				return;
 
 			var normalized = resourceKey.Trim();
@@ -154,7 +189,7 @@ namespace ClassicTilestorm.Assets
 					if (parts.Length < 2)
 						continue;
 
-					if (!TryParseHash(parts[0].Trim(), out var hash))
+					if (!ResourceIdUtil.TryParseCanonicalHash(parts[0].Trim(), out var hash))
 						continue;
 
 					var resourceKey = parts[parts.Length - 1].Trim();
@@ -177,28 +212,129 @@ namespace ClassicTilestorm.Assets
 			if (string.IsNullOrWhiteSpace(identifier))
 				return false;
 
-			var trimmed = identifier.Trim();
-			if (TryParseHash(trimmed, out hash))
-				return true;
+			return ResourceIdUtil.TryParseCanonicalHash(identifier.Trim(), out hash);
+		}
+	}
 
+	internal sealed class AliasHashTable
+	{
+		private readonly Dictionary<HashId, string> hashToDisplay = new();
+		private readonly Dictionary<string, HashId> displayToHash = new(StringComparer.OrdinalIgnoreCase);
+
+		public AliasHashTable(IEnumerable<string> canonicalNames, IDictionary<string, string> aliases = null)
+		{
+			if (canonicalNames != null)
+			{
+				foreach (var name in canonicalNames)
+				{
+					if (string.IsNullOrWhiteSpace(name))
+						continue;
+
+					RegisterCanonical(name.Trim());
+				}
+			}
+
+			if (aliases != null)
+			{
+				foreach (var pair in aliases)
+				{
+					if (string.IsNullOrWhiteSpace(pair.Key) || string.IsNullOrWhiteSpace(pair.Value))
+						continue;
+
+					if (!displayToHash.TryGetValue(pair.Value.Trim(), out var hash))
+						continue;
+
+					displayToHash[pair.Key.Trim()] = hash;
+				}
+			}
+		}
+
+		public void ClearCache()
+		{
+			// Fixed table; nothing to clear.
+		}
+
+		public string GetDisplayName(string identifier)
+		{
+			if (string.IsNullOrWhiteSpace(identifier))
+				return null;
+
+			var trimmed = identifier.Trim();
+			if (displayToHash.TryGetValue(trimmed, out var hash) && hashToDisplay.TryGetValue(hash, out var display))
+				return display;
+
+			if (ResourceIdUtil.TryParseCanonicalHash(trimmed, out hash) && hashToDisplay.TryGetValue(hash, out var entry))
+				return entry;
+
+			return null;
+		}
+
+		public string GetHashForDisplayName(string displayName)
+		{
+			if (string.IsNullOrWhiteSpace(displayName))
+				return null;
+
+			var trimmed = displayName.Trim();
+			return displayToHash.TryGetValue(trimmed, out var hash)
+				? HTB50Settings.ToString(hash)
+				: null;
+		}
+
+		public string ToHashOrOriginal(string identifier)
+		{
+			if (string.IsNullOrWhiteSpace(identifier))
+				return identifier;
+
+			var trimmed = identifier.Trim();
+			if (displayToHash.TryGetValue(trimmed, out var hash))
+				return HTB50Settings.ToString(hash);
+
+			return ResourceIdUtil.TryParseCanonicalHash(trimmed, out hash)
+				? HTB50Settings.ToString(hash)
+				: identifier;
+		}
+
+		public bool TryResolveResourceKey(string identifier, out string resourceKey)
+		{
+			resourceKey = null;
+			if (string.IsNullOrWhiteSpace(identifier))
+				return false;
+
+			var trimmed = identifier.Trim();
+			if (displayToHash.TryGetValue(trimmed, out var hash) && hashToDisplay.TryGetValue(hash, out var display))
+			{
+				resourceKey = display;
+				return true;
+			}
+
+			if (ResourceIdUtil.TryParseCanonicalHash(trimmed, out hash) && hashToDisplay.TryGetValue(hash, out var entry))
+			{
+				resourceKey = entry;
+				return true;
+			}
+
+			resourceKey = trimmed;
 			return false;
 		}
 
-		private static bool TryParseHash(string value, out HashId hash)
+		public IReadOnlyList<string> GetDisplayNames()
 		{
-			hash = 0;
-			if (string.IsNullOrWhiteSpace(value))
-				return false;
+			return hashToDisplay.Values
+				.OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
+				.ToArray();
+		}
 
-			try
-			{
-				hash = HTB50.Decode(value.Trim());
-				return hash != 0;
-			}
-			catch
-			{
-				return false;
-			}
+		private void RegisterCanonical(string displayName)
+		{
+			if (string.IsNullOrWhiteSpace(displayName))
+				return;
+
+			if (displayToHash.ContainsKey(displayName))
+				return;
+
+			var hash = (HashId)RadixHash.GetStableHash32(displayName);
+			displayToHash[displayName] = hash;
+			hashToDisplay[hash] = displayName;
 		}
 	}
 
@@ -222,5 +358,73 @@ namespace ClassicTilestorm.Assets
 		public static string GetHashForDisplayName(string displayName) => Table.GetHashForDisplayName(displayName);
 		public static string ToHashOrOriginal(string identifier) => Table.ToHashOrOriginal(identifier);
 		public static bool TryResolveResourceKey(string identifier, out string resourceKey) => Table.TryResolveResourceKey(identifier, out resourceKey);
+	}
+
+	public static class MaterialResourceTable
+	{
+		private static readonly ManifestHashTable Table = new("AssetManifests/Materials");
+
+		public static void ClearCache() => Table.ClearCache();
+		public static string GetDisplayName(string identifier) => Table.GetDisplayName(identifier);
+		public static string GetHashForDisplayName(string displayName) => Table.GetHashForDisplayName(displayName);
+		public static string ToHashOrOriginal(string identifier) => Table.ToHashOrOriginal(identifier);
+		public static bool TryResolveResourceKey(string identifier, out string resourceKey) => Table.TryResolveResourceKey(identifier, out resourceKey);
+	}
+
+	public static class SoundResourceTable
+	{
+		private static readonly ManifestHashTable Table = new("AssetManifests/Sounds");
+
+		public static void ClearCache() => Table.ClearCache();
+		public static string GetDisplayName(string identifier) => Table.GetDisplayName(identifier);
+		public static string GetHashForDisplayName(string displayName) => Table.GetHashForDisplayName(displayName);
+		public static string ToHashOrOriginal(string identifier) => Table.ToHashOrOriginal(identifier);
+		public static bool TryResolveResourceKey(string identifier, out string resourceKey) => Table.TryResolveResourceKey(identifier, out resourceKey);
+	}
+
+	public static class CharacterResourceTable
+	{
+		private static readonly AliasHashTable Table = new(new[]
+		{
+			"Eggbot Default",
+			"Eggbot Industrial",
+			"Eggbot Egypt",
+			"Eggbot Medieval",
+			"Eggbot Jungle",
+		});
+
+		public static void ClearCache() => Table.ClearCache();
+		public static string GetDisplayName(string identifier) => Table.GetDisplayName(identifier);
+		public static string GetHashForDisplayName(string displayName) => Table.GetHashForDisplayName(displayName);
+		public static string ToHashOrOriginal(string identifier) => Table.ToHashOrOriginal(identifier);
+		public static bool TryResolveResourceKey(string identifier, out string resourceKey) => Table.TryResolveResourceKey(identifier, out resourceKey);
+		public static IReadOnlyList<string> GetDisplayNames() => Table.GetDisplayNames();
+	}
+
+	public static class EffectResourceTable
+	{
+		private static readonly AliasHashTable Table = new(
+			new[]
+			{
+				"Debug",
+				"Mirror",
+				"Film",
+				"Frost",
+				"Water",
+			},
+			new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+			{
+				["PerfectMirror"] = "Mirror",
+				["SurfaceFilm"] = "Film",
+				["FrostEffect"] = "Frost",
+				["WaterEffect"] = "Water",
+			});
+
+		public static void ClearCache() => Table.ClearCache();
+		public static string GetDisplayName(string identifier) => Table.GetDisplayName(identifier);
+		public static string GetHashForDisplayName(string displayName) => Table.GetHashForDisplayName(displayName);
+		public static string ToHashOrOriginal(string identifier) => Table.ToHashOrOriginal(identifier);
+		public static bool TryResolveResourceKey(string identifier, out string resourceKey) => Table.TryResolveResourceKey(identifier, out resourceKey);
+		public static IReadOnlyList<string> GetDisplayNames() => Table.GetDisplayNames();
 	}
 }

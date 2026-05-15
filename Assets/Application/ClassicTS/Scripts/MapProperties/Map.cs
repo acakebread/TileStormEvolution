@@ -6,6 +6,7 @@ using UnityEngine;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using MassiveHadronLtd;
+using ClassicTilestorm.Assets;
 
 namespace ClassicTilestorm
 {
@@ -156,8 +157,12 @@ namespace ClassicTilestorm
 		[JsonIgnore]
 		public ReflectionEffectCamera.EffectMode Effect
 		{
-			get => ReflectionEffectCamera.ParseEffectMode(string.IsNullOrEmpty(effect) ? "Water" : effect);
-			set => effect = ReflectionEffectCamera.EffectModeToString(value);
+			get => ReflectionEffectCamera.ParseEffectMode(EffectResourceTable.GetDisplayName(effect) ?? effect ?? "Water");
+			set
+			{
+				var displayName = ReflectionEffectCamera.EffectModeToString(value);
+				effect = EffectResourceTable.GetHashForDisplayName(displayName) ?? displayName;
+			}
 		}
 
 		[JsonIgnore]

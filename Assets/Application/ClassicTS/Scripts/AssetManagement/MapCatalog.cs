@@ -31,6 +31,8 @@ namespace ClassicTilestorm
 		public static void ClearCache()
 		{
 			CachedMaps.Clear();
+			InternalResourceIndex = null;
+			InternalResourceIndexLoaded = false;
 		}
 
 		public static bool IsInternalMap(HashId hash)
@@ -278,7 +280,8 @@ namespace ClassicTilestorm
 
 					try
 					{
-						var hash = HTB50.Decode(parts[0].Trim());
+						if (!ClassicTilestorm.Assets.ResourceIdUtil.TryParseCanonicalHash(parts[0].Trim(), out var hash))
+							continue;
 						var resourceName = parts[parts.Length - 1].Trim();
 						if (hash != 0 && !string.IsNullOrWhiteSpace(resourceName))
 							InternalResourceIndex[hash] = resourceName;
@@ -324,15 +327,7 @@ namespace ClassicTilestorm
 					candidate = fileStem;
 			}
 
-			try
-			{
-				hash = HTB50.Decode(candidate);
-				return hash != 0;
-			}
-			catch
-			{
-				return false;
-			}
+			return ClassicTilestorm.Assets.ResourceIdUtil.TryParseCanonicalHash(candidate, out hash);
 		}
 
 		private static Map LoadMapFromFile(string path)

@@ -265,7 +265,16 @@ namespace ClassicTilestorm.Assets
 	{
 		public static void RegisterRoot(string root) => AssetRegistry<Material>.RegisterMaterialRoot(root);
 		public static void ClearCache() => AssetRegistry<Material>.ClearMaterialCache();
-		public static Material Find(string materialName) => AssetRegistry<Material>.FindMaterial(materialName);
+		public static Material Find(string materialName)
+		{
+			if (string.IsNullOrWhiteSpace(materialName))
+				return null;
+
+			if (MaterialResourceTable.TryResolveResourceKey(materialName, out var resourceKey))
+				return AssetRegistry<Material>.FindMaterial(resourceKey);
+
+			return AssetRegistry<Material>.FindMaterial(materialName);
+		}
 	}
 
 	/// <summary>
@@ -294,7 +303,16 @@ namespace ClassicTilestorm.Assets
 	{
 		public static void RegisterRoot(string root) => AssetRegistry<AudioClip>.RegisterSoundRoot(root);
 		public static void ClearCache() => AssetRegistry<AudioClip>.ClearSoundCache();
-		public static AudioClip Find(string clipName) => AssetRegistry<AudioClip>.FindSound(clipName);
+		public static AudioClip Find(string clipName)
+		{
+			if (string.IsNullOrWhiteSpace(clipName))
+				return null;
+
+			if (SoundResourceTable.TryResolveResourceKey(clipName, out var resourceKey))
+				return AssetRegistry<AudioClip>.FindSound(resourceKey);
+
+			return AssetRegistry<AudioClip>.FindSound(clipName);
+		}
 	}
 
 	/// <summary>

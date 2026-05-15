@@ -256,6 +256,8 @@ namespace ClassicTilestorm
 
 			map.music = MusicResourceTable.ToHashOrOriginal(map.music);
 			map.skybox = SkycubeResourceTable.ToHashOrOriginal(map.skybox);
+			map.character = CharacterResourceTable.ToHashOrOriginal(map.character);
+			map.effect = EffectResourceTable.ToHashOrOriginal(map.effect);
 
 			map.EnsureHashID();
 			return map;

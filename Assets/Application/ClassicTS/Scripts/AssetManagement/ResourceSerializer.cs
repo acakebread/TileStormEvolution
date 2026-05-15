@@ -61,8 +61,12 @@ namespace ClassicTilestorm
 
 			JsonSetup.Init();
 			MapCatalog.ClearCache();
+			MaterialResourceTable.ClearCache();
 			SkycubeResourceTable.ClearCache();
 			MusicResourceTable.ClearCache();
+			SoundResourceTable.ClearCache();
+			CharacterResourceTable.ClearCache();
+			EffectResourceTable.ClearCache();
 			ResourceManager.database = null;// important
 			ResourceManager.database = LoadDatabase(jsonAsset.text);
 		}
@@ -140,6 +144,31 @@ namespace ClassicTilestorm
 		public static void SaveDatabase(DatabaseData data, string filepath = null, bool verbose = false, bool cropAllMaps = true)
 		{
 			if (data == null) return;
+			if (data.maps != null)
+			{
+				foreach (var map in data.maps)
+				{
+					if (map == null)
+						continue;
+
+					map.music = MusicResourceTable.ToHashOrOriginal(map.music);
+					map.skybox = SkycubeResourceTable.ToHashOrOriginal(map.skybox);
+					map.character = CharacterResourceTable.ToHashOrOriginal(map.character);
+					map.effect = EffectResourceTable.ToHashOrOriginal(map.effect);
+				}
+			}
+
+			if (data.definitions != null)
+			{
+				foreach (var def in data.definitions)
+				{
+					if (def == null)
+						continue;
+
+					def.material = MaterialResourceTable.ToHashOrOriginal(def.material);
+				}
+			}
+
 			data.mapIds = data.maps != null && data.maps.Length > 0
 				? data.maps.Where(m => m != null).Select(m => HTB50Settings.ToString(m.HashID)).ToArray()
 				: (data.mapIds ?? Array.Empty<string>());

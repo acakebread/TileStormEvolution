@@ -63,7 +63,9 @@ public class AssetManifestGenerator : IPreprocessBuildWithReport
 
 		if (string.Equals(manifestName, "Models", StringComparison.OrdinalIgnoreCase) ||
 			string.Equals(manifestName, "Music", StringComparison.OrdinalIgnoreCase) ||
-			string.Equals(manifestName, "Skycubes", StringComparison.OrdinalIgnoreCase))
+			string.Equals(manifestName, "Skycubes", StringComparison.OrdinalIgnoreCase) ||
+			string.Equals(manifestName, "Materials", StringComparison.OrdinalIgnoreCase) ||
+			string.Equals(manifestName, "Sounds", StringComparison.OrdinalIgnoreCase))
 		{
 			var lines = sorted
 				.Select(n => $"{HTB50.EncodeFixed(RadixHash.GetStableHash32(n), 6)}\t{n}")
