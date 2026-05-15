@@ -299,7 +299,8 @@ namespace ClassicTilestorm
 			if (originalMap == null)
 				return null;
 
-			var map = crop ? CreateCroppedCopy(originalMap) : originalMap;
+			var map = crop ? CreateCroppedCopy(originalMap) : originalMap.Clone();
+			map.Optimise();
 
 			var settings = new JsonSerializerSettings
 			{

@@ -121,7 +121,9 @@ namespace ClassicTilestorm
 					File.Delete(existing);
 			}
 
-			var json = JsonConvert.SerializeObject(map.Clone(), Formatting.Indented, MapSerializerSettings);
+			var saveMap = map.Clone();
+			saveMap.Optimise();
+			var json = JsonConvert.SerializeObject(saveMap, Formatting.Indented, MapSerializerSettings);
 			WriteJsonIfChanged(path, json);
 
 			CachedMaps[map.HashID] = map;
@@ -150,7 +152,9 @@ namespace ClassicTilestorm
 					File.Delete(existing);
 			}
 
-			var json = JsonConvert.SerializeObject(map.Clone(), Formatting.Indented, MapSerializerSettings);
+			var saveMap = map.Clone();
+			saveMap.Optimise();
+			var json = JsonConvert.SerializeObject(saveMap, Formatting.Indented, MapSerializerSettings);
 			WriteJsonIfChanged(path, json);
 
 			var resourceName = Path.GetFileNameWithoutExtension(fileName);
