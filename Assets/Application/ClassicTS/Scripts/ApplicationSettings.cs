@@ -3,6 +3,7 @@
 using UnityEditor;
 #endif
 using MassiveHadronLtd;
+using System.IO;
 
 namespace ClassicTilestorm
 {
@@ -15,7 +16,7 @@ namespace ClassicTilestorm
 
 	public class ApplicationSettings : MonoBehaviour
 	{
-		public const string MutableDatabaseSubfolder = "Data";
+		public const string JsonDataSubfolder = "Config";
 
 		[Header("map to load")]
 		[SerializeField] private string loadMapName = "Industrial 01";
@@ -120,9 +121,11 @@ namespace ClassicTilestorm
 		[SerializeField] private bool showTileSelection = false;
 		public static bool ShowTileSelection => instance.showTileSelection;
 
-		[Header("resource paths")]
-		[SerializeField] private TextAsset databaseJsonFile;
-		public static TextAsset DatabaseJsonFile => instance.databaseJsonFile;
+		[Header("json data root")]
+		[SerializeField, ResourcePath] private string jsonDataPath = "ClassicTS/Config";
+		public static string JsonDataPath => string.IsNullOrWhiteSpace(instance?.jsonDataPath) ? "ClassicTS/Config" : instance.jsonDataPath.Trim('/').Trim();
+		public static string JsonDataProjectPath => Path.Combine(Application.dataPath, "Application", "ClassicTS", "Resources", JsonDataPath.Replace('/', Path.DirectorySeparatorChar));
+		public static string JsonDataResourcePath => JsonDataPath;
 
 		[SerializeField, ResourcePath] private string geometryPath = "ClassicTS/Geometry/";
 		public static string GeometryPath => instance?.geometryPath;

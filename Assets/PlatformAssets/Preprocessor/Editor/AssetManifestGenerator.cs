@@ -84,7 +84,8 @@ public class AssetManifestGenerator : IPreprocessBuildWithReport
 	{
 		const string manifestName = "Maps";
 		string path = $"Assets/Resources/{AssetManifestConfig.ManifestRootFolder}/{manifestName}.txt";
-		var names = ResourceUtils.GetAssetNamesFromResources<TextAsset>(new[] { "ClassicTS/Maps" }, manifestName)
+		var mapRoot = $"{ApplicationSettings.JsonDataPath}/Maps";
+		var names = ResourceUtils.GetAssetNamesFromResources<TextAsset>(new[] { mapRoot }, manifestName)
 			.Where(n => !string.IsNullOrWhiteSpace(n))
 			.Select(n => n.Trim())
 			.Distinct(StringComparer.OrdinalIgnoreCase)

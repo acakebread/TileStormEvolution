@@ -10,7 +10,7 @@ namespace ClassicTilestorm
 {
 	public static class MapCatalog
 	{
-		private const string InternalResourcesRoot = "ClassicTS/Maps";
+		private static string InternalResourcesRoot => $"{ApplicationSettings.JsonDataResourcePath}/Maps";
 		private const string InternalManifestPath = "AssetManifests/Maps";
 		private const string FileHashSeparator = "__";
 		private const string PersistentMapsFolderName = "Maps";
@@ -26,7 +26,7 @@ namespace ClassicTilestorm
 
 		public static string PersistentMapsFolder => Path.Combine(Application.persistentDataPath, PersistentMapsFolderName);
 
-		public static string InternalMapsFolder => Path.Combine(Application.dataPath, "Application", "ClassicTS", "Resources", "ClassicTS", "Maps");
+		public static string InternalMapsFolder => Path.Combine(ApplicationSettings.JsonDataProjectPath, "Maps");
 
 		public static void ClearCache()
 		{

@@ -5,10 +5,10 @@ using System.Linq;
 using MassiveHadronLtd;
 using MassiveHadronLtd.FileBrowserUtil;
 using UnityEngine.EventSystems;
+using ClassicTilestorm.Assets;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
-using ClassicTilestorm.Assets;
 
 namespace ClassicTilestorm
 {
@@ -94,7 +94,7 @@ namespace ClassicTilestorm
 			};
 
 			if (!FindAnyObjectByType<EventSystem>()) new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
-			ResourceSerializer.Initialise(ApplicationSettings.DatabaseJsonFile);
+			ResourceSerializer.Initialise();
 			gameController = gameObject.AddComponent<GameController>();
 			editorController = gameObject.AddComponent<EditorController>();
 			cameraController = gameObject.AddComponent<MainCameraController>();
@@ -246,18 +246,9 @@ namespace ClassicTilestorm
 
 		public void LoadDatabase()
 		{
-			var dbAsset = ApplicationSettings.DatabaseJsonFile;
-			if (dbAsset == null)
-			{
-				Debug.LogError("PreviewSettings.DatabaseJsonFile is not assigned in PreviewSettings!");
-				return;
-			}
-
-			ResourceSerializer.Initialise(dbAsset);
-
 			if (ResourceManager.database == null)
 			{
-				Debug.LogError("Failed to load database from DatabaseJsonFile!");
+				Debug.LogError("Failed to load content data from levels.json / definitions.json!");
 				return;
 			}
 
@@ -273,22 +264,7 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			var database = ApplicationSettings.DatabaseJsonFile;
-			if (database == null)
-			{
-				Debug.LogError("PreviewSettings.DatabaseJsonFile is not assigned!");
-				return;
-			}
-
-			string assetPath = AssetDatabase.GetAssetPath(database);
-			if (string.IsNullOrEmpty(assetPath) || assetPath.Contains("Resources/unity_builtin_extra"))
-			{
-				Debug.LogError("Cannot save to project: not a real project asset.");
-				return;
-			}
-
-			string fullPath = System.IO.Path.GetFullPath(assetPath);
-			ResourceSerializer.SaveDatabase(ResourceManager.database, fullPath, verbose: true);
+			ResourceSerializer.SaveDatabase(ResourceManager.database, verbose: true);
 #else
 			Debug.Log("Save Database only works in Editor");
 #endif

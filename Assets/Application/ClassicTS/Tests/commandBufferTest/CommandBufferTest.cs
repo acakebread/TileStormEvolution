@@ -17,18 +17,11 @@ namespace ClassicTilestorm
 		void Start()
 		{
 			AssetConfiguration.Initialize();
-			var dbAsset = ApplicationSettings.DatabaseJsonFile;
-			if (dbAsset == null)
-			{
-				Debug.LogError("PreviewSettings.DatabaseJsonFile is not assigned in PreviewSettings!");
-				return;
-			}
-
-			ResourceSerializer.Initialise(dbAsset);
+			ResourceSerializer.Initialise();
 
 			if (ResourceManager.database == null)
 			{
-				Debug.LogError("Failed to load database from DatabaseJsonFile!");
+				Debug.LogError("Failed to load content data from levels.json / definitions.json!");
 				return;
 			}
 

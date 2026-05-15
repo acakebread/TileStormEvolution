@@ -505,7 +505,7 @@ MonoBehaviour:
   detailLevel: 1
   showHiddenTiles: 0
   showTileSelection: 0
-  databaseJsonFile: {fileID: 4900000, guid: 96c40ca8617a15a4590b9728c168e29a, type: 3}
+  jsonDataPath: ClassicTS/Config
   geometryPath: ClassicTS/Geometry/
   texturePath: ClassicTS/Textures/
   materialPath: ClassicTS/Materials/
