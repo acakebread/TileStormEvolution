@@ -139,7 +139,14 @@ namespace ClassicTilestorm
 		[JsonIgnore] public int Count => Width * Height;
 		[JsonIgnore] public int[] State { get => state = state?.Length == width * height ? state : Enumerable.Range(0, width * height).ToArray(); }
 
-		[JsonIgnore] public string Music { get => music; set => music = value; }
+		[JsonIgnore]
+		public string Music
+		{
+			get => string.IsNullOrWhiteSpace(music)
+				? MusicResourceTable.DefaultHash
+				: music;
+			set => music = value;
+		}
 
 		[JsonIgnore]
 		public string Skybox

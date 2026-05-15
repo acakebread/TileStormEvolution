@@ -347,6 +347,7 @@ namespace ClassicTilestorm.Assets
 		public static string GetHashForDisplayName(string displayName) => Table.GetHashForDisplayName(displayName);
 		public static string ToHashOrOriginal(string identifier) => Table.ToHashOrOriginal(identifier);
 		public static bool TryResolveResourceKey(string identifier, out string resourceKey) => Table.TryResolveResourceKey(identifier, out resourceKey);
+		public static string DefaultHash => GetHashForDisplayName("TileStormTheme");
 	}
 
 	public static class PrefabResourceTable
