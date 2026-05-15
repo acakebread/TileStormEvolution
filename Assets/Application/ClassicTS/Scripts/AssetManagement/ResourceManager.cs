@@ -32,8 +32,10 @@ namespace ClassicTilestorm
 	[Serializable]
 	public class DatabaseData
 	{
-		public Map[] maps;
+		[JsonProperty("maps")]
+		public string[] mapIds;
 		public Definition[] definitions;
+		[JsonIgnore] public Map[] maps;
 		//public TextureInfo[] textures;
 	}
 
@@ -43,6 +45,7 @@ namespace ClassicTilestorm
 		public static DatabaseData database { get => _db; set => _db = value; }
 
 		public static IList<Map> Maps => _db?.maps ?? Array.Empty<Map>();
+		public static IList<string> MapIds => _db?.mapIds ?? Array.Empty<string>();
 		public static IList<Definition> Definitions => _db?.definitions ?? Array.Empty<Definition>();
 		//public static IList<TextureInfo> TextureInfos => _db?.textures ?? Array.Empty<TextureInfo>();
 
@@ -127,12 +130,35 @@ namespace ClassicTilestorm
 		public static void ApplyMapChanges(Map modifiedMap)
 		{
 			if (null == modifiedMap) return;
-			if (null != _db?.maps)
+			modifiedMap.EnsureHashID();
+
+			if (null != _db)
 			{
-				for (int i = 0; i < _db.maps.Length; i++)
-					if (_db.maps[i].name == modifiedMap.name)
-					{ _db.maps[i] = modifiedMap; return; }
+				MapCatalog.Register(modifiedMap);
+
+				if (_db.maps != null)
+				{
+					for (int i = 0; i < _db.maps.Length; i++)
+						if (_db.maps[i] != null && _db.maps[i].HashID == modifiedMap.HashID)
+						{ _db.maps[i] = modifiedMap; SyncMapIds(); return; }
+				}
+
+				var list = (_db.maps ?? Array.Empty<Map>()).ToList();
+				list.Add(modifiedMap);
+				_db.maps = list.ToArray();
+				SyncMapIds();
 			}
+		}
+
+		public static void SyncMapIds()
+		{
+			if (_db == null) return;
+
+			_db.mapIds = _db.maps?
+				.Where(m => m != null)
+				.Select(m => HTB50Settings.ToString(m.HashID))
+				.ToArray()
+				?? Array.Empty<string>();
 		}
 
 		// ── EXISTING INSERT METHODS (unchanged) ───────────────────────────────

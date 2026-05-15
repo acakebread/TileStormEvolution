@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
 using MassiveHadronLtd;
@@ -21,6 +23,62 @@ namespace ClassicTilestorm
 		public static Transform MapRoot { get; set; }
 
 		public event System.Action<int> OnChangeMapRequested; // delta or 0 for reload
+
+		private static string GetMapHash(Map map) => map == null ? null : HTB50Settings.ToString(map.HashID);
+
+		private static string DescribeMap(Map map)
+		{
+			if (map == null) return "<null>";
+			var name = string.IsNullOrWhiteSpace(map.name) ? "Unnamed" : map.name;
+			var hash = GetMapHash(map) ?? "000000";
+			return $"{name} [{hash}]";
+		}
+
+		private static string BuildExportFileBase(Map map)
+		{
+			var name = string.IsNullOrWhiteSpace(map?.name) ? "Untitled" : map.name;
+			var invalid = System.IO.Path.GetInvalidFileNameChars();
+			var safeName = new string(name.Select(ch => invalid.Contains(ch) ? '_' : ch).ToArray()).Trim();
+			return $"{GetMapHash(map) ?? "000000"}_{safeName}";
+		}
+
+		private static HashId? TryParseMapHash(string identifier)
+		{
+			if (string.IsNullOrWhiteSpace(identifier))
+				return null;
+
+			try
+			{
+				return HTB50.Decode(identifier);
+			}
+			catch
+			{
+				return null;
+			}
+		}
+
+		private static int FindMapIndex(IList<Map> maps, string identifier)
+		{
+			if (maps == null || maps.Count == 0)
+				return -1;
+
+			var hash = TryParseMapHash(identifier);
+			if (hash.HasValue)
+			{
+				for (int i = 0; i < maps.Count; i++)
+					if (maps[i] != null && maps[i].HashID == hash.Value)
+						return i;
+			}
+
+			if (!string.IsNullOrWhiteSpace(identifier))
+			{
+				for (int i = 0; i < maps.Count; i++)
+					if (maps[i] != null && string.Equals(maps[i].name, identifier, StringComparison.OrdinalIgnoreCase))
+						return i;
+			}
+
+			return -1;
+		}
 
 		private void Awake()
 		{
@@ -64,12 +122,18 @@ namespace ClassicTilestorm
 			if (string.IsNullOrEmpty(mapName ??= ApplicationSettings.LoadMapName))
 				return;
 
-			var newMap = ResourceManager.Maps.FirstOrDefault(m => m.name == mapName)
-						  ?? ResourceManager.Maps.FirstOrDefault();
+			var maps = ResourceManager.Maps;
+			var mapHash = TryParseMapHash(mapName);
+			var newMap = mapHash.HasValue
+				? maps.FirstOrDefault(m => m != null && m.HashID == mapHash.Value)
+				: null;
+			newMap = newMap
+						  ?? maps.FirstOrDefault(m => m != null && string.Equals(m.name, mapName, StringComparison.OrdinalIgnoreCase))
+						  ?? maps.FirstOrDefault();
 
 			if (newMap == null)
 			{
-				Debug.LogError($"No map found for '{mapName}'! Available: {string.Join(", ", ResourceManager.Maps.Select(m => m.name))}");
+				Debug.LogError($"No map found for '{mapName}'! Available: {string.Join(", ", ResourceManager.Maps.Select(DescribeMap))}");
 				return;
 			}
 
@@ -102,13 +166,14 @@ namespace ClassicTilestorm
 				DestroyImmediate(MapRoot.gameObject);
 
 			// ─── Create new container GameObject ──────────────────────────
-			var container = new GameObject($"Map: {newMap.name}");
+			var container = new GameObject($"Map: {DescribeMap(newMap)}");
 			container.transform.SetParent(transform, false);
 			MapRoot = container.transform;
 
 			// ─── Load & initialise ────────────────────────────────────────
 
 			CurrentMap = newMap;
+			ApplicationSettings.LoadMapName = GetMapHash(CurrentMap);
 
 			if (null != mainReflection)
 			{
@@ -154,23 +219,13 @@ namespace ClassicTilestorm
 			if (maps == null || maps.Count == 0) return;
 
 			// Find current index the old-school way — works on ANY IList<T>
-			int currentIndex = -1;
-			for (int i = 0; i < maps.Count; i++)
-			{
-				if (maps[i]?.name == ApplicationSettings.LoadMapName)
-				{
-					currentIndex = i;
-					break;
-				}
-			}
-
-			// If not found, default to 0
+			int currentIndex = FindMapIndex(maps, ApplicationSettings.LoadMapName);
 			if (currentIndex == -1) currentIndex = 0;
 
 			if (delta != 0)
 			{
 				currentIndex = (currentIndex + delta + maps.Count) % maps.Count;
-				ApplicationSettings.LoadMapName = maps[currentIndex].name;
+				ApplicationSettings.LoadMapName = GetMapHash(maps[currentIndex]);
 			}
 
 			LoadMap();
@@ -248,10 +303,9 @@ namespace ClassicTilestorm
 				".json",
 				path =>
 				{
-					ResourceSerializer.ImportAtomicMap(path);
-					string importedName = System.IO.Path.GetFileNameWithoutExtension(path);
+					var importedMap = ResourceSerializer.ImportAtomicMap(path);
 
-					if (CurrentMap != null && CurrentMap.name == importedName)
+					if (CurrentMap != null && importedMap != null && CurrentMap.HashID == importedMap.HashID)
 						OnChangeMapRequested?.Invoke(0);
 				},
 				importRoot,
@@ -271,7 +325,7 @@ namespace ClassicTilestorm
 			}
 
 			var map = CurrentMap;
-			string fileName = $"{map.name}.json";
+			string fileName = $"{BuildExportFileBase(map)}.json";
 			string json = ResourceSerializer.BuildAtomicMapJson(map, verbose: true, crop: true);
 
 			if (string.IsNullOrEmpty(json))

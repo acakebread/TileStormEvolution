@@ -253,6 +253,7 @@ namespace ClassicTilestorm
 				((Map.IVariantAccess)map).Variants = ParseTableToVariants(tableArray);
 			}
 
+			map.EnsureHashID();
 			return map;
 		}
 

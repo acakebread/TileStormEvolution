@@ -138,7 +138,7 @@ namespace ClassicTilestorm
 			GUI.Label(new Rect(currentX, y, labelWidth, buttonHeight), "Map:");
 			currentX += labelWidth;
 
-			GUI.Label(new Rect(currentX, y, mapNameWidth, buttonHeight), ApplicationSettings.LoadMapName);
+			GUI.Label(new Rect(currentX, y, mapNameWidth, buttonHeight), MainController.CurrentMap?.name ?? ApplicationSettings.LoadMapName);
 			currentX += mapNameWidth + spacing;
 
 			DrawModeButton(currentX, y, "Editor", ApplicationMode.Editor);

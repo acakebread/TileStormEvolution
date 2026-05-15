@@ -35,6 +35,9 @@ namespace ClassicTilestorm.Assets
 				return "Materials";
 			}
 
+			if (typeof(T) == typeof(TextAsset))
+				return "Maps";
+
 			if (typeof(T) == typeof(AudioClip))
 			{
 				if (roots != null && roots.Any(r => r != null && (r.Contains("Music", StringComparison.OrdinalIgnoreCase))))

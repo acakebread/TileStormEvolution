@@ -495,6 +495,10 @@ namespace ClassicTilestorm
 			}
 
 			bool result = ResourceManager.RenameMapName(CurrentMap, newName);
+			if (result)
+			{
+				ResourceManager.SyncMapIds();
+			}
 			RefreshMapList();
 		}
 
@@ -539,7 +543,7 @@ namespace ClassicTilestorm
 			var label = go.GetComponentInChildren<TMP_Text>();
 			if (label != null)
 			{
-				var display = map.name ?? "Unnamed";
+				var display = $"{(string.IsNullOrWhiteSpace(map.name) ? "Unnamed" : map.name)} [{HTB50Settings.ToString(map.HashID)}]";
 				if (map.width > 0 && map.height > 0)
 					display += $"  ({map.width}×{map.height})";
 
@@ -625,7 +629,9 @@ namespace ClassicTilestorm
 
 			var list = ResourceManager.Maps.ToList();
 			list.Insert(insertIndex, newMap);
+			Map.EnsureUniqueHashIDs(list);
 			ResourceManager.database.maps = list.ToArray();
+			ResourceManager.SyncMapIds();
 
 			lastSelectedMapIndex = insertIndex;
 			RefreshMapList();
@@ -639,6 +645,7 @@ namespace ClassicTilestorm
 			var list = ResourceManager.Maps.ToList();
 			list.RemoveAt(idx);
 			ResourceManager.database.maps = list.ToArray();
+			ResourceManager.SyncMapIds();
 
 			lastSelectedMapIndex = Mathf.Clamp(idx - 1, 0, list.Count - 1);
 			RefreshMapList();
@@ -652,6 +659,7 @@ namespace ClassicTilestorm
 			var i = lastSelectedMapIndex;
 			(list[i - 1], list[i]) = (list[i], list[i - 1]);
 			ResourceManager.database.maps = list.ToArray();
+			ResourceManager.SyncMapIds();
 
 			lastSelectedMapIndex--;
 			RefreshMapList();
@@ -666,6 +674,7 @@ namespace ClassicTilestorm
 			var i = lastSelectedMapIndex;
 			(list[i + 1], list[i]) = (list[i], list[i + 1]);
 			ResourceManager.database.maps = list.ToArray();
+			ResourceManager.SyncMapIds();
 
 			lastSelectedMapIndex++;
 			RefreshMapList();
@@ -762,7 +771,7 @@ namespace ClassicTilestorm
 
 			void UpdateMainView()
 			{
-				if (CurrentMap.name == MainController.CurrentMap.name)
+				if (CurrentMap != null && MainController.CurrentMap != null && CurrentMap.HashID == MainController.CurrentMap.HashID)
 				{
 					CurrentMap.CopyFrom(currentClone);
 				}

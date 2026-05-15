@@ -59,6 +59,7 @@ namespace ClassicTilestorm
 			if (jsonAsset == null) return;
 
 			JsonSetup.Init();
+			MapCatalog.ClearCache();
 			ResourceManager.database = null;// important
 			ResourceManager.database = LoadDatabase(jsonAsset.text);
 		}
@@ -81,18 +82,38 @@ namespace ClassicTilestorm
 
 				var data = new DatabaseData
 				{
-					maps = root["maps"] != null
-						? serializer.Deserialize<Map[]>(root["maps"].CreateReader())
-						: Array.Empty<Map>(),
-
 					definitions = root["definitions"] != null
 						? serializer.Deserialize<Definition[]>(root["definitions"].CreateReader())
 						: Array.Empty<Definition>(),
-
-					//textures = root["textures"] != null
-					//	? serializer.Deserialize<TextureInfo[]>(root["textures"].CreateReader())
-					//	: Array.Empty<TextureInfo>(),
 				};
+
+				var mapsToken = root["maps"] as JArray;
+				if (mapsToken != null && mapsToken.Count > 0 && mapsToken[0]?.Type == JTokenType.Object)
+				{
+					data.maps = serializer.Deserialize<Map[]>(mapsToken.CreateReader()) ?? Array.Empty<Map>();
+					data.mapIds = data.maps.Select(m => HTB50Settings.ToString(m.HashID)).ToArray();
+				}
+				else if (mapsToken != null)
+				{
+					data.mapIds = mapsToken
+						.Select(t => t?.Value<string>()?.Trim())
+						.Where(s => !string.IsNullOrWhiteSpace(s))
+						.ToArray();
+					data.maps = MapCatalog.LoadMaps(data.mapIds).ToArray();
+				}
+				else if (root["mapIds"] is JArray mapIdsToken)
+				{
+					data.mapIds = mapIdsToken
+						.Select(t => t?.Value<string>()?.Trim())
+						.Where(s => !string.IsNullOrWhiteSpace(s))
+						.ToArray();
+					data.maps = MapCatalog.LoadMaps(data.mapIds).ToArray();
+				}
+				else
+				{
+					data.mapIds = Array.Empty<string>();
+					data.maps = Array.Empty<Map>();
+				}
 
 				if (data.maps == null || data.definitions == null ||
 					data.maps.Length == 0 || data.definitions.Length == 0)
@@ -100,6 +121,9 @@ namespace ClassicTilestorm
 					Debug.LogError("ResourceSerializer: Database failed validation");
 					return null;
 				}
+
+				Map.EnsureUniqueHashIDs(data.maps);
+				data.mapIds = data.maps.Select(m => HTB50Settings.ToString(m.HashID)).ToArray();
 
 				return data;
 			}
@@ -113,14 +137,44 @@ namespace ClassicTilestorm
 		public static void SaveDatabase(DatabaseData data, string filepath = null, bool verbose = false, bool cropAllMaps = true)
 		{
 			if (data == null) return;
+			data.mapIds = data.maps != null && data.maps.Length > 0
+				? data.maps.Where(m => m != null).Select(m => HTB50Settings.ToString(m.HashID)).ToArray()
+				: (data.mapIds ?? Array.Empty<string>());
 
-			Map[] mapsToSave = data.maps;
-
-			if (cropAllMaps && data.maps != null)
+			if (data.maps != null)
 			{
-				mapsToSave = data.maps
-					.Select(m => CreateCroppedCopy(m))
-					.ToArray();
+				foreach (var map in data.maps)
+				{
+					if (map == null)
+						continue;
+
+					MapCatalog.SaveMap(map);
+				}
+
+				try
+				{
+					if (Directory.Exists(MapCatalog.PersistentMapsFolder))
+					{
+						var allowed = data.mapIds
+							.Where(id => !string.IsNullOrWhiteSpace(id))
+							.ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+						foreach (var file in Directory.EnumerateFiles(MapCatalog.PersistentMapsFolder, "*.json", SearchOption.TopDirectoryOnly))
+						{
+							var name = Path.GetFileNameWithoutExtension(file);
+							if (string.IsNullOrWhiteSpace(name))
+								continue;
+
+							var prefix = name.Split('_')[0];
+							if (!allowed.Contains(prefix))
+								File.Delete(file);
+						}
+					}
+				}
+				catch (Exception ex)
+				{
+					Debug.LogWarning($"SaveDatabase: map file cleanup skipped → {ex.Message}");
+				}
 			}
 
 			var settings = new JsonSerializerSettings
@@ -133,8 +187,8 @@ namespace ClassicTilestorm
 			// Build JObject manually so we can skip empty buttons array
 			var root = new JObject();
 
-			if (mapsToSave != null && mapsToSave.Length > 0)
-				root["maps"] = JArray.FromObject(mapsToSave, JsonSerializer.Create(settings));
+			if (data.mapIds != null && data.mapIds.Length > 0)
+				root["maps"] = JArray.FromObject(data.mapIds, JsonSerializer.Create(settings));
 
 			if (data.definitions != null && data.definitions.Length > 0)
 				root["definitions"] = JArray.FromObject(data.definitions, JsonSerializer.Create(settings));
@@ -151,13 +205,17 @@ namespace ClassicTilestorm
 			EnsureFolder(Path.GetDirectoryName(path));
 			File.WriteAllText(path, json);
 
+#if UNITY_EDITOR
+			AssetDatabase.Refresh();
+#endif
+
 			//Debug.Log($"Database saved → {path} " +
 			//		  $"(maps: {mapsToSave?.Length ?? 0}, " +
 			//		  $"definitions: {data.definitions?.Length ?? 0}, " +
 			//		  $"textures: {data.textures?.Length ?? 0}");
 
 			Debug.Log($"Database saved → {path} " +
-					  $"(maps: {mapsToSave?.Length ?? 0}, " +
+					  $"(maps: {data.mapIds?.Length ?? 0}, " +
 					  $"definitions: {data.definitions?.Length ?? 0}");
 		}
 
@@ -187,12 +245,12 @@ namespace ClassicTilestorm
 			return Path.Combine(Application.persistentDataPath, "Maps");
 		}
 
-		public static void ImportAtomicMap(string filepath)
+		public static Map ImportAtomicMap(string filepath)
 		{
 			if (!File.Exists(filepath))
 			{
 				Debug.LogError($"Import failed: File not found → {filepath}");
-				return;
+				return null;
 			}
 
 			try
@@ -210,37 +268,43 @@ namespace ClassicTilestorm
 				if (importedMap == null || string.IsNullOrEmpty(importedMap.name))
 				{
 					Debug.LogError("Import failed: Invalid map or missing name");
-					return;
+					return null;
 				}
+
+				importedMap.EnsureHashID();
 
 				var db = ResourceManager.database;
 				if (db?.maps == null)
 				{
 					Debug.LogError("Database not loaded");
-					return;
+					return null;
 				}
 
-				int existingIndex = Array.FindIndex(db.maps, m => m.name == importedMap.name);
+				int existingIndex = Array.FindIndex(db.maps, m => m != null && m.HashID == importedMap.HashID);
 				if (existingIndex >= 0)
 				{
 					db.maps[existingIndex] = importedMap;
-					Debug.Log($"Imported map replaced existing: {importedMap.name}");
+					Debug.Log($"Imported map replaced existing: {importedMap.name} [{HTB50Settings.ToString(importedMap.HashID)}]");
 				}
 				else
 				{
 					var list = db.maps.ToList();
 					list.Add(importedMap);
 					db.maps = list.ToArray();
-					Debug.Log($"Imported new map added: {importedMap.name}");
+					Debug.Log($"Imported new map added: {importedMap.name} [{HTB50Settings.ToString(importedMap.HashID)}]");
 				}
 
+				Map.EnsureUniqueHashIDs(db.maps);
+				ResourceManager.SyncMapIds();
 				ResourceManager.ApplyMapChanges(importedMap);
 
-				Debug.Log($"Map imported into database: {importedMap.name}");
+				Debug.Log($"Map imported into database: {importedMap.name} [{HTB50Settings.ToString(importedMap.HashID)}]");
+				return importedMap;
 			}
 			catch (Exception e)
 			{
 				Debug.LogError($"Import failed: {e.Message}");
+				return null;
 			}
 		}
 
@@ -259,7 +323,8 @@ namespace ClassicTilestorm
 					: filepath;
 
 				EnsureFolder(folder);
-				string path = Path.Combine(folder, $"{map.name}.json");
+				string safeName = SanitizeFileName(string.IsNullOrWhiteSpace(map.name) ? "Untitled" : map.name);
+				string path = Path.Combine(folder, $"{HTB50Settings.ToString(map.HashID)}_{safeName}.json");
 
 				File.WriteAllText(path, json);
 
@@ -281,6 +346,16 @@ namespace ClassicTilestorm
 			//	Debug.Log($"[Export] Map '{copy.name}' table consolidated table {((Map.IHashAccess)map).Hashes.Length} or auto-cropped to {copy.width}x{copy.height}");
 
 			return copy;
+		}
+
+		private static string SanitizeFileName(string value)
+		{
+			if (string.IsNullOrWhiteSpace(value))
+				return "Untitled";
+
+			var invalid = Path.GetInvalidFileNameChars();
+			var chars = value.Select(ch => invalid.Contains(ch) || char.IsWhiteSpace(ch) ? '_' : ch).ToArray();
+			return new string(chars).Trim('_');
 		}
 	}
 }

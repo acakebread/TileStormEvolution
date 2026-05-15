@@ -1,5 +1,6 @@
 ﻿//#define VERBOSE
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using Newtonsoft.Json;
@@ -79,12 +80,17 @@ namespace ClassicTilestorm
 		Material SkyboxMaterial { get; }
 	}
 
-	public partial class Map : IMapEdit, Map.IVariantAccess
+	public interface IMapIdentity
+	{
+		HashId HashID { get; }
+	}
+
+	public partial class Map : IMapEdit, Map.IVariantAccess, IMapIdentity
 	{
 		// ─────────────────────────────────────────────
 		// Core identity
 		// ─────────────────────────────────────────────
-		[JsonProperty(Order = 1)] public string id;//ToDo hook into serialisation using HTB50 system
+		[JsonProperty(Order = 1)] public string id;
 		[JsonProperty(Order = 2)] public string name;
 		[JsonProperty(Order = 3)] public string character;
 		[JsonProperty(Order = 4)] public string music;
@@ -123,6 +129,7 @@ namespace ClassicTilestorm
 		public bool ShouldSerializeskybox() => !string.IsNullOrEmpty(skybox);
 		public bool ShouldSerializeskyvec() => null != skyvec;
 
+		[JsonIgnore]
 		public Action<Map, bool, Vector3> OnMapEdited { get; set; }
 		[JsonIgnore] public Transform parent { get; set; }
 
@@ -153,6 +160,7 @@ namespace ClassicTilestorm
 			set => effect = ReflectionEffectCamera.EffectModeToString(value);
 		}
 
+		[JsonIgnore]
 		public Action<ReflectionEffectCamera.EffectMode> OnEffectChanged;
 
 		[JsonIgnore] private Color ambientRGB;
@@ -181,6 +189,26 @@ namespace ClassicTilestorm
 		[JsonIgnore] private DirectionalLightUtility directionalLight;
 
 		[JsonIgnore] public Material SkyboxMaterial => SkyboxUtility.GetSkyboxMaterialForName(Skybox);
+
+		[JsonIgnore]
+		public HashId HashID
+		{
+			get
+			{
+				if (string.IsNullOrWhiteSpace(id))
+					return 0;
+
+				try
+				{
+					return HTB50.Decode(id);
+				}
+				catch
+				{
+					return 0;
+				}
+			}
+			set => id = HTB50Settings.ToString(value);
+		}
 
 		// ─────────────────────────────────────────────
 		// Tile data — variants is now the only source of truth
@@ -275,14 +303,16 @@ namespace ClassicTilestorm
 			return -1;
 		}
 
-		public Map() { }
+		public Map()
+		{
+			EnsureHashID();
+		}
 
-		public Map(int width = 16, int height = 16, string mapName = "New Map")
+		public Map(int width = 16, int height = 16, string mapName = "New Map") : this()
 		{
 			if (width <= 0 || height <= 0)
 				throw new ArgumentException("Map dimensions must be positive");
 
-			//this.id = new random HashId //ToDo
 			this.name = mapName;
 			this.width = width;
 			this.height = height;
@@ -308,6 +338,54 @@ namespace ClassicTilestorm
 		}
 
 		public static Map CreateEmpty(int width = 16, int height = 16, string name = null) => new(width, height, name ?? $"Map {width}×{height}");
+
+		public void EnsureHashID(IEnumerable<Map> existingMaps = null)
+		{
+			if (HashID != 0)
+			{
+				if (existingMaps == null)
+					return;
+
+				bool duplicate = existingMaps.Any(m => m != null && !ReferenceEquals(m, this) && m.HashID == HashID);
+				if (!duplicate)
+					return;
+			}
+
+			var used = existingMaps?
+				.Where(m => m != null && !ReferenceEquals(m, this) && m.HashID != 0)
+				.Select(m => m.HashID)
+				.ToHashSet() ?? new HashSet<HashId>();
+
+			HashID = CreateUniqueHashID(used);
+		}
+
+		public static void EnsureUniqueHashIDs(IEnumerable<Map> maps)
+		{
+			if (maps == null) return;
+
+			var used = new HashSet<HashId>();
+			foreach (var map in maps)
+			{
+				if (map == null) continue;
+
+				if (map.HashID == 0 || used.Contains(map.HashID))
+					map.HashID = CreateUniqueHashID(used);
+
+				used.Add(map.HashID);
+			}
+		}
+
+		private static HashId CreateUniqueHashID(HashSet<HashId> used)
+		{
+			HashId candidate;
+			do
+			{
+				candidate = RadixHash.GetSecureRandomHash32();
+			}
+			while (candidate == 0 || (used != null && used.Contains(candidate)));
+
+			return candidate;
+		}
 
 		public Map Clone() => new()
 		{
@@ -452,6 +530,7 @@ namespace ClassicTilestorm
 			OnEffectChanged?.Invoke(Effect);
 		}
 
+		[JsonIgnore]
 		public Action<UnityRenderSettings> OnRenderSettingsChanged;
 
 		[JsonIgnore]

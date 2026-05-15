@@ -155,6 +155,7 @@ namespace MassiveHadronLtd
 		/// </summary>
 		public static IEnumerable<string> GetExtensionsForType<T>() where T : UnityEngine.Object
 		{
+			if (typeof(T) == typeof(TextAsset)) return new[] { ".json" };
 			if (typeof(T) == typeof(GameObject)) return new[] { ".prefab", ".obj", ".fbx" };
 			if (typeof(T) == typeof(Texture) || typeof(T) == typeof(Texture2D))
 				return new[] { ".png", ".jpg", ".jpeg", ".tga" };   // add more if needed
