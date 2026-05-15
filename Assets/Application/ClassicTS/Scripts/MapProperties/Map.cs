@@ -84,12 +84,12 @@ namespace ClassicTilestorm
 		// ─────────────────────────────────────────────
 		// Core identity
 		// ─────────────────────────────────────────────
-		[JsonProperty(Order = 1)] public string name;
-		[JsonProperty(Order = 2)] public string character;
-		[JsonProperty(Order = 3)] public string music;
-		[JsonProperty(Order = 4)] public string effect;
-		[JsonProperty(Order = 5)] public string skybox;
-		[JsonProperty(Order = 6)] public string button;
+		[JsonProperty(Order = 1)] public string id;//ToDo hook into serialisation using HTB50 system
+		[JsonProperty(Order = 2)] public string name;
+		[JsonProperty(Order = 3)] public string character;
+		[JsonProperty(Order = 4)] public string music;
+		[JsonProperty(Order = 5)] public string effect;
+		[JsonProperty(Order = 6)] public string skybox;
 
 		// ─────────────────────────────────────────────
 		// Dimensions and Tile Data
@@ -282,6 +282,7 @@ namespace ClassicTilestorm
 			if (width <= 0 || height <= 0)
 				throw new ArgumentException("Map dimensions must be positive");
 
+			//this.id = new random HashId //ToDo
 			this.name = mapName;
 			this.width = width;
 			this.height = height;
@@ -303,13 +304,14 @@ namespace ClassicTilestorm
 			music = null;
 			skybox = null;
 			character = null;
-			button = null;
+			//button = null;
 		}
 
 		public static Map CreateEmpty(int width = 16, int height = 16, string name = null) => new(width, height, name ?? $"Map {width}×{height}");
 
 		public Map Clone() => new()
 		{
+			id = id,
 			name = name,
 			character = character,
 			music = music,
@@ -318,7 +320,7 @@ namespace ClassicTilestorm
 			skybox = skybox,
 			skyvec = skyvec,
 			effect = effect,
-			button = button,
+			//button = button,
 			width = width,
 			height = height,
 
