@@ -122,7 +122,7 @@ namespace ClassicTilestorm
 			}
 
 			var json = JsonConvert.SerializeObject(map.Clone(), Formatting.Indented, MapSerializerSettings);
-			File.WriteAllText(path, json);
+			WriteJsonIfChanged(path, json);
 
 			CachedMaps[map.HashID] = map;
 			return true;
@@ -151,7 +151,7 @@ namespace ClassicTilestorm
 			}
 
 			var json = JsonConvert.SerializeObject(map.Clone(), Formatting.Indented, MapSerializerSettings);
-			File.WriteAllText(path, json);
+			WriteJsonIfChanged(path, json);
 
 			var resourceName = Path.GetFileNameWithoutExtension(fileName);
 			InternalResourceIndex ??= new Dictionary<HashId, string>();
@@ -357,6 +357,39 @@ namespace ClassicTilestorm
 				Debug.LogWarning($"Failed to parse map json: {ex.Message}");
 				return null;
 			}
+		}
+
+		private static void WriteJsonIfChanged(string path, string json)
+		{
+			if (string.IsNullOrWhiteSpace(path))
+				return;
+
+			var normalized = EnsureTrailingNewline(json ?? string.Empty);
+			if (File.Exists(path))
+			{
+				try
+				{
+					var current = File.ReadAllText(path);
+					if (string.Equals(current, normalized, StringComparison.Ordinal))
+						return;
+				}
+				catch (Exception ex)
+				{
+					Debug.LogWarning($"MapCatalog: failed to read existing file before save '{path}': {ex.Message}");
+				}
+			}
+
+			File.WriteAllText(path, normalized);
+		}
+
+		private static string EnsureTrailingNewline(string value)
+		{
+			if (string.IsNullOrEmpty(value))
+				return string.Empty;
+
+			return value.EndsWith(Environment.NewLine, StringComparison.Ordinal)
+				? value
+				: value + Environment.NewLine;
 		}
 
 		private static bool TryParseHash(string id, out HashId hash)
