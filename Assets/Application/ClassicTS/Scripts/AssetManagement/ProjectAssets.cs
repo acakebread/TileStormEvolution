@@ -7,6 +7,35 @@ using System.IO;
 
 namespace ClassicTilestorm.Assets
 {
+	internal delegate bool ResourceKeyResolver(string identifier, out string resourceKey);
+	internal delegate bool TryLoadAsset<T>(string identifier, out T asset) where T : UnityEngine.Object;
+
+	internal static class ResourceLookupHelpers
+	{
+		public static T FindWithImportedFallback<T>(
+			string identifier,
+			ResourceKeyResolver resolveResourceKey,
+			TryLoadAsset<T> importedLoader,
+			Func<string, T> internalLoader) where T : UnityEngine.Object
+		{
+			if (string.IsNullOrWhiteSpace(identifier))
+				return null;
+
+			if (resolveResourceKey != null && resolveResourceKey(identifier, out var resourceKey))
+			{
+				if (importedLoader != null && importedLoader(resourceKey, out var imported))
+					return imported;
+
+				return internalLoader != null ? internalLoader(resourceKey) : null;
+			}
+
+			if (importedLoader != null && importedLoader(identifier, out var directImported))
+				return directImported;
+
+			return internalLoader != null ? internalLoader(identifier) : null;
+		}
+	}
+
 	/// <summary>
 	/// Typed access to model geometry assets (FBX/OBJ/etc placed in Resources)
 	/// </summary>
@@ -271,23 +300,7 @@ namespace ClassicTilestorm.Assets
 			AssetRegistry<Texture>.ClearTextureCache();
 		}
 		public static Texture Find(string textureName)
-		{
-			if (string.IsNullOrWhiteSpace(textureName))
-				return null;
-
-			if (TextureResourceTable.TryResolveResourceKey(textureName, out var resourceKey))
-			{
-				if (ImportedResourceLoader.TryLoadTexture(resourceKey, out var importedTexture))
-					return importedTexture;
-
-				return AssetRegistry<Texture>.FindTexture(resourceKey);
-			}
-
-			if (ImportedResourceLoader.TryLoadTexture(textureName, out var directImportedTexture))
-				return directImportedTexture;
-
-			return AssetRegistry<Texture>.FindTexture(textureName);
-		}
+			=> ClassicTilestorm.Assets.ResourceLookupHelpers.FindWithImportedFallback(textureName, TextureResourceTable.TryResolveResourceKey, ImportedResourceLoader.TryLoadTexture, AssetRegistry<Texture>.FindTexture);
 
 		public static string GetDisplayName(string identifier) => TextureResourceTable.GetDisplayName(identifier);
 		public static string GetHashForDisplayName(string displayName) => TextureResourceTable.GetHashForDisplayName(displayName);
@@ -317,26 +330,23 @@ namespace ClassicTilestorm.Assets
 	/// </summary>
 	public static class SkyboxAssets
 	{
-		private static readonly Dictionary<string, Material> ImportedSkyboxCache = new(StringComparer.OrdinalIgnoreCase);
-
 		public static void RegisterRoot(string root) => AssetRegistry<Material>.RegisterSkyboxRoot(root);
 		public static void ClearCache()
 		{
 			AssetRegistry<Material>.ClearSkyboxCache();
-			ImportedSkyboxCache.Clear();
 		}
 		public static Material Find(string skyboxName)
 		{
 			if (string.IsNullOrWhiteSpace(skyboxName))
 				return null;
 
-			if (Assets.SkycubeResourceTable.TryResolveResourceKey(skyboxName, out var resourceKey))
+			if (SkycubeResourceTable.TryResolveResourceKey(skyboxName, out var resourceKey))
 			{
 				if (ImportedResourceLoader.TryLoadPortableMaterial(resourceKey, out var importedMaterial))
 					return importedMaterial;
 
 				if (ImportedResourceLoader.TryLoadTexture(resourceKey, out var importedTexture))
-					return CreateImportedSkyboxMaterial(importedTexture, resourceKey);
+					return SkyboxUtility.CreateImportedSkyboxMaterial(importedTexture, resourceKey);
 
 				return AssetRegistry<Material>.FindSkybox(resourceKey);
 			}
@@ -345,46 +355,9 @@ namespace ClassicTilestorm.Assets
 				return directPortable;
 
 			if (ImportedResourceLoader.TryLoadTexture(skyboxName, out var directTexture))
-				return CreateImportedSkyboxMaterial(directTexture, skyboxName);
+				return SkyboxUtility.CreateImportedSkyboxMaterial(directTexture, skyboxName);
 
 			return AssetRegistry<Material>.FindSkybox(skyboxName);
-		}
-
-		private static Material CreateImportedSkyboxMaterial(Texture texture, string sourceName)
-		{
-			if (texture == null)
-				return null;
-
-			var key = sourceName?.Trim();
-			if (!string.IsNullOrWhiteSpace(key) && ImportedSkyboxCache.TryGetValue(key, out var cached) && cached != null)
-				return cached;
-
-			var shader = Shader.Find("Skybox/Panoramic") ?? Shader.Find("Skybox/6 Sided") ?? Shader.Find("Universal Render Pipeline/Simple Lit");
-			if (shader == null)
-				return null;
-
-			var material = new Material(shader)
-			{
-				name = string.IsNullOrWhiteSpace(sourceName) ? "Imported Skybox" : Path.GetFileNameWithoutExtension(sourceName)
-			};
-
-			material.mainTexture = texture;
-			if (material.HasProperty("_MainTex"))
-				material.SetTexture("_MainTex", texture);
-			if (material.HasProperty("_Tex"))
-				material.SetTexture("_Tex", texture);
-
-			if (material.HasProperty("_ImageType"))
-				material.SetFloat("_ImageType", 0f);
-			if (material.HasProperty("_Exposure"))
-				material.SetFloat("_Exposure", 1f);
-			if (material.HasProperty("_Rotation"))
-				material.SetFloat("_Rotation", 0f);
-
-			if (!string.IsNullOrWhiteSpace(key))
-				ImportedSkyboxCache[key] = material;
-
-			return material;
 		}
 	}
 
@@ -399,23 +372,7 @@ namespace ClassicTilestorm.Assets
 			AssetRegistry<AudioClip>.ClearSoundCache();
 		}
 		public static AudioClip Find(string clipName)
-		{
-			if (string.IsNullOrWhiteSpace(clipName))
-				return null;
-
-			if (SoundResourceTable.TryResolveResourceKey(clipName, out var resourceKey))
-			{
-				if (ImportedResourceLoader.TryLoadAudioClip(resourceKey, out var importedClip))
-					return importedClip;
-
-				return AssetRegistry<AudioClip>.FindSound(resourceKey);
-			}
-
-			if (ImportedResourceLoader.TryLoadAudioClip(clipName, out var directImportedClip))
-				return directImportedClip;
-
-			return AssetRegistry<AudioClip>.FindSound(clipName);
-		}
+			=> ClassicTilestorm.Assets.ResourceLookupHelpers.FindWithImportedFallback(clipName, SoundResourceTable.TryResolveResourceKey, ImportedResourceLoader.TryLoadAudioClip, AssetRegistry<AudioClip>.FindSound);
 	}
 
 	/// <summary>
@@ -429,23 +386,7 @@ namespace ClassicTilestorm.Assets
 			AssetRegistry<AudioClip>.ClearMusicCache();
 		}
 		public static AudioClip Find(string clipName)
-		{
-			if (string.IsNullOrWhiteSpace(clipName))
-				return null;
-
-			if (Assets.MusicResourceTable.TryResolveResourceKey(clipName, out var resourceKey))
-			{
-				if (ImportedResourceLoader.TryLoadAudioClip(resourceKey, out var importedClip))
-					return importedClip;
-
-				return AssetRegistry<AudioClip>.FindMusic(resourceKey);
-			}
-
-			if (ImportedResourceLoader.TryLoadAudioClip(clipName, out var directImportedClip))
-				return directImportedClip;
-
-			return AssetRegistry<AudioClip>.FindMusic(clipName);
-		}
+			=> ClassicTilestorm.Assets.ResourceLookupHelpers.FindWithImportedFallback(clipName, MusicResourceTable.TryResolveResourceKey, ImportedResourceLoader.TryLoadAudioClip, AssetRegistry<AudioClip>.FindMusic);
 	}
 }
 
