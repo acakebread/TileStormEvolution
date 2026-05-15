@@ -44,22 +44,8 @@ namespace ClassicTilestorm
 			if (!Directory.Exists(path)) Directory.CreateDirectory(path);
 		}
 
-		public static void Initialise(TextAsset jsonAsset)
+		public static void Initialise()
 		{
-#if UNITY_EDITOR
-			if (jsonAsset != null)
-			{
-				string path = AssetDatabase.GetAssetPath(jsonAsset);
-				if (!string.IsNullOrEmpty(path))
-				{
-					AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
-					AssetDatabase.Refresh();
-				}
-			}
-#endif
-
-			if (jsonAsset == null) return;
-
 			JsonSetup.Init();
 			MapCatalog.ClearCache();
 			PrefabResourceTable.ClearCache();
@@ -73,10 +59,26 @@ namespace ClassicTilestorm
 			ImportedResourceLoader.ClearCache();
 			ProjectAssets.RefreshAllNameCaches();
 			ResourceManager.database = null;// important
-			ResourceManager.database = LoadDatabase(jsonAsset.text);
+
+			var levelsAsset = LoadJsonAsset("levels");
+			var definitionsAsset = LoadJsonAsset("definitions");
+
+			if (levelsAsset == null)
+			{
+				Debug.LogError($"ResourceSerializer: missing levels.json at '{ApplicationSettings.JsonDataResourcePath}'");
+				return;
+			}
+
+			if (definitionsAsset == null)
+			{
+				Debug.LogError($"ResourceSerializer: missing definitions.json at '{ApplicationSettings.JsonDataResourcePath}'");
+				return;
+			}
+
+			ResourceManager.database = LoadDatabase(levelsAsset.text, definitionsAsset.text);
 		}
 
-		public static DatabaseData LoadDatabase(string json)
+		public static DatabaseData LoadDatabase(string json, string definitionsJson = null)
 		{
 			if (string.IsNullOrEmpty(json)) return null;
 
@@ -94,9 +96,7 @@ namespace ClassicTilestorm
 
 				var data = new DatabaseData
 				{
-					definitions = root["definitions"] != null
-						? serializer.Deserialize<Definition[]>(root["definitions"].CreateReader())
-						: Array.Empty<Definition>(),
+					definitions = LoadDefinitions(definitionsJson, root, serializer),
 				};
 
 				var mapsToken = root["maps"] as JArray;
@@ -146,7 +146,25 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public static void SaveDatabase(DatabaseData data, string filepath = null, bool verbose = false, bool cropAllMaps = true)
+		private static Definition[] LoadDefinitions(string definitionsJson, JObject legacyRoot, JsonSerializer serializer)
+		{
+			if (!string.IsNullOrWhiteSpace(definitionsJson))
+			{
+				var parsed = JToken.Parse(definitionsJson);
+				if (parsed is JArray definitionsArray)
+					return serializer.Deserialize<Definition[]>(definitionsArray.CreateReader()) ?? Array.Empty<Definition>();
+
+				if (parsed is JObject definitionsRoot && definitionsRoot["definitions"] is JArray nestedDefinitions)
+					return serializer.Deserialize<Definition[]>(nestedDefinitions.CreateReader()) ?? Array.Empty<Definition>();
+			}
+
+			if (legacyRoot["definitions"] is JArray legacyDefinitions)
+				return serializer.Deserialize<Definition[]>(legacyDefinitions.CreateReader()) ?? Array.Empty<Definition>();
+
+			return Array.Empty<Definition>();
+		}
+
+		public static void SaveDatabase(DatabaseData data, string filepath = null, string definitionsPath = null, bool verbose = false, bool cropAllMaps = true)
 		{
 			if (data == null) return;
 			if (data.maps != null)
@@ -226,20 +244,25 @@ namespace ClassicTilestorm
 			if (data.mapIds != null && data.mapIds.Length > 0)
 				root["maps"] = JArray.FromObject(data.mapIds, JsonSerializer.Create(settings));
 
-			if (data.definitions != null && data.definitions.Length > 0)
-				root["definitions"] = JArray.FromObject(data.definitions, JsonSerializer.Create(settings));
-
-			//if (data.textures != null && data.textures.Length > 0)
-			//	root["textures"] = JArray.FromObject(data.textures, JsonSerializer.Create(settings));
-
 			string json = root.ToString(verbose ? Formatting.Indented : Formatting.None);
+			string definitionsJson = data.definitions != null && data.definitions.Length > 0
+				? JArray.FromObject(data.definitions, JsonSerializer.Create(settings)).ToString(verbose ? Formatting.Indented : Formatting.None)
+				: "[]";
 
 			string path = string.IsNullOrEmpty(filepath)
-				? Path.Combine(Application.persistentDataPath, "database.json")
+				? Path.Combine(ApplicationSettings.JsonDataProjectPath, "levels.json")
 				: filepath;
+			string defsRoot = string.IsNullOrEmpty(filepath)
+				? ApplicationSettings.JsonDataProjectPath
+				: (Path.GetDirectoryName(filepath) ?? ApplicationSettings.JsonDataProjectPath);
+			string defsPath = string.IsNullOrEmpty(definitionsPath)
+				? Path.Combine(defsRoot, "definitions.json")
+				: definitionsPath;
 
 			EnsureFolder(Path.GetDirectoryName(path));
 			WriteJsonIfChanged(path, json);
+			EnsureFolder(Path.GetDirectoryName(defsPath));
+			WriteJsonIfChanged(defsPath, definitionsJson);
 
 #if UNITY_EDITOR
 			AssetDatabase.Refresh();
@@ -250,9 +273,25 @@ namespace ClassicTilestorm
 			//		  $"definitions: {data.definitions?.Length ?? 0}, " +
 			//		  $"textures: {data.textures?.Length ?? 0}");
 
-			Debug.Log($"Database saved → {path} " +
+			Debug.Log($"Database saved → {path} / {defsPath} " +
 					  $"(maps: {data.mapIds?.Length ?? 0}, " +
 					  $"definitions: {data.definitions?.Length ?? 0}");
+		}
+
+		private static TextAsset LoadJsonAsset(string fileName)
+		{
+			if (string.IsNullOrWhiteSpace(fileName))
+				return null;
+
+			var root = ApplicationSettings.JsonDataResourcePath?.Trim('/');
+			if (string.IsNullOrWhiteSpace(root))
+				root = "ClassicTS/Config";
+
+			var asset = Resources.Load<TextAsset>($"{root}/{fileName}");
+			if (asset != null)
+				return asset;
+
+			return Resources.Load<TextAsset>($"{root}/{fileName}.json");
 		}
 
 		public static string BuildAtomicMapJson(Map originalMap, bool verbose = false, bool crop = true)
@@ -260,7 +299,8 @@ namespace ClassicTilestorm
 			if (originalMap == null)
 				return null;
 
-			var map = crop ? CreateCroppedCopy(originalMap) : originalMap;
+			var map = crop ? CreateCroppedCopy(originalMap) : originalMap.Clone();
+			map.Optimise();
 
 			var settings = new JsonSerializerSettings
 			{

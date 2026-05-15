@@ -111,6 +111,8 @@ namespace ClassicTilestorm
 			if (map.tiles == null || map.tiles.Length == 0 || map.variants == null || map.variants.Length == 0)
 				return false;
 
+			int originalVariantCount = map.variants.Length;
+
 			// Group by full Variant identity (hash + angle + delta)
 			var grouped = map.tiles
 				.Select(idx => idx >= 0 && idx < map.variants.Length ? map.variants[idx] : new Variant(0))
@@ -164,8 +166,8 @@ namespace ClassicTilestorm
 
 				if (sizeChanged)
 				{
-					string direction = newVariants.Length > map.variants.Length ? "increased" : "reduced";
-					Debug.Log($"{map.name} consolidated: table size {direction} from {map.variants.Length} → {newVariants.Length}");
+					string direction = newVariants.Length > originalVariantCount ? "increased" : "reduced";
+					Debug.Log($"{map.name} consolidated: table size {direction} from {originalVariantCount} → {newVariants.Length}");
 				}
 				else if (orderChanged)
 				{

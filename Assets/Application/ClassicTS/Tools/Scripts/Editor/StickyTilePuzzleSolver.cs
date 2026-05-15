@@ -5,7 +5,7 @@ using System.Collections.Generic;
 
 public class StickyTilePuzzleSolver : EditorWindow
 {
-	[MenuItem("Tools/Classic Tilestorm/Sticky Tile Puzzle Solver")]
+	[MenuItem("Tools/Classic Tilestorm/Puzzles/Sticky Tile Puzzle Solver")]
 	public static void ShowWindow()
 	{
 		GetWindow<StickyTilePuzzleSolver>("Sticky Tile Solver");

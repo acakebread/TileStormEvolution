@@ -268,7 +268,7 @@ namespace MassiveHadronLtd
 		}
 
 #if UNITY_EDITOR
-		[UnityEditor.MenuItem("Tools/OBJ Clean - BRUTE FORCE (selected original .obj)")]
+		[UnityEditor.MenuItem("Tools/Classic Tilestorm/Models/OBJ/Clean - BRUTE FORCE (selected original .obj)")]
 		private static void CleanOriginal()
 		{
 			string path = GetSelectedOBJPath();

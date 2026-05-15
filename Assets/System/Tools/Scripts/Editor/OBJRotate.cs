@@ -423,7 +423,7 @@ namespace MassiveHadronLtd
 		}
 
 #if UNITY_EDITOR
-		[UnityEditor.MenuItem("Tools/Rotate OBJ 90 Degrees")]
+		[UnityEditor.MenuItem("Tools/Classic Tilestorm/Models/OBJ/Rotate OBJ 90 Degrees")]
 		public static void RunBatchProcess90()
 		{
 			string inputDir = Path.Combine(Application.dataPath, "InputOBJ");
@@ -431,7 +431,7 @@ namespace MassiveHadronLtd
 			ProcessOBJFiles(inputDir, outputDir, 90f);
 		}
 
-		[UnityEditor.MenuItem("Tools/Rotate OBJ 180 Degrees")]
+		[UnityEditor.MenuItem("Tools/Classic Tilestorm/Models/OBJ/Rotate OBJ 180 Degrees")]
 		public static void RunBatchProcess180()
 		{
 			string inputDir = Path.Combine(Application.dataPath, "InputOBJ");
@@ -439,7 +439,7 @@ namespace MassiveHadronLtd
 			ProcessOBJFiles(inputDir, outputDir, 180f);
 		}
 
-		[UnityEditor.MenuItem("Tools/Rotate OBJ 270 Degrees")]
+		[UnityEditor.MenuItem("Tools/Classic Tilestorm/Models/OBJ/Rotate OBJ 270 Degrees")]
 		public static void RunBatchProcess270()
 		{
 			string inputDir = Path.Combine(Application.dataPath, "InputOBJ");

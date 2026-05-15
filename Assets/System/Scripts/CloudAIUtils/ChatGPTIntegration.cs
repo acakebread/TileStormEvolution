@@ -34,7 +34,7 @@ namespace com.massivehadron.utils.cloud_ai_utils
 		// ===============================
 		// CONTEXT MENU: Single Script
 		// ===============================
-		[MenuItem("Assets/Send Script to ChatGPT", false, 2000)]
+		[MenuItem("Assets/Classic Tilestorm/AI/ChatGPT/Send Script to ChatGPT", false, 2000)]
 		private static void SendScriptToChatGPT_Context()
 		{
 			SendSelectedScriptToChatGPT();
@@ -43,7 +43,7 @@ namespace com.massivehadron.utils.cloud_ai_utils
 		// ===============================
 		// CONTEXT MENU: Multiple Scripts
 		// ===============================
-		[MenuItem("Assets/Send Selected Scripts to ChatGPT (Multi)", false, 2002)]
+		[MenuItem("Assets/Classic Tilestorm/AI/ChatGPT/Send Selected Scripts to ChatGPT (Multi)", false, 2002)]
 		private static void SendMultipleScriptsToChatGPT_Context()
 		{
 			SendMultipleScriptsToChatGPT();
@@ -52,7 +52,7 @@ namespace com.massivehadron.utils.cloud_ai_utils
 		// ===============================
 		// CONTEXT MENU: Console Message
 		// ===============================
-		[MenuItem("Assets/Send Last Console Message to ChatGPT", false, 2001)]
+		[MenuItem("Assets/Classic Tilestorm/AI/ChatGPT/Send Last Console Message to ChatGPT", false, 2001)]
 		private static void SendConsoleToChatGPT_Context()
 		{
 			SendConsoleToChatGPT();
@@ -172,7 +172,7 @@ namespace com.massivehadron.utils.cloud_ai_utils
 		// ===============================
 		// Prompt config window
 		// ===============================
-		[MenuItem("Tools/ChatGPT/Set Prompts")]
+		[MenuItem("Tools/Classic Tilestorm/AI/ChatGPT/Set Prompts")]
 		private static void ShowPromptWindow()
 		{
 			GetWindow<ChatGPTIntegration>("ChatGPT Prompts").Show();
