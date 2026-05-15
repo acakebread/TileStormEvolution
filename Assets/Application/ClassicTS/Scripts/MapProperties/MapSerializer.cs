@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
+using ClassicTilestorm.Assets;
 using MassiveHadronLtd;
 using UnityEngine;
 
@@ -252,6 +253,11 @@ namespace ClassicTilestorm
 			{
 				((Map.IVariantAccess)map).Variants = ParseTableToVariants(tableArray);
 			}
+
+			map.music = MusicResourceTable.ToHashOrOriginal(map.music);
+			map.skybox = SkycubeResourceTable.ToHashOrOriginal(map.skybox);
+			map.character = CharacterResourceTable.ToHashOrOriginal(map.character);
+			map.effect = EffectResourceTable.ToHashOrOriginal(map.effect);
 
 			map.EnsureHashID();
 			return map;

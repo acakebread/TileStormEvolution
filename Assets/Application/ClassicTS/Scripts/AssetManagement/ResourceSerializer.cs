@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using ClassicTilestorm.Assets;
 
 namespace ClassicTilestorm
 {
@@ -60,6 +61,15 @@ namespace ClassicTilestorm
 
 			JsonSetup.Init();
 			MapCatalog.ClearCache();
+			PrefabResourceTable.ClearCache();
+			TextureResourceTable.ClearCache();
+			MaterialResourceTable.ClearCache();
+			SkycubeResourceTable.ClearCache();
+			MusicResourceTable.ClearCache();
+			SoundResourceTable.ClearCache();
+			CharacterResourceTable.ClearCache();
+			EffectResourceTable.ClearCache();
+			ProjectAssets.RefreshAllNameCaches();
 			ResourceManager.database = null;// important
 			ResourceManager.database = LoadDatabase(jsonAsset.text);
 		}
@@ -137,6 +147,31 @@ namespace ClassicTilestorm
 		public static void SaveDatabase(DatabaseData data, string filepath = null, bool verbose = false, bool cropAllMaps = true)
 		{
 			if (data == null) return;
+			if (data.maps != null)
+			{
+				foreach (var map in data.maps)
+				{
+					if (map == null)
+						continue;
+
+					map.music = MusicResourceTable.ToHashOrOriginal(map.music);
+					map.skybox = SkycubeResourceTable.ToHashOrOriginal(map.skybox);
+					map.character = CharacterResourceTable.ToHashOrOriginal(map.character);
+					map.effect = EffectResourceTable.ToHashOrOriginal(map.effect);
+				}
+			}
+
+			if (data.definitions != null)
+			{
+				foreach (var def in data.definitions)
+				{
+					if (def == null)
+						continue;
+
+					def.material = MaterialResourceTable.ToHashOrOriginal(def.material);
+				}
+			}
+
 			data.mapIds = data.maps != null && data.maps.Length > 0
 				? data.maps.Where(m => m != null).Select(m => HTB50Settings.ToString(m.HashID)).ToArray()
 				: (data.mapIds ?? Array.Empty<string>());
@@ -165,8 +200,7 @@ namespace ClassicTilestorm
 							if (string.IsNullOrWhiteSpace(name))
 								continue;
 
-							var prefix = name.Split('_')[0];
-							if (!allowed.Contains(prefix))
+							if (!MapCatalog.TryGetMapHashFromFileName(file, out var fileHash) || !allowed.Contains(HTB50Settings.ToString(fileHash)))
 								File.Delete(file);
 						}
 					}
@@ -324,7 +358,7 @@ namespace ClassicTilestorm
 
 				EnsureFolder(folder);
 				string safeName = SanitizeFileName(string.IsNullOrWhiteSpace(map.name) ? "Untitled" : map.name);
-				string path = Path.Combine(folder, $"{HTB50Settings.ToString(map.HashID)}_{safeName}.json");
+				string path = Path.Combine(folder, $"{safeName}__{HTB50Settings.ToString(map.HashID)}.json");
 
 				File.WriteAllText(path, json);
 

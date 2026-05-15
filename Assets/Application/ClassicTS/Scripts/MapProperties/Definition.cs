@@ -5,6 +5,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 using MassiveHadronLtd;
+using ClassicTilestorm.Assets;
 
 namespace ClassicTilestorm
 {
@@ -254,6 +255,7 @@ namespace ClassicTilestorm
 			}
 
 			serializer.Populate(jo.CreateReader(), def);
+			def.material = MaterialResourceTable.ToHashOrOriginal(def.material);
 
 			// Gameplay flags
 			if (jo["flags"]?.Value<string>() is { } flagsStr && !string.IsNullOrEmpty(flagsStr))

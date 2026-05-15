@@ -61,7 +61,13 @@ public class AssetManifestGenerator : IPreprocessBuildWithReport
 			.OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
 			.ToList();
 
-		if (string.Equals(manifestName, "Models", StringComparison.OrdinalIgnoreCase))
+		if (string.Equals(manifestName, "Models", StringComparison.OrdinalIgnoreCase) ||
+			string.Equals(manifestName, "Prefabs", StringComparison.OrdinalIgnoreCase) ||
+			string.Equals(manifestName, "Textures", StringComparison.OrdinalIgnoreCase) ||
+			string.Equals(manifestName, "Music", StringComparison.OrdinalIgnoreCase) ||
+			string.Equals(manifestName, "Skycubes", StringComparison.OrdinalIgnoreCase) ||
+			string.Equals(manifestName, "Materials", StringComparison.OrdinalIgnoreCase) ||
+			string.Equals(manifestName, "Sounds", StringComparison.OrdinalIgnoreCase))
 		{
 			var lines = sorted
 				.Select(n => $"{HTB50.EncodeFixed(RadixHash.GetStableHash32(n), 6)}\t{n}")
@@ -87,10 +93,12 @@ public class AssetManifestGenerator : IPreprocessBuildWithReport
 
 		var lines = names.Select(n =>
 		{
-			var prefix = n.Split(new[] { '_' }, 2)[0].Trim();
-			return $"{prefix}\t{n}";
+			if (!MapCatalog.TryGetMapHashFromFileStem(n, out var hash))
+				return null;
+			return $"{HTB50Settings.ToString(hash)}\t{n}";
 		}).ToList();
 
+		lines = lines.Where(line => !string.IsNullOrWhiteSpace(line)).ToList();
 		lines.Insert(0, "# hashId<TAB>resourceName");
 		File.WriteAllLines(path, lines);
 		Debug.Log($"Generated {manifestName}: {names.Count} assets");

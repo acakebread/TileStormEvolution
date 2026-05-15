@@ -6,6 +6,7 @@ using UnityEngine;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using MassiveHadronLtd;
+using ClassicTilestorm.Assets;
 
 namespace ClassicTilestorm
 {
@@ -138,7 +139,14 @@ namespace ClassicTilestorm
 		[JsonIgnore] public int Count => Width * Height;
 		[JsonIgnore] public int[] State { get => state = state?.Length == width * height ? state : Enumerable.Range(0, width * height).ToArray(); }
 
-		[JsonIgnore] public string Music { get => music; set => music = value; }
+		[JsonIgnore]
+		public string Music
+		{
+			get => string.IsNullOrWhiteSpace(music)
+				? MusicResourceTable.DefaultHash
+				: music;
+			set => music = value;
+		}
 
 		[JsonIgnore]
 		public string Skybox
@@ -156,8 +164,12 @@ namespace ClassicTilestorm
 		[JsonIgnore]
 		public ReflectionEffectCamera.EffectMode Effect
 		{
-			get => ReflectionEffectCamera.ParseEffectMode(string.IsNullOrEmpty(effect) ? "Water" : effect);
-			set => effect = ReflectionEffectCamera.EffectModeToString(value);
+			get => ReflectionEffectCamera.ParseEffectMode(EffectResourceTable.GetDisplayName(effect) ?? effect ?? "Water");
+			set
+			{
+				var displayName = ReflectionEffectCamera.EffectModeToString(value);
+				effect = EffectResourceTable.GetHashForDisplayName(displayName) ?? displayName;
+			}
 		}
 
 		[JsonIgnore]

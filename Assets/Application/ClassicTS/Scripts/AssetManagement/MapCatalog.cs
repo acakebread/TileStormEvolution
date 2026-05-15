@@ -12,6 +12,7 @@ namespace ClassicTilestorm
 	{
 		private const string InternalResourcesRoot = "ClassicTS/Maps";
 		private const string InternalManifestPath = "AssetManifests/Maps";
+		private const string FileHashSeparator = "__";
 		private const string PersistentMapsFolderName = "Maps";
 
 		private static readonly Dictionary<HashId, Map> CachedMaps = new();
@@ -30,6 +31,8 @@ namespace ClassicTilestorm
 		public static void ClearCache()
 		{
 			CachedMaps.Clear();
+			InternalResourceIndex = null;
+			InternalResourceIndexLoaded = false;
 		}
 
 		public static bool IsInternalMap(HashId hash)
@@ -109,10 +112,12 @@ namespace ClassicTilestorm
 			string fileName = BuildFileName(map);
 			string path = Path.Combine(PersistentMapsFolder, fileName);
 
-			var prefix = HTB50Settings.ToString(map.HashID);
-			foreach (var existing in Directory.EnumerateFiles(PersistentMapsFolder, $"{prefix}_*.json", SearchOption.TopDirectoryOnly).ToArray())
+			foreach (var existing in Directory.EnumerateFiles(PersistentMapsFolder, "*.json", SearchOption.TopDirectoryOnly).ToArray())
 			{
-				if (!string.Equals(existing, path, StringComparison.OrdinalIgnoreCase) && File.Exists(existing))
+				if (TryGetMapHashFromFileName(existing, out var existingHash) &&
+					existingHash == map.HashID &&
+					!string.Equals(existing, path, StringComparison.OrdinalIgnoreCase) &&
+					File.Exists(existing))
 					File.Delete(existing);
 			}
 
@@ -136,11 +141,12 @@ namespace ClassicTilestorm
 
 			string fileName = BuildFileName(map);
 			string path = Path.Combine(InternalMapsFolder, fileName);
-			var prefix = HTB50Settings.ToString(map.HashID);
-
-			foreach (var existing in Directory.EnumerateFiles(InternalMapsFolder, $"{prefix}_*.json", SearchOption.TopDirectoryOnly).ToArray())
+			foreach (var existing in Directory.EnumerateFiles(InternalMapsFolder, "*.json", SearchOption.TopDirectoryOnly).ToArray())
 			{
-				if (!string.Equals(existing, path, StringComparison.OrdinalIgnoreCase) && File.Exists(existing))
+				if (TryGetMapHashFromFileName(existing, out var existingHash) &&
+					existingHash == map.HashID &&
+					!string.Equals(existing, path, StringComparison.OrdinalIgnoreCase) &&
+					File.Exists(existing))
 					File.Delete(existing);
 			}
 
@@ -171,8 +177,8 @@ namespace ClassicTilestorm
 			if (!Directory.Exists(PersistentMapsFolder))
 				return false;
 
-			var file = Directory.EnumerateFiles(PersistentMapsFolder, $"{HTB50Settings.ToString(hash)}_*.json", SearchOption.TopDirectoryOnly)
-				.FirstOrDefault();
+			var file = Directory.EnumerateFiles(PersistentMapsFolder, "*.json", SearchOption.TopDirectoryOnly)
+				.FirstOrDefault(f => TryGetMapHashFromFileName(f, out var fileHash) && fileHash == hash);
 
 			if (file == null)
 				return false;
@@ -191,7 +197,7 @@ namespace ClassicTilestorm
 		public static string BuildFileName(Map map)
 		{
 			var safeName = SanitizeFileNameComponent(string.IsNullOrWhiteSpace(map?.name) ? "Untitled" : map.name);
-			return $"{HTB50Settings.ToString(map.HashID)}_{safeName}.json";
+			return $"{safeName}{FileHashSeparator}{HTB50Settings.ToString(map.HashID)}.json";
 		}
 
 		public static string SanitizeFileNameComponent(string value)
@@ -211,9 +217,8 @@ namespace ClassicTilestorm
 			if (!Directory.Exists(PersistentMapsFolder))
 				return null;
 
-			string prefix = HTB50Settings.ToString(hash);
-			var file = Directory.EnumerateFiles(PersistentMapsFolder, $"{prefix}_*.json", SearchOption.TopDirectoryOnly)
-				.FirstOrDefault();
+			var file = Directory.EnumerateFiles(PersistentMapsFolder, "*.json", SearchOption.TopDirectoryOnly)
+				.FirstOrDefault(f => TryGetMapHashFromFileName(f, out var fileHash) && fileHash == hash);
 
 			return file != null ? LoadMapFromFile(file) : null;
 		}
@@ -236,15 +241,12 @@ namespace ClassicTilestorm
 			if (assets == null || assets.Length == 0)
 				return null;
 
-			string prefix = HTB50Settings.ToString(hash);
-
 			foreach (var asset in assets)
 			{
 				if (asset == null || string.IsNullOrWhiteSpace(asset.name))
 					continue;
 
-				if (!asset.name.StartsWith(prefix + "_", StringComparison.OrdinalIgnoreCase) &&
-					!string.Equals(asset.name, prefix, StringComparison.OrdinalIgnoreCase))
+				if (!TryGetMapHashFromFileStem(asset.name, out var fileHash) || fileHash != hash)
 					continue;
 
 				var map = LoadMapFromJson(asset.text);
@@ -278,7 +280,8 @@ namespace ClassicTilestorm
 
 					try
 					{
-						var hash = HTB50.Decode(parts[0].Trim());
+						if (!ClassicTilestorm.Assets.ResourceIdUtil.TryParseCanonicalHash(parts[0].Trim(), out var hash))
+							continue;
 						var resourceName = parts[parts.Length - 1].Trim();
 						if (hash != 0 && !string.IsNullOrWhiteSpace(resourceName))
 							InternalResourceIndex[hash] = resourceName;
@@ -289,6 +292,42 @@ namespace ClassicTilestorm
 					}
 				}
 			}
+		}
+
+		public static bool TryGetMapHashFromFileName(string filePathOrName, out HashId hash)
+		{
+			hash = 0;
+
+			if (string.IsNullOrWhiteSpace(filePathOrName))
+				return false;
+
+			var stem = Path.GetFileNameWithoutExtension(filePathOrName);
+			return TryGetMapHashFromFileStem(stem, out hash);
+		}
+
+		public static bool TryGetMapHashFromFileStem(string fileStem, out HashId hash)
+		{
+			hash = 0;
+
+			if (string.IsNullOrWhiteSpace(fileStem))
+				return false;
+
+			string candidate = null;
+			int suffixIndex = fileStem.LastIndexOf(FileHashSeparator, StringComparison.Ordinal);
+			if (suffixIndex >= 0 && suffixIndex + FileHashSeparator.Length < fileStem.Length)
+			{
+				candidate = fileStem.Substring(suffixIndex + FileHashSeparator.Length);
+			}
+			else
+			{
+				int prefixIndex = fileStem.IndexOf('_');
+				if (prefixIndex > 0)
+					candidate = fileStem.Substring(0, prefixIndex);
+				else
+					candidate = fileStem;
+			}
+
+			return ClassicTilestorm.Assets.ResourceIdUtil.TryParseCanonicalHash(candidate, out hash);
 		}
 
 		private static Map LoadMapFromFile(string path)

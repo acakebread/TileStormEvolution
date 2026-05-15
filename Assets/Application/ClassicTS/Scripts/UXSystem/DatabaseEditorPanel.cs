@@ -181,14 +181,14 @@ namespace ClassicTilestorm
 			PopulateDropdown(skyboxDropdown, Assets.ProjectAssets.GetSkycubeNames(), noneSkyboxOptionText);
 
 		private void SyncSkyboxDropdown() =>
-			SyncDropdown(skyboxDropdown, CurrentMap?.Skybox, noneSkyboxOptionText);
+			SyncDropdown(skyboxDropdown, Assets.SkycubeResourceTable.GetDisplayName(CurrentMap?.Skybox) ?? CurrentMap?.Skybox, noneSkyboxOptionText);
 
 		private void OnSkyboxDropdownValueChanged(int index)
 		{
 			if (currentClone == null) return;
 
 			var selected = index >= 0 && index < skyboxDropdown.options.Count ? skyboxDropdown.options[index].text : null;
-			var newSkybox = (selected == noneSkyboxOptionText) ? null : selected;
+			var newSkybox = (selected == noneSkyboxOptionText) ? null : Assets.SkycubeResourceTable.GetHashForDisplayName(selected) ?? selected;
 
 			if (newSkybox != currentClone.Skybox)
 			{
@@ -201,24 +201,17 @@ namespace ClassicTilestorm
 		}
 
 		private void PopulateCharacterDropdown()
-		{
-			var characterNames = new List<string>
-			{
-				"Eggbot Default", "Eggbot Industrial", "Eggbot Egypt",
-				"Eggbot Medieval", "Eggbot Jungle",
-			};
-			PopulateDropdown(characterDropdown, characterNames, noneCharacterOptionText);
-		}
+			=> PopulateDropdown(characterDropdown, Assets.CharacterResourceTable.GetDisplayNames(), noneCharacterOptionText);
 
 		private void SyncCharacterDropdown() =>
-			SyncDropdown(characterDropdown, CurrentMap?.character, noneCharacterOptionText);
+			SyncDropdown(characterDropdown, Assets.CharacterResourceTable.GetDisplayName(CurrentMap?.character) ?? CurrentMap?.character, noneCharacterOptionText);
 
 		private void OnCharacterDropdownValueChanged(int index)
 		{
 			if (CurrentMap == null) return;
 
 			var selected = index >= 0 && index < characterDropdown.options.Count ? characterDropdown.options[index].text : null;
-			var newCharacter = (selected == noneCharacterOptionText) ? null : selected;
+			var newCharacter = (selected == noneCharacterOptionText) ? null : Assets.CharacterResourceTable.GetHashForDisplayName(selected) ?? selected;
 
 			if (newCharacter != CurrentMap.character)
 				CurrentMap.character = newCharacter;
@@ -228,14 +221,14 @@ namespace ClassicTilestorm
 			PopulateDropdown(musicDropdown, Assets.ProjectAssets.GetMusicNames(), noneMusicOptionText);
 
 		private void SyncMusicDropdown() =>
-			SyncDropdown(musicDropdown, CurrentMap?.music, noneMusicOptionText);
+			SyncDropdown(musicDropdown, Assets.MusicResourceTable.GetDisplayName(CurrentMap?.music) ?? CurrentMap?.music, noneMusicOptionText);
 
 		private void OnMusicDropdownValueChanged(int index)
 		{
 			if (CurrentMap == null) return;
 
 			var selected = index >= 0 && index < musicDropdown.options.Count ? musicDropdown.options[index].text : null;
-			var newMusic = (selected == noneMusicOptionText) ? null : selected;
+			var newMusic = (selected == noneMusicOptionText) ? null : Assets.MusicResourceTable.GetHashForDisplayName(selected) ?? selected;
 
 			if (newMusic != CurrentMap.music)
 				CurrentMap.music = newMusic;
@@ -245,11 +238,7 @@ namespace ClassicTilestorm
 		{
 			if (effectDropdown == null) return;
 
-			var effectNames = Enum.GetValues(typeof(ReflectionEffectCamera.EffectMode))
-				.Cast<ReflectionEffectCamera.EffectMode>()
-				.Where(effect => effect != ReflectionEffectCamera.EffectMode.Null)
-				.Select(effect => ReflectionEffectCamera.EffectModeToString(effect))
-				.ToList();
+			var effectNames = Assets.EffectResourceTable.GetDisplayNames().ToList();
 
 			PopulateDropdown(effectDropdown, effectNames, noneEffectOptionText);
 		}
@@ -262,7 +251,7 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			SyncDropdown(effectDropdown, ReflectionEffectCamera.EffectModeToString(CurrentMap.Effect), noneEffectOptionText);
+			SyncDropdown(effectDropdown, Assets.EffectResourceTable.GetDisplayName(CurrentMap?.effect) ?? ReflectionEffectCamera.EffectModeToString(CurrentMap.Effect), noneEffectOptionText);
 		}
 
 		private void OnEffectDropdownValueChanged(int index)
@@ -272,8 +261,8 @@ namespace ClassicTilestorm
 			LeakDetector.LogSnapshot("BEFORE Effect Dropdown Change");
 
 			var selected = index >= 0 && index < effectDropdown.options.Count ? effectDropdown.options[index].text : null;
-			var newEffect = (selected == noneEffectOptionText) ? null : selected;
-			currentClone.Effect = ReflectionEffectCamera.ParseEffectMode(newEffect);
+			var newEffect = (selected == noneEffectOptionText) ? null : Assets.EffectResourceTable.GetHashForDisplayName(selected) ?? selected;
+			currentClone.effect = newEffect;
 
 			UpdateMapPreview();
 

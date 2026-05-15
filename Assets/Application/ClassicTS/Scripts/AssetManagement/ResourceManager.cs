@@ -93,7 +93,7 @@ namespace ClassicTilestorm
 				name = _name ?? StringUtil.GenerateAssetId(),
 				model = ModelAssets.GetHashForDisplayName(model) ?? model,
 				//texture = texture
-				material = material
+				material = MaterialResourceTable.GetHashForDisplayName(material) ?? material
 			};
 
 			// Full-range 32-bit hash (no modulus)
