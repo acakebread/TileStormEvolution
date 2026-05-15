@@ -4,6 +4,7 @@ using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
+using ClassicTilestorm.Assets;
 
 namespace MassiveHadronLtd
 {
@@ -195,13 +196,13 @@ namespace MassiveHadronLtd
 
 		public void ApplyTo(Material mat)
 		{
-			if (string.IsNullOrEmpty(name) || mat == null || !mat.HasProperty(name)) return;
+				if (string.IsNullOrEmpty(name) || mat == null || !mat.HasProperty(name)) return;
 
 			try
 			{
 				if (!string.IsNullOrEmpty(texture))
 				{
-					var tex = Resources.Load<Texture>(texture) ?? Resources.Load<Texture2D>(texture);
+					var tex = TextureAssets.Find(texture);
 					if (tex != null)
 					{
 						mat.SetTexture(name, tex);

@@ -266,14 +266,25 @@ namespace ClassicTilestorm.Assets
 	public static class TextureAssets
 	{
 		public static void RegisterRoot(string root) => AssetRegistry<Texture>.RegisterTextureRoot(root);
-		public static void ClearCache() => AssetRegistry<Texture>.ClearTextureCache();
+		public static void ClearCache()
+		{
+			AssetRegistry<Texture>.ClearTextureCache();
+		}
 		public static Texture Find(string textureName)
 		{
 			if (string.IsNullOrWhiteSpace(textureName))
 				return null;
 
 			if (TextureResourceTable.TryResolveResourceKey(textureName, out var resourceKey))
+			{
+				if (ImportedResourceLoader.TryLoadTexture(resourceKey, out var importedTexture))
+					return importedTexture;
+
 				return AssetRegistry<Texture>.FindTexture(resourceKey);
+			}
+
+			if (ImportedResourceLoader.TryLoadTexture(textureName, out var directImportedTexture))
+				return directImportedTexture;
 
 			return AssetRegistry<Texture>.FindTexture(textureName);
 		}
@@ -306,17 +317,74 @@ namespace ClassicTilestorm.Assets
 	/// </summary>
 	public static class SkyboxAssets
 	{
+		private static readonly Dictionary<string, Material> ImportedSkyboxCache = new(StringComparer.OrdinalIgnoreCase);
+
 		public static void RegisterRoot(string root) => AssetRegistry<Material>.RegisterSkyboxRoot(root);
-		public static void ClearCache() => AssetRegistry<Material>.ClearSkyboxCache();
+		public static void ClearCache()
+		{
+			AssetRegistry<Material>.ClearSkyboxCache();
+			ImportedSkyboxCache.Clear();
+		}
 		public static Material Find(string skyboxName)
 		{
 			if (string.IsNullOrWhiteSpace(skyboxName))
 				return null;
 
 			if (Assets.SkycubeResourceTable.TryResolveResourceKey(skyboxName, out var resourceKey))
+			{
+				if (ImportedResourceLoader.TryLoadPortableMaterial(resourceKey, out var importedMaterial))
+					return importedMaterial;
+
+				if (ImportedResourceLoader.TryLoadTexture(resourceKey, out var importedTexture))
+					return CreateImportedSkyboxMaterial(importedTexture, resourceKey);
+
 				return AssetRegistry<Material>.FindSkybox(resourceKey);
+			}
+
+			if (ImportedResourceLoader.TryLoadPortableMaterial(skyboxName, out var directPortable))
+				return directPortable;
+
+			if (ImportedResourceLoader.TryLoadTexture(skyboxName, out var directTexture))
+				return CreateImportedSkyboxMaterial(directTexture, skyboxName);
 
 			return AssetRegistry<Material>.FindSkybox(skyboxName);
+		}
+
+		private static Material CreateImportedSkyboxMaterial(Texture texture, string sourceName)
+		{
+			if (texture == null)
+				return null;
+
+			var key = sourceName?.Trim();
+			if (!string.IsNullOrWhiteSpace(key) && ImportedSkyboxCache.TryGetValue(key, out var cached) && cached != null)
+				return cached;
+
+			var shader = Shader.Find("Skybox/Panoramic") ?? Shader.Find("Skybox/6 Sided") ?? Shader.Find("Universal Render Pipeline/Simple Lit");
+			if (shader == null)
+				return null;
+
+			var material = new Material(shader)
+			{
+				name = string.IsNullOrWhiteSpace(sourceName) ? "Imported Skybox" : Path.GetFileNameWithoutExtension(sourceName)
+			};
+
+			material.mainTexture = texture;
+			if (material.HasProperty("_MainTex"))
+				material.SetTexture("_MainTex", texture);
+			if (material.HasProperty("_Tex"))
+				material.SetTexture("_Tex", texture);
+
+			if (material.HasProperty("_ImageType"))
+				material.SetFloat("_ImageType", 0f);
+			if (material.HasProperty("_Exposure"))
+				material.SetFloat("_Exposure", 1f);
+			if (material.HasProperty("_Rotation"))
+				material.SetFloat("_Rotation", 0f);
+
+			if (!string.IsNullOrWhiteSpace(key))
+				ImportedSkyboxCache[key] = material;
+
+			return material;
 		}
 	}
 
@@ -326,14 +394,25 @@ namespace ClassicTilestorm.Assets
 	public static class SoundAssets
 	{
 		public static void RegisterRoot(string root) => AssetRegistry<AudioClip>.RegisterSoundRoot(root);
-		public static void ClearCache() => AssetRegistry<AudioClip>.ClearSoundCache();
+		public static void ClearCache()
+		{
+			AssetRegistry<AudioClip>.ClearSoundCache();
+		}
 		public static AudioClip Find(string clipName)
 		{
 			if (string.IsNullOrWhiteSpace(clipName))
 				return null;
 
 			if (SoundResourceTable.TryResolveResourceKey(clipName, out var resourceKey))
+			{
+				if (ImportedResourceLoader.TryLoadAudioClip(resourceKey, out var importedClip))
+					return importedClip;
+
 				return AssetRegistry<AudioClip>.FindSound(resourceKey);
+			}
+
+			if (ImportedResourceLoader.TryLoadAudioClip(clipName, out var directImportedClip))
+				return directImportedClip;
 
 			return AssetRegistry<AudioClip>.FindSound(clipName);
 		}
@@ -345,14 +424,25 @@ namespace ClassicTilestorm.Assets
 	public static class MusicAssets
 	{
 		public static void RegisterRoot(string root) => AssetRegistry<AudioClip>.RegisterMusicRoot(root);
-		public static void ClearCache() => AssetRegistry<AudioClip>.ClearMusicCache();
+		public static void ClearCache()
+		{
+			AssetRegistry<AudioClip>.ClearMusicCache();
+		}
 		public static AudioClip Find(string clipName)
 		{
 			if (string.IsNullOrWhiteSpace(clipName))
 				return null;
 
 			if (Assets.MusicResourceTable.TryResolveResourceKey(clipName, out var resourceKey))
+			{
+				if (ImportedResourceLoader.TryLoadAudioClip(resourceKey, out var importedClip))
+					return importedClip;
+
 				return AssetRegistry<AudioClip>.FindMusic(resourceKey);
+			}
+
+			if (ImportedResourceLoader.TryLoadAudioClip(clipName, out var directImportedClip))
+				return directImportedClip;
 
 			return AssetRegistry<AudioClip>.FindMusic(clipName);
 		}
@@ -435,10 +525,7 @@ namespace ClassicTilestorm.Assets
 			}), forceRefresh, "Prefab");
 
 		public static IReadOnlyList<string> GetTextureNames(bool forceRefresh = false)
-			=> GetNames<Texture>(() => GetAssetNamesFromRoots<Texture>("Textures", new[]
-			{
-				AssetPath.TexturePath?.Trim('/') ?? ""
-			}), forceRefresh);
+			=> GetNames<Texture>(() => TextureResourceTable.GetDisplayNames(forceRefresh), forceRefresh);
 
 		public static IReadOnlyList<string> GetMaterialNames(bool forceRefresh = false)
 			=> GetNames<Material>(() => GetAssetNamesFromRoots<Material>("Materials", new[]
@@ -447,22 +534,13 @@ namespace ClassicTilestorm.Assets
 			}), forceRefresh, "Material");
 
 		public static IReadOnlyList<string> GetSkycubeNames(bool forceRefresh = false)
-			=> GetNames<Material>(() => GetAssetNamesFromRoots<Material>("Skycubes", new[]
-			{
-				AssetPath.SkycubesPath?.Trim('/') ?? ""
-			}), forceRefresh, "Skycube");
+			=> GetNames<Material>(() => SkycubeResourceTable.GetDisplayNames(forceRefresh), forceRefresh, "Skycube");
 
 		public static IReadOnlyList<string> GetMusicNames(bool forceRefresh = false)
-			=> GetNames<AudioClip>(() => GetAssetNamesFromRoots<AudioClip>("Music", new[]
-			{
-				AssetPath.MusicPath?.Trim('/') ?? ""
-			}), forceRefresh);
+			=> GetNames<AudioClip>(() => MusicResourceTable.GetDisplayNames(forceRefresh), forceRefresh);
 
 		public static IReadOnlyList<string> GetSoundNames(bool forceRefresh = false)
-			=> GetNames<AudioClip>(() => GetAssetNamesFromRoots<AudioClip>("Sounds", new[]
-			{
-				AssetPath.SoundPath?.Trim('/') ?? ""
-			}), forceRefresh, "Sound");
+			=> GetNames<AudioClip>(() => SoundResourceTable.GetDisplayNames(forceRefresh), forceRefresh, "Sound");
 
 		/// <summary>
 		/// Force refresh all name caches (call after significant asset changes)

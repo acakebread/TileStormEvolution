@@ -35,6 +35,7 @@ namespace ClassicTilestorm.Assets
 			SoundResourceTable.ClearCache();
 			CharacterResourceTable.ClearCache();
 			EffectResourceTable.ClearCache();
+			ImportedResourceLoader.ClearCache();
 			ProjectAssets.RefreshAllNameCaches();
 			//don't know if these need clearing
 			//SkyboxAssets.ClearCache();
