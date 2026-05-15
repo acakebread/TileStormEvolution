@@ -1,0 +1,49 @@
+﻿{
+    "id":  "Av60dX",
+    "name":  "test 2",
+    "character":  "Eggbot Medieval",
+    "effect":  "FrostEffect",
+    "skybox":  "EgyptSkybox",
+    "width":  3,
+    "height":  3,
+    "tiles":  [
+                  0,
+                  0,
+                  1,
+                  2,
+                  0,
+                  3,
+                  0,
+                  0,
+                  1
+              ],
+    "solve":  [
+                  0,
+                  9
+              ],
+    "table":  [
+                  "000000",
+                  "2An3fe",
+                  "CyHA4u",
+                  "0KdnWP|angle:180"
+              ],
+    "waypoints":  [
+                      2,
+                      8
+                  ],
+    "attachments":  [
+                        {
+                            "type":  "View",
+                            "tile":  2,
+                            "data":  [
+                                         6.40963,
+                                         3.80257177,
+                                         0.850421667,
+                                         0.1621,
+                                         -0.6831,
+                                         0.1596,
+                                         8.582
+                                     ]
+                        }
+                    ]
+}

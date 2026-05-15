@@ -45,6 +45,8 @@ public class AssetManifestGenerator : IPreprocessBuildWithReport
 			Debug.Log($"Generated {manifestName}: {names.Count} assets");
 		}
 
+		WriteMapManifest();
+
 		AssetDatabase.Refresh();
 		Debug.Log("<color=cyan>Asset Manifests generated successfully.</color>");
 	}
@@ -70,6 +72,28 @@ public class AssetManifestGenerator : IPreprocessBuildWithReport
 		}
 
 		File.WriteAllLines(path, sorted);
+	}
+
+	private static void WriteMapManifest()
+	{
+		const string manifestName = "Maps";
+		string path = $"Assets/Resources/{AssetManifestConfig.ManifestRootFolder}/{manifestName}.txt";
+		var names = ResourceUtils.GetAssetNamesFromResources<TextAsset>(new[] { "ClassicTS/Maps" }, manifestName)
+			.Where(n => !string.IsNullOrWhiteSpace(n))
+			.Select(n => n.Trim())
+			.Distinct(StringComparer.OrdinalIgnoreCase)
+			.OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
+			.ToList();
+
+		var lines = names.Select(n =>
+		{
+			var prefix = n.Split(new[] { '_' }, 2)[0].Trim();
+			return $"{prefix}\t{n}";
+		}).ToList();
+
+		lines.Insert(0, "# hashId<TAB>resourceName");
+		File.WriteAllLines(path, lines);
+		Debug.Log($"Generated {manifestName}: {names.Count} assets");
 	}
 
 	private static List<string> GetAssetNames(Type assetType, string[] roots)

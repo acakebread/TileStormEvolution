@@ -129,6 +129,7 @@ namespace ClassicTilestorm
 		public bool ShouldSerializeskybox() => !string.IsNullOrEmpty(skybox);
 		public bool ShouldSerializeskyvec() => null != skyvec;
 
+		[JsonIgnore]
 		public Action<Map, bool, Vector3> OnMapEdited { get; set; }
 		[JsonIgnore] public Transform parent { get; set; }
 
@@ -159,6 +160,7 @@ namespace ClassicTilestorm
 			set => effect = ReflectionEffectCamera.EffectModeToString(value);
 		}
 
+		[JsonIgnore]
 		public Action<ReflectionEffectCamera.EffectMode> OnEffectChanged;
 
 		[JsonIgnore] private Color ambientRGB;
@@ -528,6 +530,7 @@ namespace ClassicTilestorm
 			OnEffectChanged?.Invoke(Effect);
 		}
 
+		[JsonIgnore]
 		public Action<UnityRenderSettings> OnRenderSettingsChanged;
 
 		[JsonIgnore]

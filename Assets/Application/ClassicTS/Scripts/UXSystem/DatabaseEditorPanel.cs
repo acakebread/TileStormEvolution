@@ -495,6 +495,10 @@ namespace ClassicTilestorm
 			}
 
 			bool result = ResourceManager.RenameMapName(CurrentMap, newName);
+			if (result)
+			{
+				ResourceManager.SyncMapIds();
+			}
 			RefreshMapList();
 		}
 
@@ -627,6 +631,7 @@ namespace ClassicTilestorm
 			list.Insert(insertIndex, newMap);
 			Map.EnsureUniqueHashIDs(list);
 			ResourceManager.database.maps = list.ToArray();
+			ResourceManager.SyncMapIds();
 
 			lastSelectedMapIndex = insertIndex;
 			RefreshMapList();
@@ -640,6 +645,7 @@ namespace ClassicTilestorm
 			var list = ResourceManager.Maps.ToList();
 			list.RemoveAt(idx);
 			ResourceManager.database.maps = list.ToArray();
+			ResourceManager.SyncMapIds();
 
 			lastSelectedMapIndex = Mathf.Clamp(idx - 1, 0, list.Count - 1);
 			RefreshMapList();
@@ -653,6 +659,7 @@ namespace ClassicTilestorm
 			var i = lastSelectedMapIndex;
 			(list[i - 1], list[i]) = (list[i], list[i - 1]);
 			ResourceManager.database.maps = list.ToArray();
+			ResourceManager.SyncMapIds();
 
 			lastSelectedMapIndex--;
 			RefreshMapList();
@@ -667,6 +674,7 @@ namespace ClassicTilestorm
 			var i = lastSelectedMapIndex;
 			(list[i + 1], list[i]) = (list[i], list[i + 1]);
 			ResourceManager.database.maps = list.ToArray();
+			ResourceManager.SyncMapIds();
 
 			lastSelectedMapIndex++;
 			RefreshMapList();
