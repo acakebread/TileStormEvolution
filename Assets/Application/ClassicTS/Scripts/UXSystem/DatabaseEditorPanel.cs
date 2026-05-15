@@ -181,14 +181,14 @@ namespace ClassicTilestorm
 			PopulateDropdown(skyboxDropdown, Assets.ProjectAssets.GetSkycubeNames(), noneSkyboxOptionText);
 
 		private void SyncSkyboxDropdown() =>
-			SyncDropdown(skyboxDropdown, CurrentMap?.Skybox, noneSkyboxOptionText);
+			SyncDropdown(skyboxDropdown, Assets.SkycubeResourceTable.GetDisplayName(CurrentMap?.Skybox) ?? CurrentMap?.Skybox, noneSkyboxOptionText);
 
 		private void OnSkyboxDropdownValueChanged(int index)
 		{
 			if (currentClone == null) return;
 
 			var selected = index >= 0 && index < skyboxDropdown.options.Count ? skyboxDropdown.options[index].text : null;
-			var newSkybox = (selected == noneSkyboxOptionText) ? null : selected;
+			var newSkybox = (selected == noneSkyboxOptionText) ? null : Assets.SkycubeResourceTable.GetHashForDisplayName(selected) ?? selected;
 
 			if (newSkybox != currentClone.Skybox)
 			{
@@ -228,14 +228,14 @@ namespace ClassicTilestorm
 			PopulateDropdown(musicDropdown, Assets.ProjectAssets.GetMusicNames(), noneMusicOptionText);
 
 		private void SyncMusicDropdown() =>
-			SyncDropdown(musicDropdown, CurrentMap?.music, noneMusicOptionText);
+			SyncDropdown(musicDropdown, Assets.MusicResourceTable.GetDisplayName(CurrentMap?.music) ?? CurrentMap?.music, noneMusicOptionText);
 
 		private void OnMusicDropdownValueChanged(int index)
 		{
 			if (CurrentMap == null) return;
 
 			var selected = index >= 0 && index < musicDropdown.options.Count ? musicDropdown.options[index].text : null;
-			var newMusic = (selected == noneMusicOptionText) ? null : selected;
+			var newMusic = (selected == noneMusicOptionText) ? null : Assets.MusicResourceTable.GetHashForDisplayName(selected) ?? selected;
 
 			if (newMusic != CurrentMap.music)
 				CurrentMap.music = newMusic;

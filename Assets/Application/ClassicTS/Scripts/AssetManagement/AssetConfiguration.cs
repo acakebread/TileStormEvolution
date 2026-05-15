@@ -14,7 +14,6 @@ namespace ClassicTilestorm.Assets
 			ModelAssets.RegisterRoot("Levels/Med");
 			PrefabAssets.RegisterRoot(AssetPath.PrefabPath?.Trim('/').Trim());
 			TextureAssets.RegisterRoot(AssetPath.TexturePath?.Trim('/').Trim());
-			Texture2DAssets.RegisterRoot(AssetPath.TexturePath?.Trim('/').Trim());
 			MaterialAssets.RegisterRoot(AssetPath.MaterialPath?.Trim('/').Trim());
 			SkyboxAssets.RegisterRoot(AssetPath.SkycubesPath?.Trim('/').Trim());
 			SoundAssets.RegisterRoot(AssetPath.SoundPath?.Trim('/').Trim()); // e.g. "ClassicTS/Sounds/"
@@ -27,8 +26,9 @@ namespace ClassicTilestorm.Assets
 			ModelAssets.ClearCache();
 			PrefabAssets.ClearCache();
 			TextureAssets.ClearCache();
-			Texture2DAssets.ClearCache();
 			MaterialAssets.ClearCache();
+			SkycubeResourceTable.ClearCache();
+			MusicResourceTable.ClearCache();
 			//don't know if these need clearing
 			//SkyboxAssets.ClearCache();
 			//SoundAssets.ClearCache();

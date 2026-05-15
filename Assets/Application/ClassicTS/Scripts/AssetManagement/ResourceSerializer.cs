@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using ClassicTilestorm.Assets;
 
 namespace ClassicTilestorm
 {
@@ -60,6 +61,8 @@ namespace ClassicTilestorm
 
 			JsonSetup.Init();
 			MapCatalog.ClearCache();
+			SkycubeResourceTable.ClearCache();
+			MusicResourceTable.ClearCache();
 			ResourceManager.database = null;// important
 			ResourceManager.database = LoadDatabase(jsonAsset.text);
 		}
@@ -165,8 +168,7 @@ namespace ClassicTilestorm
 							if (string.IsNullOrWhiteSpace(name))
 								continue;
 
-							var prefix = name.Split('_')[0];
-							if (!allowed.Contains(prefix))
+							if (!MapCatalog.TryGetMapHashFromFileName(file, out var fileHash) || !allowed.Contains(HTB50Settings.ToString(fileHash)))
 								File.Delete(file);
 						}
 					}
@@ -324,7 +326,7 @@ namespace ClassicTilestorm
 
 				EnsureFolder(folder);
 				string safeName = SanitizeFileName(string.IsNullOrWhiteSpace(map.name) ? "Untitled" : map.name);
-				string path = Path.Combine(folder, $"{HTB50Settings.ToString(map.HashID)}_{safeName}.json");
+				string path = Path.Combine(folder, $"{safeName}__{HTB50Settings.ToString(map.HashID)}.json");
 
 				File.WriteAllText(path, json);
 

@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+using UnityEngine;
+using ClassicTilestorm.Assets;
 
 namespace MassiveHadronLtd
 {
@@ -41,7 +42,7 @@ namespace MassiveHadronLtd
 		}
 
 		private static Material GetSkyboxMaterial(string pathOrName = null)
-			=> AssetRegistry<Material>.FindSkybox(pathOrName) ?? defaultSkyboxMaterial;
+			=> SkyboxAssets.Find(pathOrName) ?? defaultSkyboxMaterial;
 
 		/// <summary>
 		/// Returns the raw _Tint color from the skybox material exactly as set in the inspector.

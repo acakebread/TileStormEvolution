@@ -39,7 +39,7 @@ namespace ClassicTilestorm
 			var name = string.IsNullOrWhiteSpace(map?.name) ? "Untitled" : map.name;
 			var invalid = System.IO.Path.GetInvalidFileNameChars();
 			var safeName = new string(name.Select(ch => invalid.Contains(ch) ? '_' : ch).ToArray()).Trim();
-			return $"{GetMapHash(map) ?? "000000"}_{safeName}";
+			return $"{safeName}__{GetMapHash(map) ?? "000000"}";
 		}
 
 		private static HashId? TryParseMapHash(string identifier)
@@ -185,9 +185,12 @@ namespace ClassicTilestorm
 
 			// Skybox - auto fixup legacy map data - will be removed soon
 			if (string.IsNullOrEmpty(CurrentMap.skybox))
-				CurrentMap.skybox = $"{CurrentMap.music}Skybox";
+			{
+				var musicDisplayName = Assets.MusicResourceTable.GetDisplayName(CurrentMap.music) ?? CurrentMap.music;
+				CurrentMap.skybox = Assets.SkycubeResourceTable.GetHashForDisplayName($"{musicDisplayName}Skybox");
+			}
 
-			if (null == AssetRegistry<Material>.FindSkybox(CurrentMap.skybox))
+			if (null == SkyboxAssets.Find(CurrentMap.skybox))
 				CurrentMap.skybox = null;
 			// Skybox - auto fixup legacy map data - ends here
 

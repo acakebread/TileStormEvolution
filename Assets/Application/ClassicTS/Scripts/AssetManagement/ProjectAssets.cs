@@ -259,16 +259,6 @@ namespace ClassicTilestorm.Assets
 	}
 
 	/// <summary>
-	/// Typed access to texture2Ds
-	/// </summary>
-	public static class Texture2DAssets
-	{
-		public static void RegisterRoot(string root) => AssetRegistry<Texture2D>.RegisterTexture2DRoot(root);
-		public static void ClearCache() => AssetRegistry<Texture2D>.ClearTexture2DCache();
-		public static Texture2D Find(string textureName) => AssetRegistry<Texture2D>.FindTexture2D(textureName);
-	}
-
-	/// <summary>
 	/// Typed access to materials
 	/// </summary>
 	public static class MaterialAssets
@@ -285,7 +275,16 @@ namespace ClassicTilestorm.Assets
 	{
 		public static void RegisterRoot(string root) => AssetRegistry<Material>.RegisterSkyboxRoot(root);
 		public static void ClearCache() => AssetRegistry<Material>.ClearSkyboxCache();
-		public static Material Find(string skyboxName) => AssetRegistry<Material>.FindSkybox(skyboxName);
+		public static Material Find(string skyboxName)
+		{
+			if (string.IsNullOrWhiteSpace(skyboxName))
+				return null;
+
+			if (Assets.SkycubeResourceTable.TryResolveResourceKey(skyboxName, out var resourceKey))
+				return AssetRegistry<Material>.FindSkybox(resourceKey);
+
+			return AssetRegistry<Material>.FindSkybox(skyboxName);
+		}
 	}
 
 	/// <summary>
@@ -305,7 +304,16 @@ namespace ClassicTilestorm.Assets
 	{
 		public static void RegisterRoot(string root) => AssetRegistry<AudioClip>.RegisterMusicRoot(root);
 		public static void ClearCache() => AssetRegistry<AudioClip>.ClearMusicCache();
-		public static AudioClip Find(string clipName) => AssetRegistry<AudioClip>.FindMusic(clipName);
+		public static AudioClip Find(string clipName)
+		{
+			if (string.IsNullOrWhiteSpace(clipName))
+				return null;
+
+			if (Assets.MusicResourceTable.TryResolveResourceKey(clipName, out var resourceKey))
+				return AssetRegistry<AudioClip>.FindMusic(resourceKey);
+
+			return AssetRegistry<AudioClip>.FindMusic(clipName);
+		}
 	}
 }
 
@@ -386,12 +394,6 @@ namespace ClassicTilestorm.Assets
 
 		public static IReadOnlyList<string> GetTextureNames(bool forceRefresh = false)
 			=> GetNames<Texture>(() => GetAssetNamesFromRoots<Texture>(new[]
-			{
-				AssetPath.TexturePath?.Trim('/') ?? ""
-			}), forceRefresh);
-
-		public static IReadOnlyList<string> GetTexture2DNames(bool forceRefresh = false)
-			=> GetNames<Texture2D>(() => GetAssetNamesFromRoots<Texture2D>(new[]
 			{
 				AssetPath.TexturePath?.Trim('/') ?? ""
 			}), forceRefresh);
