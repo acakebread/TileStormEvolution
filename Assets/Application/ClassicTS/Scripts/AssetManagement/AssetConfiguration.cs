@@ -1,3 +1,5 @@
+using MassiveHadronLtd;
+
 namespace ClassicTilestorm.Assets
 {
 	public static class AssetConfiguration

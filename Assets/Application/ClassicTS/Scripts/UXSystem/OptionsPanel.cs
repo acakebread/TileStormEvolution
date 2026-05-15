@@ -1,4 +1,5 @@
-﻿using MassiveHadronLtd;
+using MassiveHadronLtd;
+using MassiveHadronLtd.FileBrowserUtil;
 using System;
 using TMPro;
 using UnityEngine;
@@ -6,7 +7,7 @@ using UnityEngine.UI;
 
 namespace ClassicTilestorm
 {
-    public class OptionsPanel : UIPanel
+	public class OptionsPanel : UIPanel
 	{
 		[Header("UI References")]
 		[SerializeField] private Button closeButton;
@@ -16,6 +17,7 @@ namespace ClassicTilestorm
 		[SerializeField] private Button SaveDatabaseButton;
 		[SerializeField] private Button ImportMapButton;
 		[SerializeField] private Button ExportMapButton;
+		[SerializeField] private Button ImportModelButton;
 
 		[SerializeField] private Toggle difficultyToggle;
 		[SerializeField] private Toggle musicToggle;
@@ -61,12 +63,36 @@ namespace ClassicTilestorm
 				if (null != ImportMapButton)
 				{
 					ImportMapButton.onClick.AddListener(() => mainController.ImportMapAsAtomic());
-					ImportMapButton.interactable = Application.isEditor;
+					ImportMapButton.interactable = true;
 				}
 				if (null != ExportMapButton)
 				{
 					ExportMapButton.onClick.AddListener(() => mainController.ExportMapAsAtomic());
-					ExportMapButton.interactable = Application.isEditor;
+					ExportMapButton.interactable = true;
+				}
+				if (null != ImportModelButton)
+				{
+					ImportModelButton.onClick.AddListener(() =>
+					{
+#if UNITY_WEBGL && !UNITY_EDITOR
+						string importRoot = RuntimeFileBrowser.GetDefaultRootFolder();
+#else
+						string importRoot = RuntimeFileBrowser.GetDefaultRootFolder();
+#endif
+						RuntimeFileBrowser.OpenObjFile(
+							"Import Wavefront Model",
+							path =>
+							{
+								var importedPath = AssetImporter.ImportWavefrontModel(path);
+								if (!string.IsNullOrEmpty(importedPath))
+								{
+									ClassicTilestorm.Assets.ModelAssets.RefreshRegistry(true);
+									ClassicTilestorm.Assets.ProjectAssets.RefreshAllNameCaches();
+								}
+							},
+							importRoot);
+					});
+					ImportModelButton.interactable = true;
 				}
 			}
 

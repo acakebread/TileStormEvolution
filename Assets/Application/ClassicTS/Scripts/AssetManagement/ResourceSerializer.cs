@@ -1,6 +1,8 @@
 ﻿using System;
 using UnityEngine;
+#if UNITY_EDITOR
 using UnityEditor;
+#endif
 using System.IO;
 using System.Linq;
 using Newtonsoft.Json;
@@ -159,6 +161,32 @@ namespace ClassicTilestorm
 					  $"definitions: {data.definitions?.Length ?? 0}");
 		}
 
+		public static string BuildAtomicMapJson(Map originalMap, bool verbose = false, bool crop = true)
+		{
+			if (originalMap == null)
+				return null;
+
+			var map = crop ? CreateCroppedCopy(originalMap) : originalMap;
+
+			var settings = new JsonSerializerSettings
+			{
+				NullValueHandling = NullValueHandling.Ignore,
+				Formatting = verbose ? Formatting.Indented : Formatting.None,
+				Converters = { new AtomicMapConverter() },
+			};
+
+			return JsonConvert.SerializeObject(map, settings);
+		}
+
+		public static string GetDefaultMapExportFolder()
+		{
+			string documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+			if (!string.IsNullOrWhiteSpace(documents))
+				return Path.Combine(documents, "MHCommunity", "Maps");
+
+			return Path.Combine(Application.persistentDataPath, "Maps");
+		}
+
 		public static void ImportAtomicMap(string filepath)
 		{
 			if (!File.Exists(filepath))
@@ -220,19 +248,11 @@ namespace ClassicTilestorm
 		{
 			if (originalMap == null) return;
 
-			// Create a copy if we're cropping — we never mutate the original
 			var map = crop ? CreateCroppedCopy(originalMap) : originalMap;
 
 			try
 			{
-				var settings = new JsonSerializerSettings
-				{
-					NullValueHandling = NullValueHandling.Ignore,
-					Formatting = verbose ? Formatting.Indented : Formatting.None,
-					Converters = { new AtomicMapConverter() },
-				};
-
-				string json = JsonConvert.SerializeObject(map, settings);
+				string json = BuildAtomicMapJson(originalMap, verbose, crop);
 
 				var folder = string.IsNullOrEmpty(filepath)
 					? Application.persistentDataPath

@@ -28,57 +28,41 @@ namespace ClassicTilestorm.Assets
 			}
 		}
 
-		private static readonly Dictionary<string, ModelEntry> HashToEntry = new(StringComparer.OrdinalIgnoreCase);
 		private static readonly Dictionary<string, GameObject> ReferenceCache = new(StringComparer.OrdinalIgnoreCase);
 		private static readonly Dictionary<string, GameObject> ImportedInstanceCache = new(StringComparer.OrdinalIgnoreCase);
 		private static readonly List<ModelEntry> CachedEntries = new();
-		private static bool registryReady;
 
 		public static void RegisterRoot(string root) => AssetRegistry<GameObject>.RegisterModelRoot(root);
 		public static void ClearCache()
 		{
 			AssetRegistry<GameObject>.ClearModelCache();
-			HashToEntry.Clear();
 			ReferenceCache.Clear();
 			foreach (var go in ImportedInstanceCache.Values)
 				DestroyLoadedObject(go);
 			ImportedInstanceCache.Clear();
 			CachedEntries.Clear();
-			registryReady = false;
+			ModelResourceTable.ClearRuntimeCache();
 		}
 
 		public static void RefreshRegistry(bool forceRefresh = false)
 		{
-			if (registryReady && !forceRefresh && CachedEntries.Count > 0)
+			if (!forceRefresh && CachedEntries.Count > 0)
 				return;
 
-			HashToEntry.Clear();
 			ReferenceCache.Clear();
 			CachedEntries.Clear();
+			ModelResourceTable.Refresh(forceRefresh);
 
-			var importedEntries = GetImportedModelEntries().ToList();
-			var usedHashes = new HashSet<string>(
-				importedEntries.Select(e => e.HashId),
-				StringComparer.OrdinalIgnoreCase);
-
-			var internalEntries = ProjectAssets.GetModelNames(forceRefresh: true)
-				.Where(n => !string.IsNullOrWhiteSpace(n))
-				.Select(n => n.Trim())
-				.Distinct(StringComparer.OrdinalIgnoreCase)
-				.Select(name =>
-				{
-					string hash = CreateStableHashForName(name, usedHashes);
-					usedHashes.Add(hash);
-					return new ModelEntry(name, hash, resourcePath: name);
-				});
-
-			foreach (var entry in internalEntries.Concat(importedEntries).OrderBy(e => e.DisplayName, StringComparer.OrdinalIgnoreCase))
+			foreach (var entry in ModelResourceTable.GetEntries(false)
+					 .Select(e => new ModelEntry(
+						 displayName: e.DisplayName,
+						 hashId: e.HashId,
+						 resourcePath: e.ResourcePath,
+						 filePath: e.FilePath))
+					 .OrderBy(e => e.DisplayName, StringComparer.OrdinalIgnoreCase))
 			{
-				HashToEntry[entry.HashId] = entry;
 				CachedEntries.Add(entry);
 			}
-
-			registryReady = true;
 		}
 
 		public static IReadOnlyList<ModelEntry> GetModelEntries(bool forceRefresh = false)
@@ -101,13 +85,7 @@ namespace ClassicTilestorm.Assets
 			if (ReferenceCache.TryGetValue(key, out var cached))
 				return cached;
 
-			var asset = TryLoadExactReference(key);
-
-			if (asset == null)
-			{
-				RefreshRegistry(true);
-				asset = TryLoadExactReference(key);
-			}
+			var asset = LoadByKey(key);
 
 			if (asset != null)
 			{
@@ -153,55 +131,30 @@ namespace ClassicTilestorm.Assets
 			set => AssetRegistry<GameObject>.NameRemapper = value;
 		}
 
-		private static string CreateStableHashForName(string modelName, HashSet<string> usedHashes)
+		private static GameObject LoadByKey(string key)
 		{
-			for (int attempt = 0; attempt < 2048; attempt++)
-			{
-				string seed = attempt == 0 ? modelName : $"{modelName}#{attempt}";
-				string hash = HTB50Settings.ToString(RadixHash.GetStableHash32(seed));
+			if (ModelResourceTable.TryGetEntry(key, out var entry))
+				return LoadEntry(ToModelEntry(entry));
 
-				if (!usedHashes.Contains(hash))
-					return hash;
-			}
-
-			return HTB50Settings.ToString(RadixHash.GetStableHash32($"{modelName}#{Guid.NewGuid():N}"));
+			string hash = GetHashForDisplayName(key);
+			return !string.IsNullOrWhiteSpace(hash) && ModelResourceTable.TryGetEntry(hash, out entry)
+				? LoadEntry(ToModelEntry(entry))
+				: AssetRegistry<GameObject>.FindModel(key);
 		}
 
-		private static IEnumerable<ModelEntry> GetImportedModelEntries()
+		private static ModelEntry ToModelEntry(ModelResourceTable.Entry entry)
 		{
-			string importedRoot = Path.Combine(Application.persistentDataPath, "Imported");
-			if (!Directory.Exists(importedRoot))
-				yield break;
-
-			foreach (var objPath in Directory.EnumerateFiles(importedRoot, "*.obj", SearchOption.AllDirectories))
-			{
-				string folderName = Path.GetFileName(Path.GetDirectoryName(objPath));
-				if (string.IsNullOrWhiteSpace(folderName))
-					continue;
-
-				string displayBase = Path.GetFileNameWithoutExtension(objPath);
-				if (string.IsNullOrWhiteSpace(displayBase))
-					displayBase = folderName;
-
-				yield return new ModelEntry(
-					displayName: $"{displayBase} [{folderName}]",
-					hashId: folderName,
-					filePath: objPath);
-			}
-		}
-
-		private static GameObject TryLoadExactReference(string key)
-		{
-			if (HashToEntry.TryGetValue(key, out var entry))
-				return LoadEntry(entry);
-
-			return null;
+			return new ModelEntry(
+				displayName: entry.DisplayName,
+				hashId: entry.HashId,
+				resourcePath: entry.ResourcePath,
+				filePath: entry.FilePath);
 		}
 
 		private static GameObject LoadEntry(ModelEntry entry)
 		{
-			if (entry.FilePath == null)
-				return AssetRegistry<GameObject>.FindModel(entry.ResourcePath ?? entry.DisplayName);
+			if (!string.IsNullOrWhiteSpace(entry.ResourcePath))
+				return AssetRegistry<GameObject>.FindModel(entry.ResourcePath);
 
 			if (ImportedInstanceCache.TryGetValue(entry.HashId, out var cached) && cached != null)
 				return cached;
@@ -220,34 +173,12 @@ namespace ClassicTilestorm.Assets
 
 		public static string GetDisplayNameForHash(string hash)
 		{
-			if (string.IsNullOrWhiteSpace(hash))
-				return null;
-
-			RefreshRegistry(false);
-
-			string key = hash.Trim();
-			if (HashToEntry.TryGetValue(key, out var entry))
-				return entry.DisplayName;
-
-			RefreshRegistry(true);
-			return HashToEntry.TryGetValue(key, out entry) ? entry.DisplayName : null;
+			return ModelResourceTable.GetDisplayName(hash);
 		}
 
 		public static string GetHashForDisplayName(string displayName)
 		{
-			if (string.IsNullOrWhiteSpace(displayName))
-				return null;
-
-			RefreshRegistry(false);
-
-			string key = displayName.Trim();
-			foreach (var entry in CachedEntries)
-			{
-				if (entry.DisplayName.Equals(key, StringComparison.OrdinalIgnoreCase))
-					return entry.HashId;
-			}
-
-			return null;
+			return ModelResourceTable.GetHashForDisplayName(displayName);
 		}
 
 		private static void PrepareInstanceForScene(GameObject instance, GameObject source)

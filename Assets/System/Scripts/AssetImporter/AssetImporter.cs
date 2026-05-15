@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using ClassicTilestorm;
 using UnityEngine;
 
 namespace MassiveHadronLtd
@@ -44,8 +43,9 @@ namespace MassiveHadronLtd
 			Debug.Log($"Imported OBJ to: {destObjPath}");
 
 			CopyDependenciesWithStructure(sourceObjPath, importRoot);
+			ModelResourceTable.RegisterImported(ExtractImportHash(sourceObjPath, importOption), destObjPath);
 
-			Debug.Log($"✅ Import completed: {importRoot}");
+			Debug.Log($"Import completed: {importRoot}");
 			return destObjPath;
 		}
 
@@ -63,12 +63,33 @@ namespace MassiveHadronLtd
 						.ToLowerInvariant();
 
 					int hash32 = RadixHash.GetStableHash32(normalizedSource);
-					return HTB50Settings.ToString(hash32);
+					return HTB50.EncodeFixed(hash32, 6);
 				}
 
 				case ImportOption.Root:
 				default:
 					return null;
+			}
+		}
+
+		private static string ExtractImportHash(string sourceObjPath, ImportOption importOption)
+		{
+			switch (importOption)
+			{
+				case ImportOption.AssetFileNameFolder:
+					return HTB50.EncodeFixed(RadixHash.GetStableHash32(Path.GetFileNameWithoutExtension(sourceObjPath)), 6);
+
+				case ImportOption.HashIdFolder:
+				{
+					string normalizedSource = Path.GetFullPath(sourceObjPath)
+						.Replace('\\', '/')
+						.ToLowerInvariant();
+					return HTB50.EncodeFixed(RadixHash.GetStableHash32(normalizedSource), 6);
+				}
+
+				case ImportOption.Root:
+				default:
+					return HTB50.EncodeFixed(RadixHash.GetStableHash32(Path.GetFullPath(sourceObjPath)), 6);
 			}
 		}
 
@@ -107,15 +128,13 @@ namespace MassiveHadronLtd
 				return;
 			}
 
-			// Copy MTL (preserving relative path like "Materials/xxx.mtl")
 			string destMtlPath = Path.Combine(importRoot, mtlRelative);
 			Directory.CreateDirectory(Path.GetDirectoryName(destMtlPath));
 			File.Copy(sourceMtlPath, destMtlPath, true);
-			Debug.Log($"Copied MTL → {mtlRelative}");
+			Debug.Log($"Copied MTL -> {mtlRelative}");
 
 			string mtlDestDir = Path.GetDirectoryName(destMtlPath);
 
-			// Copy textures next to the .mtl
 			var textureRefs = ExtractTextureReferencesFromMtl(destMtlPath);
 			string mtlSourceDir = Path.GetDirectoryName(sourceMtlPath);
 
@@ -133,7 +152,7 @@ namespace MassiveHadronLtd
 				string destTexPath = Path.Combine(mtlDestDir, Path.GetFileName(texRef));
 
 				File.Copy(sourceTexPath, destTexPath, true);
-				Debug.Log($"✅ Copied texture → {Path.GetRelativePath(importRoot, destTexPath)}");
+				Debug.Log($"Copied texture -> {Path.GetRelativePath(importRoot, destTexPath)}");
 			}
 		}
 

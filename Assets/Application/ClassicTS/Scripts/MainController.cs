@@ -1,8 +1,11 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Linq;
 using MassiveHadronLtd;
+using MassiveHadronLtd.FileBrowserUtil;
 using UnityEngine.EventSystems;
+#if UNITY_EDITOR
 using UnityEditor;
+#endif
 using ClassicTilestorm.Assets;
 
 namespace ClassicTilestorm
@@ -227,7 +230,7 @@ namespace ClassicTilestorm
 			}
 
 			string fullPath = System.IO.Path.GetFullPath(assetPath);
-			ResourceSerializer.SaveDatabase(ResourceManager.database, fullPath, verbose:true);
+			ResourceSerializer.SaveDatabase(ResourceManager.database, fullPath, verbose: true);
 #else
 			Debug.Log("Save Database only works in Editor");
 #endif
@@ -235,55 +238,64 @@ namespace ClassicTilestorm
 
 		public void ImportMapAsAtomic()
 		{
-#if UNITY_EDITOR
-			string path = EditorUtility.OpenFilePanel("Import Atomic Map", ApplicationSettings.ExportFolder, "json");
-			if (!string.IsNullOrEmpty(path))
-			{
-				ResourceSerializer.ImportAtomicMap(path);
-				string importedName = System.IO.Path.GetFileNameWithoutExtension(path);
-
-				if (CurrentMap != null && CurrentMap.name == importedName)
-					OnChangeMapRequested?.Invoke(0);
-			}
+#if UNITY_WEBGL && !UNITY_EDITOR
+			string importRoot = RuntimeFileBrowser.GetDefaultRootFolder();
 #else
-			Debug.Log("Import currently only available in Unity Editor");
+			string importRoot = ApplicationSettings.ExportFolder;
 #endif
+			RuntimeFileBrowser.OpenFile(
+				"Import Atomic Map",
+				".json",
+				path =>
+				{
+					ResourceSerializer.ImportAtomicMap(path);
+					string importedName = System.IO.Path.GetFileNameWithoutExtension(path);
+
+					if (CurrentMap != null && CurrentMap.name == importedName)
+						OnChangeMapRequested?.Invoke(0);
+				},
+				importRoot,
+				importRoot);
 		}
 
 		public void ExportMapAsAtomic()
 		{
-#if UNITY_EDITOR
 			if (CurrentMap == null)
 			{
+#if UNITY_EDITOR
 				EditorUtility.DisplayDialog("Export Error", "No map is currently loaded.", "OK");
+#else
+				Debug.LogError("No map is currently loaded.");
+#endif
 				return;
 			}
 
 			var map = CurrentMap;
-			string originalName = map.name;
-			string lastFolder = PlayerPrefs.GetString("ClassicTilestorm_LastExportFolder", PreviewSettingsStatic.ExportFolder);
-			System.IO.Directory.CreateDirectory(lastFolder);
+			string fileName = $"{map.name}.json";
+			string json = ResourceSerializer.BuildAtomicMapJson(map, verbose: true, crop: true);
 
-			string initialPath = System.IO.Path.Combine(lastFolder, originalName + ".json");
-			string path = EditorUtility.SaveFilePanel("Export Map As Atomic JSON", lastFolder, originalName + ".json", "json");
+			if (string.IsNullOrEmpty(json))
+			{
+				Debug.LogError("Failed to build export JSON.");
+				return;
+			}
 
+#if UNITY_WEBGL && !UNITY_EDITOR
+			WebGLDownloadUtility.DownloadText(fileName, json, "application/json;charset=utf-8");
+			Debug.Log($"Map export prepared for browser download: {fileName}");
+#elif UNITY_EDITOR
+			string defaultFolder = ApplicationSettings.ExportFolder;
+			System.IO.Directory.CreateDirectory(defaultFolder);
+			string path = EditorUtility.SaveFilePanel("Export Map As Atomic JSON", defaultFolder, fileName, "json");
 			if (string.IsNullOrEmpty(path))
 			{
 				Debug.Log("Export cancelled by user.");
 				return;
 			}
 
-			string chosenFolder = System.IO.Path.GetDirectoryName(path);
-			string chosenName = System.IO.Path.GetFileNameWithoutExtension(path);
-			PlayerPrefs.SetString("ClassicTilestorm_LastExportFolder", chosenFolder);
-			PlayerPrefs.Save();
-
-			bool nameChanged = !string.Equals(originalName, chosenName, System.StringComparison.Ordinal);
-
 			try
 			{
-				if (nameChanged) map.name = chosenName;
-				ResourceSerializer.ExportAtomicMap(map, chosenFolder, true);
+				System.IO.File.WriteAllText(path, json);
 				EditorUtility.DisplayDialog("Export Successful", $"Map exported successfully!\n\nPath: {path}", "OK");
 				Debug.Log($"Map exported: {path}");
 			}
@@ -292,12 +304,19 @@ namespace ClassicTilestorm
 				EditorUtility.DisplayDialog("Export Failed", $"Error during export:\n{ex.Message}", "OK");
 				Debug.LogError($"Export failed: {ex}");
 			}
-			finally
-			{
-				if (nameChanged) map.name = originalName;
-			}
 #else
-			Debug.Log("Export currently only available in Unity Editor");
+			string defaultFolder = ResourceSerializer.GetDefaultMapExportFolder();
+			System.IO.Directory.CreateDirectory(defaultFolder);
+			string path = System.IO.Path.Combine(defaultFolder, fileName);
+			try
+			{
+				System.IO.File.WriteAllText(path, json);
+				Debug.Log($"Map exported: {path}");
+			}
+			catch (System.Exception ex)
+			{
+				Debug.LogError($"Export failed: {ex}");
+			}
 #endif
 		}
 
