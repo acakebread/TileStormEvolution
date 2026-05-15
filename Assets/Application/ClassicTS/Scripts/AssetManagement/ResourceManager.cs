@@ -130,7 +130,7 @@ namespace ClassicTilestorm
 			if (null != _db?.maps)
 			{
 				for (int i = 0; i < _db.maps.Length; i++)
-					if (_db.maps[i].name == modifiedMap.name)
+					if (_db.maps[i] != null && _db.maps[i].HashID == modifiedMap.HashID)
 					{ _db.maps[i] = modifiedMap; return; }
 			}
 		}

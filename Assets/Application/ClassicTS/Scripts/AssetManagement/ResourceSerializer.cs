@@ -101,6 +101,8 @@ namespace ClassicTilestorm
 					return null;
 				}
 
+				Map.EnsureUniqueHashIDs(data.maps);
+
 				return data;
 			}
 			catch (Exception ex)
@@ -187,12 +189,12 @@ namespace ClassicTilestorm
 			return Path.Combine(Application.persistentDataPath, "Maps");
 		}
 
-		public static void ImportAtomicMap(string filepath)
+		public static Map ImportAtomicMap(string filepath)
 		{
 			if (!File.Exists(filepath))
 			{
 				Debug.LogError($"Import failed: File not found → {filepath}");
-				return;
+				return null;
 			}
 
 			try
@@ -210,37 +212,40 @@ namespace ClassicTilestorm
 				if (importedMap == null || string.IsNullOrEmpty(importedMap.name))
 				{
 					Debug.LogError("Import failed: Invalid map or missing name");
-					return;
+					return null;
 				}
 
 				var db = ResourceManager.database;
 				if (db?.maps == null)
 				{
 					Debug.LogError("Database not loaded");
-					return;
+					return null;
 				}
 
-				int existingIndex = Array.FindIndex(db.maps, m => m.name == importedMap.name);
+				int existingIndex = Array.FindIndex(db.maps, m => m != null && m.HashID == importedMap.HashID);
 				if (existingIndex >= 0)
 				{
 					db.maps[existingIndex] = importedMap;
-					Debug.Log($"Imported map replaced existing: {importedMap.name}");
+					Debug.Log($"Imported map replaced existing: {importedMap.name} [{HTB50Settings.ToString(importedMap.HashID)}]");
 				}
 				else
 				{
 					var list = db.maps.ToList();
 					list.Add(importedMap);
 					db.maps = list.ToArray();
-					Debug.Log($"Imported new map added: {importedMap.name}");
+					Debug.Log($"Imported new map added: {importedMap.name} [{HTB50Settings.ToString(importedMap.HashID)}]");
 				}
 
+				Map.EnsureUniqueHashIDs(db.maps);
 				ResourceManager.ApplyMapChanges(importedMap);
 
-				Debug.Log($"Map imported into database: {importedMap.name}");
+				Debug.Log($"Map imported into database: {importedMap.name} [{HTB50Settings.ToString(importedMap.HashID)}]");
+				return importedMap;
 			}
 			catch (Exception e)
 			{
 				Debug.LogError($"Import failed: {e.Message}");
+				return null;
 			}
 		}
 
@@ -259,7 +264,8 @@ namespace ClassicTilestorm
 					: filepath;
 
 				EnsureFolder(folder);
-				string path = Path.Combine(folder, $"{map.name}.json");
+				string safeName = SanitizeFileName(string.IsNullOrWhiteSpace(map.name) ? "Untitled" : map.name);
+				string path = Path.Combine(folder, $"{HTB50Settings.ToString(map.HashID)}_{safeName}.json");
 
 				File.WriteAllText(path, json);
 
@@ -281,6 +287,16 @@ namespace ClassicTilestorm
 			//	Debug.Log($"[Export] Map '{copy.name}' table consolidated table {((Map.IHashAccess)map).Hashes.Length} or auto-cropped to {copy.width}x{copy.height}");
 
 			return copy;
+		}
+
+		private static string SanitizeFileName(string value)
+		{
+			if (string.IsNullOrWhiteSpace(value))
+				return "Untitled";
+
+			var invalid = Path.GetInvalidFileNameChars();
+			var chars = value.Select(ch => invalid.Contains(ch) ? '_' : ch).ToArray();
+			return new string(chars).Trim();
 		}
 	}
 }
