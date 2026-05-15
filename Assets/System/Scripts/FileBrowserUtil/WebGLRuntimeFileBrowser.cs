@@ -19,6 +19,13 @@ namespace MassiveHadronLtd.FileBrowserUtil
 			string receiverObject,
 			string onFileMethod,
 			string onCompleteMethod);
+
+		[DllImport("__Internal")]
+		private static extern void MassiveHadron_OpenDirectoryPicker(
+			string title,
+			string receiverObject,
+			string onFileMethod,
+			string onCompleteMethod);
 #endif
 
 		private const string UploadRootFolderName = "WebGLUploads";
@@ -49,9 +56,9 @@ namespace MassiveHadronLtd.FileBrowserUtil
 
 			EnsureHost().Open(new UploadRequest
 			{
-				Title = string.IsNullOrWhiteSpace(title) ? "Select OBJ Folder" : title,
-				Extensions = new[] { ".obj", ".mtl", ".png", ".jpg", ".jpeg", ".bmp", ".tga" },
-				AllowMultiple = true,
+				Title = string.IsNullOrWhiteSpace(title) ? "Select Wavefront Model Folder" : title,
+				Extensions = Array.Empty<string>(),
+				AllowMultiple = false,
 				AllowDirectory = true,
 				RootFolder = NormalizeRoot(rootFolder),
 				OnSelected = onSelected,
@@ -145,20 +152,39 @@ namespace MassiveHadronLtd.FileBrowserUtil
 				enabled = true;
 
 #if UNITY_WEBGL && !UNITY_EDITOR
-				string accept = request.Extensions == null ? string.Empty : string.Join(",", request.Extensions);
-				MassiveHadron_OpenFilePicker(
-					request.Title ?? "Select File",
-					accept,
-					request.AllowMultiple ? 1 : 0,
-					request.AllowDirectory ? 1 : 0,
-					gameObject.name,
-					nameof(ReceiveFile),
-					nameof(ReceiveComplete));
+				OpenNativePicker();
 #else
 				Debug.LogWarning("WebGLRuntimeFileBrowser was invoked outside WebGL.");
 				Close();
 #endif
 			}
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+			private void OpenNativePicker()
+			{
+				string title = request?.Title ?? "Select File";
+
+				if (request?.AllowDirectory == true)
+				{
+					MassiveHadron_OpenDirectoryPicker(
+						title,
+						gameObject.name,
+						nameof(ReceiveFile),
+						nameof(ReceiveComplete));
+					return;
+				}
+
+				string accept = request?.Extensions == null ? string.Empty : string.Join(",", request.Extensions);
+				MassiveHadron_OpenFilePicker(
+					title,
+					accept,
+					request?.AllowMultiple == true ? 1 : 0,
+					request?.AllowDirectory == true ? 1 : 0,
+					gameObject.name,
+					nameof(ReceiveFile),
+					nameof(ReceiveComplete));
+			}
+#endif
 
 			public void ReceiveFile(string json)
 			{
@@ -206,7 +232,10 @@ namespace MassiveHadronLtd.FileBrowserUtil
 					if (!string.IsNullOrWhiteSpace(selectedPath))
 						onSelected?.Invoke(selectedPath);
 					else
+					{
+						Debug.LogWarning("WebGLRuntimeFileBrowser: no matching .obj file was found in the uploaded folder.");
 						onCancelled?.Invoke();
+					}
 				}
 				catch (Exception ex)
 				{
@@ -261,8 +290,8 @@ namespace MassiveHadronLtd.FileBrowserUtil
 
 				if (request.SelectionKind == UploadSelectionKind.ObjPackage)
 				{
-					var obj = files.FirstOrDefault(path => string.Equals(Path.GetExtension(path), ".obj", StringComparison.OrdinalIgnoreCase));
-					return obj ?? files[0];
+					return files.FirstOrDefault(path =>
+						string.Equals(Path.GetExtension(path), ".obj", StringComparison.OrdinalIgnoreCase));
 				}
 
 				if (request.Extensions == null || request.Extensions.Length == 0)

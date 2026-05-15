@@ -64,5 +64,64 @@ mergeInto(LibraryManager.library, {
 
     document.body.appendChild(input);
     input.click();
+  },
+
+  MassiveHadron_OpenDirectoryPicker: function (titlePtr, receiverPtr, onFilePtr, onCompletePtr) {
+    var title = UTF8ToString(titlePtr);
+    var receiver = UTF8ToString(receiverPtr);
+    var onFile = UTF8ToString(onFilePtr);
+    var onComplete = UTF8ToString(onCompletePtr);
+
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.multiple = false;
+    input.setAttribute('webkitdirectory', '');
+    input.setAttribute('directory', '');
+    input.style.display = 'none';
+    input.title = title || 'Select Folder';
+
+    input.onchange = function () {
+      var files = Array.from(input.files || []);
+      if (input.parentNode) {
+        input.parentNode.removeChild(input);
+      }
+
+      if (!files.length) {
+        SendMessage(receiver, onComplete, '');
+        return;
+      }
+
+      var remaining = files.length;
+      files.forEach(function (file) {
+        var reader = new FileReader();
+        reader.onerror = function () {
+          remaining -= 1;
+          if (remaining <= 0) {
+            SendMessage(receiver, onComplete, '');
+          }
+        };
+        reader.onload = function (ev) {
+          var dataUrl = ev.target.result || '';
+          var comma = dataUrl.indexOf(',');
+          var base64 = comma >= 0 ? dataUrl.substring(comma + 1) : '';
+          var payload = JSON.stringify({
+            name: file.name || '',
+            relativePath: file.webkitRelativePath || '',
+            base64: base64
+          });
+
+          SendMessage(receiver, onFile, payload);
+
+          remaining -= 1;
+          if (remaining <= 0) {
+            SendMessage(receiver, onComplete, '');
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+    };
+
+    document.body.appendChild(input);
+    input.click();
   }
 });
