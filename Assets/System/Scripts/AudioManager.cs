@@ -1,5 +1,4 @@
-using ClassicTilestorm.Assets;
-using System.Collections.Generic;
+ï»¿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Audio;
 
@@ -52,7 +51,7 @@ namespace MassiveHadronLtd
 			source.Play();
 		}
 
-		// === MUSIC — OVERLOAD 1: String name (convenient) ===
+		// === MUSIC â€” OVERLOAD 1: String name (convenient) ===
 		public static AudioSource PlayMusic(string clipName, bool loop = true)
 		{
 			if (instance == null) return null;
@@ -67,7 +66,7 @@ namespace MassiveHadronLtd
 			if (string.IsNullOrEmpty(clipName))
 				return null;
 
-			var clip = MusicAssets.Find(clipName);
+			var clip = ResourceResolvers.MusicResolver?.Find(clipName);
 			if (clip == null)
 			{
 				Debug.LogWarning($"AudioManager: Music clip '{clipName}' not found.");
@@ -77,7 +76,7 @@ namespace MassiveHadronLtd
 			return PlayMusicClip(clip, loop);
 		}
 
-		// === MUSIC — OVERLOAD 2: Pre-loaded AudioClip (explicit, retains your old pattern) ===
+		// === MUSIC â€” OVERLOAD 2: Pre-loaded AudioClip (explicit, retains your old pattern) ===
 		public static AudioSource PlayMusic(AudioClip clip, bool loop = true)
 		{
 			if (instance == null) return null;

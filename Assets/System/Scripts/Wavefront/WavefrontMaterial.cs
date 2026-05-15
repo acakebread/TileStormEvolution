@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using UnityEngine;
-using ClassicTilestorm.Assets;
 
 namespace MassiveHadronLtd
 {
@@ -443,7 +442,7 @@ namespace MassiveHadronLtd
 				{
 					if (!string.IsNullOrEmpty(p.texture))
 					{
-						var tex = TextureAssets.Find(p.texture);
+						var tex = ResourceResolvers.TextureResolver?.Find(p.texture);
 						if (tex != null)
 						{
 							target.SetTexture(p.name, tex);
