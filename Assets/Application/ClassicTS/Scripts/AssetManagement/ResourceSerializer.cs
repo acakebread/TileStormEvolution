@@ -148,7 +148,7 @@ namespace ClassicTilestorm
 					if (map == null)
 						continue;
 
-					MapCatalog.SaveCommunityMap(map);
+					MapCatalog.SaveMap(map);
 				}
 
 				try
@@ -204,6 +204,10 @@ namespace ClassicTilestorm
 
 			EnsureFolder(Path.GetDirectoryName(path));
 			File.WriteAllText(path, json);
+
+#if UNITY_EDITOR
+			AssetDatabase.Refresh();
+#endif
 
 			//Debug.Log($"Database saved → {path} " +
 			//		  $"(maps: {mapsToSave?.Length ?? 0}, " +

@@ -25,9 +25,24 @@ namespace ClassicTilestorm
 
 		public static string PersistentMapsFolder => Path.Combine(Application.persistentDataPath, PersistentMapsFolderName);
 
+		public static string InternalMapsFolder => Path.Combine(Application.dataPath, "Application", "ClassicTS", "Resources", "ClassicTS", "Maps");
+
 		public static void ClearCache()
 		{
 			CachedMaps.Clear();
+		}
+
+		public static bool IsInternalMap(HashId hash)
+		{
+			EnsureInternalIndex();
+			return hash != 0 && InternalResourceIndex != null && InternalResourceIndex.ContainsKey(hash);
+		}
+
+		public static bool TryGetInternalResourceName(HashId hash, out string resourceName)
+		{
+			EnsureInternalIndex();
+			resourceName = null;
+			return InternalResourceIndex != null && InternalResourceIndex.TryGetValue(hash, out resourceName) && !string.IsNullOrWhiteSpace(resourceName);
 		}
 
 		public static IReadOnlyList<Map> LoadMaps(IEnumerable<string> mapIds)
@@ -57,7 +72,9 @@ namespace ClassicTilestorm
 			if (CachedMaps.TryGetValue(hash, out var cached) && cached != null)
 				return cached;
 
-			var map = LoadCommunityMap(hash) ?? LoadInternalMap(hash);
+			var map = IsInternalMap(hash)
+				? LoadInternalMap(hash)
+				: LoadCommunityMap(hash) ?? LoadInternalMap(hash);
 			if (map != null)
 			{
 				map.EnsureHashID();
@@ -104,6 +121,46 @@ namespace ClassicTilestorm
 
 			CachedMaps[map.HashID] = map;
 			return true;
+		}
+
+		public static bool SaveInternalMap(Map map)
+		{
+			if (map == null)
+				return false;
+
+			map.EnsureHashID();
+			if (map.HashID == 0)
+				return false;
+
+			Directory.CreateDirectory(InternalMapsFolder);
+
+			string fileName = BuildFileName(map);
+			string path = Path.Combine(InternalMapsFolder, fileName);
+			var prefix = HTB50Settings.ToString(map.HashID);
+
+			foreach (var existing in Directory.EnumerateFiles(InternalMapsFolder, $"{prefix}_*.json", SearchOption.TopDirectoryOnly).ToArray())
+			{
+				if (!string.Equals(existing, path, StringComparison.OrdinalIgnoreCase) && File.Exists(existing))
+					File.Delete(existing);
+			}
+
+			var json = JsonConvert.SerializeObject(map.Clone(), Formatting.Indented, MapSerializerSettings);
+			File.WriteAllText(path, json);
+
+			var resourceName = Path.GetFileNameWithoutExtension(fileName);
+			InternalResourceIndex ??= new Dictionary<HashId, string>();
+			InternalResourceIndex[map.HashID] = resourceName;
+
+			DeleteCommunityMap(map.HashID);
+			CachedMaps[map.HashID] = map;
+			return true;
+		}
+
+		public static bool SaveMap(Map map)
+		{
+			return IsInternalMap(map?.HashID ?? 0)
+				? SaveInternalMap(map)
+				: SaveCommunityMap(map);
 		}
 
 		public static bool DeleteCommunityMap(HashId hash)
@@ -164,7 +221,7 @@ namespace ClassicTilestorm
 		private static Map LoadInternalMap(HashId hash)
 		{
 			EnsureInternalIndex();
-			if (InternalResourceIndex != null && InternalResourceIndex.TryGetValue(hash, out var resourceName) && !string.IsNullOrWhiteSpace(resourceName))
+			if (TryGetInternalResourceName(hash, out var resourceName))
 			{
 				var asset = Resources.Load<TextAsset>($"{InternalResourcesRoot}/{resourceName}");
 				if (asset != null)
