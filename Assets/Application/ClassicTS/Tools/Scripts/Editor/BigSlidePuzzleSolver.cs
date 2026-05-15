@@ -6,7 +6,7 @@ using System.Text;
 
 public class BigSlidePuzzleSolver : EditorWindow
 {
-	[MenuItem("Tools/Classic Tilestorm/Big Slide Puzzle Solver (20×20+)")]
+	[MenuItem("Tools/Classic Tilestorm/Puzzles/Big Slide Puzzle Solver (20×20+)")]
 	public static void ShowWindow() => GetWindow<BigSlidePuzzleSolver>("Big Slider Solver");
 
 	private string result = "";

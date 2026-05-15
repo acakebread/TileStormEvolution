@@ -355,7 +355,7 @@ namespace MassiveHadronLtd
 		}
 
 		// Menu item for Unity Editor with default paths
-		[UnityEditor.MenuItem("Tools/Invert OBJ Z Coordinates")]
+		[UnityEditor.MenuItem("Tools/Classic Tilestorm/Models/OBJ/Invert OBJ Z Coordinates")]
 		public static void RunBatchProcess()
 		{
 			string inputDir = Path.Combine(Application.dataPath, "InputOBJ");

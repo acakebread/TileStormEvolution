@@ -423,7 +423,7 @@ namespace MassiveHadronLtd
 		//  Editor menu items (optional)
 		// ────────────────────────────────────────────────────────────────
 #if UNITY_EDITOR
-		[UnityEditor.MenuItem("Tools/OBJ Join - Combine Terrain Pieces")]
+		[UnityEditor.MenuItem("Tools/Classic Tilestorm/Models/OBJ/Join - Combine Terrain Pieces")]
 		private static void MenuJoin()
 		{
 			string input = Path.Combine(Application.dataPath, "InputTerrain");

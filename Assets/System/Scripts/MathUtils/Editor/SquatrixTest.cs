@@ -5,7 +5,7 @@ using MassiveHadronLtd;
 
 public class SquatrixTest : EditorWindow
 {
-	[MenuItem("Tools/Test Squatrix Round-Trip")]
+	[MenuItem("Tools/Classic Tilestorm/Diagnostics/Squatrix Round-Trip")]
 	static void Test()
 	{
 		//bool allPass = true;

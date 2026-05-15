@@ -37,7 +37,7 @@ namespace ClassicTilestorm.Editor
 				importer.isReadable = true;
 		}
 
-		[MenuItem("Tools/ClassicTS/Geometry/Enable ReadWrite On Geometry Models")]
+		[MenuItem("Tools/Classic Tilestorm/Models/Geometry/Enable ReadWrite On Geometry Models")]
 		private static void EnableReadWriteOnGeometryModels()
 		{
 			var modelPaths = AssetDatabase
