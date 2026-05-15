@@ -8,6 +8,7 @@ using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using ClassicTilestorm.Assets;
+using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
@@ -69,6 +70,7 @@ namespace ClassicTilestorm
 			SoundResourceTable.ClearCache();
 			CharacterResourceTable.ClearCache();
 			EffectResourceTable.ClearCache();
+			ImportedResourceLoader.ClearCache();
 			ProjectAssets.RefreshAllNameCaches();
 			ResourceManager.database = null;// important
 			ResourceManager.database = LoadDatabase(jsonAsset.text);

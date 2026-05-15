@@ -442,7 +442,7 @@ namespace MassiveHadronLtd
 				{
 					if (!string.IsNullOrEmpty(p.texture))
 					{
-						var tex = Resources.Load<Texture>(p.texture) ?? Resources.Load<Texture2D>(p.texture);
+						var tex = ResourceResolvers.TextureResolver?.Find(p.texture);
 						if (tex != null)
 						{
 							target.SetTexture(p.name, tex);

@@ -18,6 +18,9 @@ namespace ClassicTilestorm.Assets
 			SkyboxAssets.RegisterRoot(AssetPath.SkycubesPath?.Trim('/').Trim());
 			SoundAssets.RegisterRoot(AssetPath.SoundPath?.Trim('/').Trim()); // e.g. "ClassicTS/Sounds/"
 			MusicAssets.RegisterRoot(AssetPath.MusicPath?.Trim('/').Trim()); // e.g. "ClassicTS/Music/"
+			ResourceResolvers.TextureResolver = new TextureResourceResolver();
+			ResourceResolvers.SkyboxResolver = new SkyboxResourceResolver();
+			ResourceResolvers.MusicResolver = new MusicResourceResolver();
 			ModelAssets.RefreshRegistry(forceRefresh: true);
 		}
 
@@ -35,6 +38,7 @@ namespace ClassicTilestorm.Assets
 			SoundResourceTable.ClearCache();
 			CharacterResourceTable.ClearCache();
 			EffectResourceTable.ClearCache();
+			ImportedResourceLoader.ClearCache();
 			ProjectAssets.RefreshAllNameCaches();
 			//don't know if these need clearing
 			//SkyboxAssets.ClearCache();

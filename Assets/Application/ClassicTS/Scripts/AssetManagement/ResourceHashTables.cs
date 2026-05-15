@@ -216,6 +216,360 @@ namespace ClassicTilestorm.Assets
 		}
 	}
 
+	internal sealed class PortableManifestHashTable
+	{
+		internal enum EntryKind
+		{
+			Resource = 0,
+			File = 1
+		}
+
+		internal readonly struct Entry
+		{
+			public readonly HashId HashId;
+			public readonly string Value;
+			public readonly EntryKind Kind;
+
+			public Entry(HashId hashId, string value, EntryKind kind)
+			{
+				HashId = hashId;
+				Value = value;
+				Kind = kind;
+			}
+
+			public string DisplayName => string.IsNullOrWhiteSpace(Value)
+				? null
+				: Path.GetFileNameWithoutExtension(Value);
+		}
+
+		private readonly string internalTableResourcePath;
+		private readonly string importedTableFileName;
+		private readonly string importedRootFolder;
+		private readonly Dictionary<HashId, Entry> hashToEntry = new();
+		private readonly Dictionary<string, HashId> displayToHash = new(StringComparer.OrdinalIgnoreCase);
+		private bool loaded;
+
+		public PortableManifestHashTable(string internalTableResourcePath, string importedTableFileName, string importedRootFolder)
+		{
+			this.internalTableResourcePath = internalTableResourcePath;
+			this.importedTableFileName = importedTableFileName;
+			this.importedRootFolder = importedRootFolder;
+		}
+
+		private string ImportedTablePath => Path.Combine(Application.persistentDataPath, importedTableFileName);
+
+		public void ClearCache()
+		{
+			hashToEntry.Clear();
+			displayToHash.Clear();
+			loaded = false;
+		}
+
+		public void Refresh(bool forceRefresh = false)
+		{
+			if (loaded && !forceRefresh)
+				return;
+
+			Load();
+		}
+
+		public bool TryGetHashForDisplayName(string displayName, out string hashId)
+		{
+			hashId = null;
+			if (string.IsNullOrWhiteSpace(displayName))
+				return false;
+
+			Refresh(false);
+			if (!displayToHash.TryGetValue(displayName.Trim(), out var hash))
+				return false;
+
+			hashId = HTB50Settings.ToString(hash);
+			return true;
+		}
+
+		public string GetHashForDisplayName(string displayName)
+		{
+			return TryGetHashForDisplayName(displayName, out var hashId) ? hashId : null;
+		}
+
+		public string GetDisplayName(string identifier)
+		{
+			if (string.IsNullOrWhiteSpace(identifier))
+				return null;
+
+			Refresh(false);
+
+			var trimmed = identifier.Trim();
+			if (displayToHash.ContainsKey(trimmed))
+				return trimmed;
+
+			if (TryResolveHash(trimmed, out var hash) && hashToEntry.TryGetValue(hash, out var entry))
+				return entry.DisplayName;
+
+			return null;
+		}
+
+		public string ToHashOrOriginal(string identifier)
+		{
+			if (string.IsNullOrWhiteSpace(identifier))
+				return identifier;
+
+			Refresh(false);
+
+			var trimmed = identifier.Trim();
+			if (displayToHash.TryGetValue(trimmed, out var hash))
+				return HTB50Settings.ToString(hash);
+
+			return TryResolveHash(trimmed, out hash)
+				? HTB50Settings.ToString(hash)
+				: identifier;
+		}
+
+		public bool TryResolveResourceKey(string identifier, out string resourceKey)
+		{
+			resourceKey = null;
+			if (string.IsNullOrWhiteSpace(identifier))
+				return false;
+
+			Refresh(false);
+
+			var trimmed = identifier.Trim();
+			if (displayToHash.TryGetValue(trimmed, out var hash) &&
+				hashToEntry.TryGetValue(hash, out var byDisplay) &&
+				!string.IsNullOrWhiteSpace(GetResolvedPath(byDisplay)))
+			{
+				resourceKey = GetResolvedPath(byDisplay);
+				return true;
+			}
+
+			if (TryResolveHash(trimmed, out hash) &&
+				hashToEntry.TryGetValue(hash, out var entry) &&
+				!string.IsNullOrWhiteSpace(GetResolvedPath(entry)))
+			{
+				resourceKey = GetResolvedPath(entry);
+				return true;
+			}
+
+			resourceKey = trimmed;
+			return false;
+		}
+
+		public bool TryGetEntry(string hashId, out Entry entry)
+		{
+			entry = default;
+			if (string.IsNullOrWhiteSpace(hashId))
+				return false;
+
+			Refresh(false);
+			return ResourceIdUtil.TryParseCanonicalHash(hashId.Trim(), out var hash) &&
+				hashToEntry.TryGetValue(hash, out entry);
+		}
+
+		public string GetPathForHash(string hashId)
+		{
+			return TryGetEntry(hashId, out var entry) ? GetResolvedPath(entry) : null;
+		}
+
+		public string GetHashForPath(string path)
+		{
+			if (string.IsNullOrWhiteSpace(path))
+				return null;
+
+			Refresh(false);
+			var normalized = NormalizeValue(path);
+			foreach (var entry in hashToEntry.Values)
+			{
+				var resolved = NormalizeValue(GetResolvedPath(entry));
+				if (!string.IsNullOrWhiteSpace(resolved) &&
+					string.Equals(resolved, normalized, StringComparison.OrdinalIgnoreCase))
+				{
+					return HTB50Settings.ToString(entry.HashId);
+				}
+			}
+
+			return null;
+		}
+
+		public IReadOnlyList<Entry> GetEntries(bool forceRefresh = false)
+		{
+			Refresh(forceRefresh);
+			return hashToEntry.Values
+				.OrderBy(e => e.DisplayName ?? e.Value, StringComparer.OrdinalIgnoreCase)
+				.ToArray();
+		}
+
+		public IReadOnlyList<string> GetDisplayNames(bool forceRefresh = false)
+		{
+			return GetEntries(forceRefresh)
+				.Select(e => e.DisplayName ?? e.Value)
+				.Where(n => !string.IsNullOrWhiteSpace(n))
+				.ToArray();
+		}
+
+		public void RegisterInternal(string hashId, string resourceKey)
+		{
+			if (!ResourceIdUtil.TryParseCanonicalHash(hashId, out var parsedHash))
+				return;
+
+			Upsert(new Entry(
+					hashId: parsedHash,
+					value: NormalizeValue(resourceKey),
+					kind: EntryKind.Resource),
+				persist: false);
+		}
+
+		public void RegisterImported(string hashId, string filePath)
+		{
+			string fileName = NormalizeValue(Path.GetFileName(filePath));
+			if (!ResourceIdUtil.TryParseCanonicalHash(hashId, out var parsedHash))
+				return;
+
+			Upsert(new Entry(
+					hashId: parsedHash,
+					value: fileName,
+					kind: EntryKind.File),
+				persist: true);
+		}
+
+		private void Load()
+		{
+			hashToEntry.Clear();
+			displayToHash.Clear();
+
+			LoadInternalTable();
+			LoadImportedTable();
+			SaveImportedTable();
+
+			loaded = true;
+		}
+
+		private void LoadInternalTable()
+		{
+			var table = Resources.Load<TextAsset>(internalTableResourcePath);
+			if (table == null || string.IsNullOrWhiteSpace(table.text))
+				return;
+
+			foreach (var entry in ParseTableLines(table.text, EntryKind.Resource))
+				Upsert(entry, persist: false);
+		}
+
+		private void LoadImportedTable()
+		{
+			if (!File.Exists(ImportedTablePath))
+				return;
+
+			try
+			{
+				foreach (var entry in ParseTableLines(File.ReadAllText(ImportedTablePath), EntryKind.File))
+					Upsert(entry, persist: false);
+			}
+			catch (Exception ex)
+			{
+				Debug.LogWarning($"PortableManifestHashTable: failed to load imported table '{ImportedTablePath}': {ex.Message}");
+			}
+		}
+
+		private IEnumerable<Entry> ParseTableLines(string content, EntryKind kind)
+		{
+			foreach (var rawLine in content.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
+			{
+				string line = rawLine.Trim();
+				if (string.IsNullOrWhiteSpace(line) || line.StartsWith("#", StringComparison.Ordinal))
+					continue;
+
+				var parts = line.Split('\t');
+				if (parts.Length < 2)
+					continue;
+
+				if (!ResourceIdUtil.TryParseCanonicalHash(parts[0], out var hash))
+					continue;
+
+				string value = parts[parts.Length - 1];
+				if (kind == EntryKind.File)
+					value = Path.GetFileName(value);
+
+				yield return new Entry(hash, NormalizeValue(value), kind);
+			}
+		}
+
+		private void Upsert(Entry entry, bool persist)
+		{
+			if (EqualityComparer<HashId>.Default.Equals(entry.HashId, default))
+				return;
+
+			hashToEntry[entry.HashId] = entry;
+
+			if (!string.IsNullOrWhiteSpace(entry.DisplayName))
+				displayToHash[entry.DisplayName] = entry.HashId;
+
+			if (persist)
+				SaveImportedTable();
+		}
+
+		private string GetResolvedPath(Entry entry)
+		{
+			return entry.Kind == EntryKind.Resource
+				? entry.Value
+				: ResolveImportedPath(entry.HashId, entry.Value);
+		}
+
+		private void SaveImportedTable()
+		{
+			try
+			{
+				Directory.CreateDirectory(Path.GetDirectoryName(ImportedTablePath) ?? Application.persistentDataPath);
+
+				var lines = new List<string>
+				{
+					"# MassiveHadron imported resource table",
+					"# hashId<TAB>filename"
+				};
+
+				foreach (var entry in hashToEntry.Values
+					.Where(e => e.Kind == EntryKind.File)
+					.OrderBy(e => HTB50Settings.ToString(e.HashId), StringComparer.OrdinalIgnoreCase))
+				{
+					lines.Add(string.Join("\t", new[]
+					{
+						HTB50Settings.ToString(entry.HashId) ?? string.Empty,
+						entry.Value ?? string.Empty
+					}));
+				}
+
+				File.WriteAllLines(ImportedTablePath, lines);
+			}
+			catch (Exception ex)
+			{
+				Debug.LogWarning($"PortableManifestHashTable: failed to save imported table '{ImportedTablePath}': {ex.Message}");
+			}
+		}
+
+		private static string NormalizeValue(string value)
+			=> string.IsNullOrWhiteSpace(value) ? null : value.Replace('\\', '/').Trim();
+
+		private string ResolveImportedPath(HashId hashId, string fileName, string absolutePath = null)
+		{
+			if (!string.IsNullOrWhiteSpace(absolutePath) && Path.IsPathRooted(absolutePath))
+				return NormalizeValue(absolutePath);
+
+			string safeHash = HTB50Settings.ToString(hashId);
+			string safeFile = NormalizeValue(fileName);
+			if (string.IsNullOrWhiteSpace(safeHash) || string.IsNullOrWhiteSpace(safeFile))
+				return null;
+
+			return NormalizeValue(Path.Combine(Application.persistentDataPath, importedRootFolder, safeHash, safeFile));
+		}
+
+		private static bool TryResolveHash(string identifier, out HashId hash)
+		{
+			hash = 0;
+			if (string.IsNullOrWhiteSpace(identifier))
+				return false;
+
+			return ResourceIdUtil.TryParseCanonicalHash(identifier.Trim(), out hash);
+		}
+	}
+
 	internal sealed class AliasHashTable
 	{
 		private readonly Dictionary<HashId, string> hashToDisplay = new();
@@ -340,14 +694,18 @@ namespace ClassicTilestorm.Assets
 
 	public static class MusicResourceTable
 	{
-		private static readonly ManifestHashTable Table = new("AssetManifests/Music");
+		private static readonly PortableManifestHashTable Table = new("AssetManifests/Music", "ImportedMusicTable.tsv", "Imported/Music");
 
 		public static void ClearCache() => Table.ClearCache();
 		public static string GetDisplayName(string identifier) => Table.GetDisplayName(identifier);
 		public static string GetHashForDisplayName(string displayName) => Table.GetHashForDisplayName(displayName);
 		public static string ToHashOrOriginal(string identifier) => Table.ToHashOrOriginal(identifier);
 		public static bool TryResolveResourceKey(string identifier, out string resourceKey) => Table.TryResolveResourceKey(identifier, out resourceKey);
+		public static IReadOnlyList<string> GetDisplayNames(bool forceRefresh = false) => Table.GetDisplayNames(forceRefresh);
+		public static string GetPathForHash(string hashId) => Table.GetPathForHash(hashId);
+		public static string GetHashForPath(string path) => Table.GetHashForPath(path);
 		public static string DefaultHash => GetHashForDisplayName("TileStormTheme");
+		public static void RegisterImported(string hashId, string filePath) => Table.RegisterImported(hashId, filePath);
 	}
 
 	public static class PrefabResourceTable
@@ -363,24 +721,32 @@ namespace ClassicTilestorm.Assets
 
 	public static class TextureResourceTable
 	{
-		private static readonly ManifestHashTable Table = new("AssetManifests/Textures");
+		private static readonly PortableManifestHashTable Table = new("AssetManifests/Textures", "ImportedTextureTable.tsv", "Imported/Textures");
 
 		public static void ClearCache() => Table.ClearCache();
 		public static string GetDisplayName(string identifier) => Table.GetDisplayName(identifier);
 		public static string GetHashForDisplayName(string displayName) => Table.GetHashForDisplayName(displayName);
 		public static string ToHashOrOriginal(string identifier) => Table.ToHashOrOriginal(identifier);
 		public static bool TryResolveResourceKey(string identifier, out string resourceKey) => Table.TryResolveResourceKey(identifier, out resourceKey);
+		public static IReadOnlyList<string> GetDisplayNames(bool forceRefresh = false) => Table.GetDisplayNames(forceRefresh);
+		public static string GetPathForHash(string hashId) => Table.GetPathForHash(hashId);
+		public static string GetHashForPath(string path) => Table.GetHashForPath(path);
+		public static void RegisterImported(string hashId, string filePath) => Table.RegisterImported(hashId, filePath);
 	}
 
 	public static class SkycubeResourceTable
 	{
-		private static readonly ManifestHashTable Table = new("AssetManifests/Skycubes");
+		private static readonly PortableManifestHashTable Table = new("AssetManifests/Skycubes", "ImportedSkycubeTable.tsv", "Imported/Skycubes");
 
 		public static void ClearCache() => Table.ClearCache();
 		public static string GetDisplayName(string identifier) => Table.GetDisplayName(identifier);
 		public static string GetHashForDisplayName(string displayName) => Table.GetHashForDisplayName(displayName);
 		public static string ToHashOrOriginal(string identifier) => Table.ToHashOrOriginal(identifier);
 		public static bool TryResolveResourceKey(string identifier, out string resourceKey) => Table.TryResolveResourceKey(identifier, out resourceKey);
+		public static IReadOnlyList<string> GetDisplayNames(bool forceRefresh = false) => Table.GetDisplayNames(forceRefresh);
+		public static string GetPathForHash(string hashId) => Table.GetPathForHash(hashId);
+		public static string GetHashForPath(string path) => Table.GetHashForPath(path);
+		public static void RegisterImported(string hashId, string filePath) => Table.RegisterImported(hashId, filePath);
 	}
 
 	public static class MaterialResourceTable
@@ -396,13 +762,17 @@ namespace ClassicTilestorm.Assets
 
 	public static class SoundResourceTable
 	{
-		private static readonly ManifestHashTable Table = new("AssetManifests/Sounds");
+		private static readonly PortableManifestHashTable Table = new("AssetManifests/Sounds", "ImportedSoundTable.tsv", "Imported/Sounds");
 
 		public static void ClearCache() => Table.ClearCache();
 		public static string GetDisplayName(string identifier) => Table.GetDisplayName(identifier);
 		public static string GetHashForDisplayName(string displayName) => Table.GetHashForDisplayName(displayName);
 		public static string ToHashOrOriginal(string identifier) => Table.ToHashOrOriginal(identifier);
 		public static bool TryResolveResourceKey(string identifier, out string resourceKey) => Table.TryResolveResourceKey(identifier, out resourceKey);
+		public static IReadOnlyList<string> GetDisplayNames(bool forceRefresh = false) => Table.GetDisplayNames(forceRefresh);
+		public static string GetPathForHash(string hashId) => Table.GetPathForHash(hashId);
+		public static string GetHashForPath(string path) => Table.GetHashForPath(path);
+		public static void RegisterImported(string hashId, string filePath) => Table.RegisterImported(hashId, filePath);
 	}
 
 	public static class CharacterResourceTable
