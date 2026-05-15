@@ -239,7 +239,7 @@ namespace ClassicTilestorm
 				: filepath;
 
 			EnsureFolder(Path.GetDirectoryName(path));
-			File.WriteAllText(path, json);
+			WriteJsonIfChanged(path, json);
 
 #if UNITY_EDITOR
 			AssetDatabase.Refresh();
@@ -362,7 +362,7 @@ namespace ClassicTilestorm
 				string safeName = SanitizeFileName(string.IsNullOrWhiteSpace(map.name) ? "Untitled" : map.name);
 				string path = Path.Combine(folder, $"{safeName}__{HTB50Settings.ToString(map.HashID)}.json");
 
-				File.WriteAllText(path, json);
+				WriteJsonIfChanged(path, json);
 
 				Debug.Log($"ATOMIC MAP EXPORTED{(crop ? " (auto-cropped)" : "")} → {path} ({map.width}×{map.height})");
 			}
@@ -392,6 +392,39 @@ namespace ClassicTilestorm
 			var invalid = Path.GetInvalidFileNameChars();
 			var chars = value.Select(ch => invalid.Contains(ch) || char.IsWhiteSpace(ch) ? '_' : ch).ToArray();
 			return new string(chars).Trim('_');
+		}
+
+		private static void WriteJsonIfChanged(string path, string json)
+		{
+			if (string.IsNullOrWhiteSpace(path))
+				return;
+
+			var normalized = EnsureTrailingNewline(json ?? string.Empty);
+			if (File.Exists(path))
+			{
+				try
+				{
+					var current = File.ReadAllText(path);
+					if (string.Equals(current, normalized, StringComparison.Ordinal))
+						return;
+				}
+				catch (Exception ex)
+				{
+					Debug.LogWarning($"ResourceSerializer: failed to read existing file before save '{path}': {ex.Message}");
+				}
+			}
+
+			File.WriteAllText(path, normalized);
+		}
+
+		private static string EnsureTrailingNewline(string value)
+		{
+			if (string.IsNullOrEmpty(value))
+				return string.Empty;
+
+			return value.EndsWith(Environment.NewLine, StringComparison.Ordinal)
+				? value
+				: value + Environment.NewLine;
 		}
 	}
 }
