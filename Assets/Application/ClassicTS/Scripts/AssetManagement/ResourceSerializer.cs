@@ -61,12 +61,15 @@ namespace ClassicTilestorm
 
 			JsonSetup.Init();
 			MapCatalog.ClearCache();
+			PrefabResourceTable.ClearCache();
+			TextureResourceTable.ClearCache();
 			MaterialResourceTable.ClearCache();
 			SkycubeResourceTable.ClearCache();
 			MusicResourceTable.ClearCache();
 			SoundResourceTable.ClearCache();
 			CharacterResourceTable.ClearCache();
 			EffectResourceTable.ClearCache();
+			ProjectAssets.RefreshAllNameCaches();
 			ResourceManager.database = null;// important
 			ResourceManager.database = LoadDatabase(jsonAsset.text);
 		}

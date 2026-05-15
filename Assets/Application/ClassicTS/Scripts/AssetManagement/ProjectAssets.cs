@@ -216,7 +216,19 @@ namespace ClassicTilestorm.Assets
 	{
 		public static void RegisterRoot(string root) => AssetRegistry<GameObject>.RegisterPrefabRoot(root);
 		public static void ClearCache() => AssetRegistry<GameObject>.ClearPrefabCache();
-		public static GameObject Find(string prefabName) => AssetRegistry<GameObject>.FindPrefab(prefabName);
+		public static GameObject Find(string prefabName)
+		{
+			if (string.IsNullOrWhiteSpace(prefabName))
+				return null;
+
+			if (PrefabResourceTable.TryResolveResourceKey(prefabName, out var resourceKey))
+				return AssetRegistry<GameObject>.FindPrefab(resourceKey);
+
+			return AssetRegistry<GameObject>.FindPrefab(prefabName);
+		}
+
+		public static string GetDisplayName(string identifier) => PrefabResourceTable.GetDisplayName(identifier);
+		public static string GetHashForDisplayName(string displayName) => PrefabResourceTable.GetHashForDisplayName(displayName);
 
 		// === DUPLICATED FROM ModelAssets — safe and clear ===
 		public static GameObject Instantiate(string prefabName, Transform parent = null)
@@ -225,7 +237,7 @@ namespace ClassicTilestorm.Assets
 			if (asset == null) return null;
 
 			var instance = UnityEngine.Object.Instantiate(asset, parent);
-			instance.name = System.IO.Path.GetFileNameWithoutExtension(prefabName);
+			instance.name = GetDisplayName(prefabName) ?? System.IO.Path.GetFileNameWithoutExtension(prefabName);
 			return instance;
 		}
 
@@ -255,7 +267,19 @@ namespace ClassicTilestorm.Assets
 	{
 		public static void RegisterRoot(string root) => AssetRegistry<Texture>.RegisterTextureRoot(root);
 		public static void ClearCache() => AssetRegistry<Texture>.ClearTextureCache();
-		public static Texture Find(string textureName) => AssetRegistry<Texture>.FindTexture(textureName);
+		public static Texture Find(string textureName)
+		{
+			if (string.IsNullOrWhiteSpace(textureName))
+				return null;
+
+			if (TextureResourceTable.TryResolveResourceKey(textureName, out var resourceKey))
+				return AssetRegistry<Texture>.FindTexture(resourceKey);
+
+			return AssetRegistry<Texture>.FindTexture(textureName);
+		}
+
+		public static string GetDisplayName(string identifier) => TextureResourceTable.GetDisplayName(identifier);
+		public static string GetHashForDisplayName(string displayName) => TextureResourceTable.GetHashForDisplayName(displayName);
 	}
 
 	/// <summary>
@@ -401,41 +425,41 @@ namespace ClassicTilestorm.Assets
 				if (roots.Length == 0)
 					roots = new[] { AssetPath.GeometryPath?.Trim('/')?.Trim() ?? "" };
 
-				return GetAssetNamesFromRoots<GameObject>(roots);
-			}, forceRefresh);
+				return GetAssetNamesFromRoots<GameObject>("Models", roots);
+			}, forceRefresh, "Model");
 
 		public static IReadOnlyList<string> GetPrefabNames(bool forceRefresh = false)
-			=> GetNames<GameObject>(() => GetAssetNamesFromRoots<GameObject>(new[]
+			=> GetNames<GameObject>(() => GetAssetNamesFromRoots<GameObject>("Prefabs", new[]
 			{
 				AssetPath.PrefabPath?.Trim('/') ?? ""
-			}), forceRefresh);
+			}), forceRefresh, "Prefab");
 
 		public static IReadOnlyList<string> GetTextureNames(bool forceRefresh = false)
-			=> GetNames<Texture>(() => GetAssetNamesFromRoots<Texture>(new[]
+			=> GetNames<Texture>(() => GetAssetNamesFromRoots<Texture>("Textures", new[]
 			{
 				AssetPath.TexturePath?.Trim('/') ?? ""
 			}), forceRefresh);
 
 		public static IReadOnlyList<string> GetMaterialNames(bool forceRefresh = false)
-			=> GetNames<Material>(() => GetAssetNamesFromRoots<Material>(new[]
+			=> GetNames<Material>(() => GetAssetNamesFromRoots<Material>("Materials", new[]
 			{
 				AssetPath.MaterialPath?.Trim('/') ?? ""
 			}), forceRefresh, "Material");
 
 		public static IReadOnlyList<string> GetSkycubeNames(bool forceRefresh = false)
-			=> GetNames<Material>(() => GetAssetNamesFromRoots<Material>(new[]
+			=> GetNames<Material>(() => GetAssetNamesFromRoots<Material>("Skycubes", new[]
 			{
 				AssetPath.SkycubesPath?.Trim('/') ?? ""
 			}), forceRefresh, "Skycube");
 
 		public static IReadOnlyList<string> GetMusicNames(bool forceRefresh = false)
-			=> GetNames<AudioClip>(() => GetAssetNamesFromRoots<AudioClip>(new[]
+			=> GetNames<AudioClip>(() => GetAssetNamesFromRoots<AudioClip>("Music", new[]
 			{
 				AssetPath.MusicPath?.Trim('/') ?? ""
 			}), forceRefresh);
 
 		public static IReadOnlyList<string> GetSoundNames(bool forceRefresh = false)
-			=> GetNames<AudioClip>(() => GetAssetNamesFromRoots<AudioClip>(new[]
+			=> GetNames<AudioClip>(() => GetAssetNamesFromRoots<AudioClip>("Sounds", new[]
 			{
 				AssetPath.SoundPath?.Trim('/') ?? ""
 			}), forceRefresh, "Sound");
@@ -446,6 +470,11 @@ namespace ClassicTilestorm.Assets
 		public static void RefreshAllNameCaches() => NameCaches.Clear();
 
 		// ── Core loading helper ─────────────────────────────────────────────
+		private static IEnumerable<string> GetAssetNamesFromRoots<T>(string manifestName, string[] roots) where T : UnityEngine.Object
+		{
+			return ResourceUtils.GetAssetNamesFromResources<T>(roots, manifestName);
+		}
+
 		private static IEnumerable<string> GetAssetNamesFromRoots<T>(string[] roots) where T : UnityEngine.Object
 		{
 			string manifestName = AssetManifestConfig.GetManifestName<T>(roots);

@@ -27,12 +27,15 @@ namespace ClassicTilestorm.Assets
 			PrefabAssets.ClearCache();
 			TextureAssets.ClearCache();
 			MaterialAssets.ClearCache();
+			PrefabResourceTable.ClearCache();
+			TextureResourceTable.ClearCache();
 			MaterialResourceTable.ClearCache();
 			SkycubeResourceTable.ClearCache();
 			MusicResourceTable.ClearCache();
 			SoundResourceTable.ClearCache();
 			CharacterResourceTable.ClearCache();
 			EffectResourceTable.ClearCache();
+			ProjectAssets.RefreshAllNameCaches();
 			//don't know if these need clearing
 			//SkyboxAssets.ClearCache();
 			//SoundAssets.ClearCache();
