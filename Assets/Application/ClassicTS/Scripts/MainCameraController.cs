@@ -107,7 +107,7 @@ namespace ClassicTilestorm
 
 		private void OnMapEdited(IMapEdit map, bool resized, Vector3 delta)
 		{
-			if (resized) AdjustAllCamerasForMapShift(delta);
+			if (resized) AdjustAllCamerasForWorldShift(delta);
 		}
 
 		protected override (Vector3 srcPos, Vector3 dstPos) GetInitialCameraPositions()

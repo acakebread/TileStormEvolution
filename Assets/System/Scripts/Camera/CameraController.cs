@@ -143,7 +143,7 @@ namespace MassiveHadronLtd
 
 		protected virtual void OnApplicationFocus(bool hasFocus) => activeSystem?.OnApplicationFocus(hasFocus);
 
-		public void AdjustAllCamerasForMapShift(Vector3 delta)
+		public void AdjustAllCamerasForWorldShift(Vector3 delta)
 		{
 			if (delta == Vector3.zero) return;
 
