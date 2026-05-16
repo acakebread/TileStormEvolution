@@ -149,5 +149,16 @@ namespace MassiveHadronLtd
 				sys.OnMapOriginShift(delta);
 			}
 		}
+
+		public void ResetTiming()
+		{
+			HoldTiming(1);
+		}
+
+		public void HoldTiming(int frames = 1)
+		{
+			foreach (var sys in cameraSystems.Values)
+				sys.HoldTiming(frames);
+		}
 	}
 }

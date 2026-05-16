@@ -111,6 +111,7 @@ namespace ClassicTilestorm
 		{
 			if (null == cameraController) return;
 
+			cameraController.HoldTiming(1);
 			cameraController.SetCameraMode(GameModes.GetModeString(mode));
 			editorController.enabled = mode == ApplicationMode.Editor;
 			gameController.enabled = mode != ApplicationMode.Editor;
@@ -122,6 +123,7 @@ namespace ClassicTilestorm
 			if (string.IsNullOrEmpty(mapName ??= ApplicationSettings.LoadMapName))
 				return;
 
+			cameraController?.HoldTiming(1);
 			var maps = ResourceManager.Maps;
 			var mapHash = TryParseMapHash(mapName);
 			var newMap = mapHash.HasValue

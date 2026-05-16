@@ -29,8 +29,9 @@ namespace ClassicTilestorm
 		{
 			base.Update();
 			var target = targetFn?.Invoke() ?? Vector3.forward;
-			smoothing = SmoothingUtils.Smooth(smoothing, SmoothingNa, SmoothingNb, Time.deltaTime, TargetFPS);
-			var followLerp = SmoothingUtils.Smooth(0f, 1f, smoothing, Time.deltaTime, TargetFPS);
+			var dt = GetDeltaTime();
+			smoothing = SmoothingUtils.Smooth(smoothing, SmoothingNa, SmoothingNb, dt, TargetFPS);
+			var followLerp = SmoothingUtils.Smooth(0f, 1f, smoothing, dt, TargetFPS);
 			itarget = Vector3.Lerp(itarget, target, followLerp); // Use helper property 'target'
 			var delta = itarget - iorigin;
 			var deltaHorizontal = (0f == delta.x && 0f == delta.z) ? Vector3.zero : new Vector3(delta.x, 0, delta.z).normalized;

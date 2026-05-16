@@ -29,11 +29,11 @@ namespace ClassicTilestorm
 		public override void Update()
 		{
 			base.Update();
-			smoothing = SmoothingUtils.Smooth(smoothing, SmoothingN, Time.deltaTime, TargetFPS);
-			var presetLerp = SmoothingUtils.Smooth(0f, 1f, smoothing, Time.deltaTime, TargetFPS);
+			var dt = GetDeltaTime();
+			smoothing = SmoothingUtils.Smooth(smoothing, SmoothingN, dt, TargetFPS);
+			var presetLerp = SmoothingUtils.Smooth(0f, 1f, smoothing, dt, TargetFPS);
 			iorigin = Vector3.Lerp(iorigin, origin, presetLerp);
 			itarget = Vector3.Lerp(itarget, target, presetLerp);
-
 			if (camera == null) return;
 			camera.transform.position = iorigin;
 			var direction = itarget - iorigin;

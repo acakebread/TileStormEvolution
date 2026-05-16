@@ -36,6 +36,28 @@ namespace MassiveHadronLtd
 
 		protected float smoothing = 64f;// Default Smoothing Rate
 		protected const float TargetFPS = 60f;
+		private int timingHoldFrames;
+
+		public virtual void ResetTiming()
+		{
+			HoldTiming(1);
+		}
+
+		public virtual void HoldTiming(int frames = 1)
+		{
+			timingHoldFrames = Mathf.Max(timingHoldFrames, Mathf.Max(0, frames));
+		}
+
+		protected float GetDeltaTime()
+		{
+			if (timingHoldFrames > 0)
+			{
+				timingHoldFrames--;
+				return 0f;
+			}
+
+			return Mathf.Min(Time.deltaTime, 1f / 20f);
+		}
 
 		public bool postProcessingEnabled;
 		public bool PostProcessingEnabled

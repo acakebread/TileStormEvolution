@@ -60,9 +60,9 @@ namespace ClassicTilestorm
 			lastTarget = nextTarget = this.target;
 		}
 
-		protected virtual void UpdateCinemaLerping()
+		protected virtual void UpdateCinemaLerping(float deltaTime)
 		{
-			var interpolate = SmoothingUtils.Smooth(0f, 1f, smoothing, Time.deltaTime, TargetFPS);
+			var interpolate = SmoothingUtils.Smooth(0f, 1f, smoothing, deltaTime, TargetFPS);
 			iorigin = Vector3.Lerp(iorigin, localOrigin, interpolate);
 			itarget = Vector3.Lerp(itarget, localTarget, interpolate);
 		}
@@ -133,14 +133,15 @@ namespace ClassicTilestorm
 		{
 			base.Update();
 
+			var dt = GetDeltaTime();
 			var _target = target;
 			var posDelta = _target - lastTarget;
 			lastTarget = _target;
 
-			sequenceTimer -= Time.deltaTime;
+			sequenceTimer -= dt;
 			if (sequenceTimer > 0f)
 			{
-				nextTarget = SmoothingUtils.SmoothVector(nextTarget, _target + posDelta * 2f, ProjectionSmoothingRate, Time.deltaTime, TargetFPS);
+				nextTarget = SmoothingUtils.SmoothVector(nextTarget, _target + posDelta * 2f, ProjectionSmoothingRate, dt, TargetFPS);
 
 				// Update target
 				var easedSequenceTimer = SmoothingUtils.Ease(sequenceDuration > 0 ? 1f - Mathf.Clamp01(sequenceTimer / sequenceDuration) : 1f);
@@ -155,12 +156,11 @@ namespace ClassicTilestorm
 				fieldOfView = Mathf.Lerp(FovMin, currentFovMax, SmoothingUtils.EasePingPong(sequenceTimer / sequenceDuration));
 			}
 			else
-				pauseTimer -= Time.deltaTime;
+				pauseTimer -= dt;
 
-			smoothing = SmoothingUtils.Smooth(smoothing, SmoothingRate, sequenceDuration, Time.deltaTime, TargetFPS);
+			smoothing = SmoothingUtils.Smooth(smoothing, SmoothingRate, sequenceDuration, dt, TargetFPS);
 
-			UpdateCinemaLerping();
-
+			UpdateCinemaLerping(dt);
 			if (camera == null) return;
 			camera.transform.position = iorigin;
 			var direction = itarget - iorigin;
