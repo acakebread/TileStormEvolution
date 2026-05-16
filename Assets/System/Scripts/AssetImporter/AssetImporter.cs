@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace MassiveHadronLtd
 {
-	public static class AssetImporter
+	public static class WavefrontAssetImporter
 	{
 		public enum ImportOption
 		{

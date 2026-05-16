@@ -9,7 +9,7 @@ namespace MassiveHadronLtd
 		[Tooltip("Last successfully imported model folder")]
 		public string lastImportedPath;
 		[Tooltip("How imported Wavefront assets are organized on disk")]
-		public AssetImporter.ImportOption importOption = AssetImporter.ImportOption.HashIdFolder;
+		public WavefrontAssetImporter.ImportOption importOption = WavefrontAssetImporter.ImportOption.HashIdFolder;
 
 		private void OnGUI()
 		{
@@ -46,7 +46,7 @@ namespace MassiveHadronLtd
 
 			if (!string.IsNullOrEmpty(path))
 			{
-				lastImportedPath = AssetImporter.ImportWavefrontModel(path, importOption);
+				lastImportedPath = WavefrontAssetImporter.ImportWavefrontModel(path, importOption);
 
 				if (!string.IsNullOrEmpty(lastImportedPath))
 				{
@@ -84,7 +84,7 @@ namespace MassiveHadronLtd
 //		[Tooltip("Last successfully imported model folder")]
 //		public string lastImportedPath;
 //		[Tooltip("How imported Wavefront assets are organized on disk")]
-//		public AssetImporter.ImportOption importOption = AssetImporter.ImportOption.HashIdFolder;
+//		public WavefrontAssetImporter.ImportOption importOption = WavefrontAssetImporter.ImportOption.HashIdFolder;
 
 //		private void OnGUI()
 //		{
@@ -117,7 +117,7 @@ namespace MassiveHadronLtd
 //				"Select Wavefront .obj file",
 //				path =>
 //				{
-//					lastImportedPath = AssetImporter.ImportWavefrontModel(path, importOption);
+//					lastImportedPath = WavefrontAssetImporter.ImportWavefrontModel(path, importOption);
 
 //					if (!string.IsNullOrEmpty(lastImportedPath))
 //					{

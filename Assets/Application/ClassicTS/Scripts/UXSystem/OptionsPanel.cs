@@ -83,7 +83,7 @@ namespace ClassicTilestorm
 							"Import Wavefront Model",
 							path =>
 							{
-								var importedPath = AssetImporter.ImportWavefrontModel(path);
+								var importedPath = WavefrontAssetImporter.ImportWavefrontModel(path);
 								if (!string.IsNullOrEmpty(importedPath))
 								{
 									ClassicTilestorm.Assets.ModelAssets.RefreshRegistry(true);
