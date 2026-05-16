@@ -6,7 +6,7 @@ using MassiveHadronLtd;
 
 namespace ClassicTilestorm.Editor
 {
-	public class GeometryReadWriteImporter : AssetPostprocessor
+	public class TileStormAssetProcessor : AssetPostprocessor
 	{
 		private static bool IsGeometryModelPath(string path)
 		{
@@ -33,6 +33,9 @@ namespace ClassicTilestorm.Editor
 			if (!IsGeometryModelPath(assetPath) || gameObject == null)
 				return;
 
+			if (!IsTestAnimatingModel(assetPath))
+				return;
+
 			if (!TryGetWavefrontMaterialImport(assetPath, out var sourceMaterialName, out var baseColor, out var emissiveColor, out var emissionMap))
 				return;
 
@@ -57,16 +60,26 @@ namespace ClassicTilestorm.Editor
 					if (ApplyWavefrontMaterial(material, baseColor, emissiveColor, emissionMap))
 					{
 						patched++;
-						Debug.Log($"GeometryReadWriteImporter: patched emissive material '{material.name}' from '{assetPath}' (source '{sourceMaterialName}')");
+						Debug.Log($"TileStormAssetProcessor: patched emissive material '{material.name}' from '{assetPath}' (source '{sourceMaterialName}')");
 					}
 				}
 			}
 
 			if (patched > 0)
-				Debug.Log($"GeometryReadWriteImporter: patched {patched} emissive material(s) on '{assetPath}'.");
+				Debug.Log($"TileStormAssetProcessor: patched {patched} emissive material(s) on '{assetPath}'.");
 		}
 
-		[MenuItem("Tools/Classic Tilestorm/Models/Geometry/Enable ReadWrite On Geometry Models")]
+		private static bool IsTestAnimatingModel(string path)
+		{
+			if (string.IsNullOrWhiteSpace(path))
+				return false;
+
+			var normalized = path.Replace('\\', '/');
+			return normalized.EndsWith("/TestAnimatingModel.obj", System.StringComparison.OrdinalIgnoreCase) ||
+				   string.Equals(Path.GetFileNameWithoutExtension(normalized), "TestAnimatingModel", System.StringComparison.OrdinalIgnoreCase);
+		}
+
+		[MenuItem("Tools/Classic Tilestorm/Asset Processing/Enable ReadWrite On Geometry Models")]
 		private static void EnableReadWriteOnGeometryModels()
 		{
 			var modelPaths = AssetDatabase
@@ -86,7 +99,7 @@ namespace ClassicTilestorm.Editor
 				changed++;
 			}
 
-			Debug.Log($"GeometryReadWriteImporter: enabled Read/Write on {changed} model(s).");
+			Debug.Log($"TileStormAssetProcessor: enabled Read/Write on {changed} model(s).");
 		}
 
 		private static bool TryGetWavefrontMaterialImport(string modelAssetPath, out string sourceMaterialName, out Color baseColor, out Color emissiveColor, out Texture2D emissionMap)
