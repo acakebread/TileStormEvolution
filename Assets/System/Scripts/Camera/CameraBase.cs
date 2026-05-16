@@ -36,11 +36,18 @@ namespace MassiveHadronLtd
 
 		protected float smoothing = 64f;// Default Smoothing Rate
 		protected const float TargetFPS = 60f;
+		private bool timingSuspended;
 		private int timingHoldFrames;
 
-		public virtual void ResetTiming()
+		public virtual void Suspend()
 		{
-			HoldTiming(1);
+			timingSuspended = true;
+		}
+
+		public virtual void Resume(int holdFrames = 1)
+		{
+			timingSuspended = false;
+			HoldTiming(holdFrames);
 		}
 
 		public virtual void HoldTiming(int frames = 1)
@@ -50,6 +57,9 @@ namespace MassiveHadronLtd
 
 		protected float GetDeltaTime()
 		{
+			if (timingSuspended)
+				return 0f;
+
 			if (timingHoldFrames > 0)
 			{
 				timingHoldFrames--;

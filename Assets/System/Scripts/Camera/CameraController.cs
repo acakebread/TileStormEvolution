@@ -17,6 +17,7 @@ namespace MassiveHadronLtd
 		private Dictionary<string, string[]> modes = new();
 		private Dictionary<string, string> modeSystems = new();
 		private HashSet<string> startedSystems = new();
+		private bool timingSuspended;
 
 		protected virtual void Awake()
 		{
@@ -110,6 +111,8 @@ namespace MassiveHadronLtd
 				Debug.LogWarning($"Camera mode '{system}' is already registered. Overwriting.");
 
 			cameraSystems[system] = camera;
+			if (timingSuspended)
+				cameraSystems[system].Suspend();
 			cameraSystems[system].Awake();
 		}
 
@@ -150,15 +153,18 @@ namespace MassiveHadronLtd
 			}
 		}
 
-		public void ResetTiming()
+		public void Suspend()
 		{
-			HoldTiming(1);
+			timingSuspended = true;
+			foreach (var sys in cameraSystems.Values)
+				sys.Suspend();
 		}
 
-		public void HoldTiming(int frames = 1)
+		public void Resume(int holdFrames = 1)
 		{
+			timingSuspended = false;
 			foreach (var sys in cameraSystems.Values)
-				sys.HoldTiming(frames);
+				sys.Resume(holdFrames);
 		}
 	}
 }

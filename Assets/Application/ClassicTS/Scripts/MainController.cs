@@ -111,11 +111,19 @@ namespace ClassicTilestorm
 		{
 			if (null == cameraController) return;
 
-			cameraController.HoldTiming(1);
-			cameraController.SetCameraMode(GameModes.GetModeString(mode));
-			editorController.enabled = mode == ApplicationMode.Editor;
-			gameController.enabled = mode != ApplicationMode.Editor;
-			eggbotController.gameObject.SetActive(mode != ApplicationMode.Editor);
+			cameraController.Suspend();
+			try
+			{
+				cameraController.SetCameraMode(GameModes.GetModeString(mode));
+				editorController.enabled = mode == ApplicationMode.Editor;
+				gameController.enabled = mode != ApplicationMode.Editor;
+				if (eggbotController != null)
+					eggbotController.gameObject.SetActive(mode != ApplicationMode.Editor);
+			}
+			finally
+			{
+				cameraController.Resume();
+			}
 		}
 
 		public void LoadMap(string mapName = null)
@@ -123,7 +131,6 @@ namespace ClassicTilestorm
 			if (string.IsNullOrEmpty(mapName ??= ApplicationSettings.LoadMapName))
 				return;
 
-			cameraController?.HoldTiming(1);
 			var maps = ResourceManager.Maps;
 			var mapHash = TryParseMapHash(mapName);
 			var newMap = mapHash.HasValue
@@ -140,6 +147,9 @@ namespace ClassicTilestorm
 			}
 
 			var mainReflection = Camera.main?.GetComponent<ReflectionEffectCamera>();
+			cameraController?.Suspend();
+			try
+			{
 
 			Resources.UnloadUnusedAssets();
 
@@ -212,10 +222,15 @@ namespace ClassicTilestorm
 			eggbotController?.Initialise(CurrentMap);
 			eggbotController.gameObject.SetActive(ApplicationSettings.CurrentMode != ApplicationMode.Editor);
 
-			// Controllers
-			cameraController?.Initialise(CurrentMap, eggbotController);
-			gameController?.Initialise(CurrentMap);
-			editorController?.Initialise(CurrentMap);
+				// Controllers
+				cameraController?.Initialise(CurrentMap, eggbotController);
+				gameController?.Initialise(CurrentMap);
+				editorController?.Initialise(CurrentMap);
+			}
+			finally
+			{
+				cameraController?.Resume();
+			}
 		}
 
 		public void HandleChangeMap(int delta)
