@@ -61,11 +61,14 @@ namespace ClassicTilestorm
 			{
 				var waypoints = map.GetWaypoints();
 				var yaw = waypoints?.Length > 1 ? Navigation.DirToAngle(Navigation.NavToDest(map, waypoints[0].tile, waypoints[1].tile)) : 0f;
+				transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+				startYaw = targetYaw = yaw;
 				dstWaypoint = 1;
 			}
 			else
 			{
 				transform.rotation = Quaternion.Euler(0f, 0f, 0f);
+				startYaw = targetYaw = 0f;
 			}
 
 			map.OnMapEdited += HandleMapEdited;// Subscribe to map changes
