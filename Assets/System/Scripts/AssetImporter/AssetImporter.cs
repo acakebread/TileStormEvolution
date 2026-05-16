@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using Newtonsoft.Json.Linq;
 using UnityEngine;
 
 namespace MassiveHadronLtd
@@ -137,6 +139,7 @@ namespace MassiveHadronLtd
 
 			var textureRefs = ExtractTextureReferencesFromMtl(destMtlPath);
 			string mtlSourceDir = Path.GetDirectoryName(sourceMtlPath);
+			var visitedAnimationTextures = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
 			foreach (string texRef in textureRefs)
 			{
@@ -153,6 +156,44 @@ namespace MassiveHadronLtd
 
 				File.Copy(sourceTexPath, destTexPath, true);
 				Debug.Log($"Copied texture -> {Path.GetRelativePath(importRoot, destTexPath)}");
+
+				CopyAnimationSidecars(sourceTexPath, destTexPath, visitedAnimationTextures);
+			}
+		}
+
+		private static void CopyAnimationSidecars(string sourceTexturePath, string destTexturePath, HashSet<string> visitedTextures)
+		{
+			if (string.IsNullOrWhiteSpace(sourceTexturePath) || string.IsNullOrWhiteSpace(destTexturePath))
+				return;
+
+			string normalizedSourceTexture = Path.GetFullPath(sourceTexturePath);
+			if (visitedTextures != null && !visitedTextures.Add(normalizedSourceTexture))
+				return;
+
+			string sourceJsonPath = Path.ChangeExtension(sourceTexturePath, ".json");
+			if (!File.Exists(sourceJsonPath))
+				return;
+
+			string destJsonPath = Path.ChangeExtension(destTexturePath, ".json");
+			Directory.CreateDirectory(Path.GetDirectoryName(destJsonPath));
+			File.Copy(sourceJsonPath, destJsonPath, true);
+			Debug.Log($"Copied animation json -> {Path.GetRelativePath(Path.GetDirectoryName(destTexturePath), destJsonPath)}");
+
+			foreach (string animationTexture in ExtractAnimationTextureReferences(sourceJsonPath))
+			{
+				string sourceDir = Path.GetDirectoryName(sourceJsonPath);
+				string sourceFrameTexture = FindTextureFile(sourceDir, animationTexture);
+				if (string.IsNullOrWhiteSpace(sourceFrameTexture))
+				{
+					Debug.LogWarning($"Could not find animation texture: {animationTexture}");
+					continue;
+				}
+
+				string destFrameTexture = Path.Combine(Path.GetDirectoryName(destJsonPath), Path.GetFileName(sourceFrameTexture));
+				File.Copy(sourceFrameTexture, destFrameTexture, true);
+				Debug.Log($"Copied animation texture -> {Path.GetRelativePath(Path.GetDirectoryName(destTexturePath), destFrameTexture)}");
+
+				CopyAnimationSidecars(sourceFrameTexture, destFrameTexture, visitedTextures);
 			}
 		}
 
@@ -188,6 +229,32 @@ namespace MassiveHadronLtd
 				}
 			}
 			return list;
+		}
+
+		private static IEnumerable<string> ExtractAnimationTextureReferences(string jsonPath)
+		{
+			try
+			{
+				string json = File.ReadAllText(jsonPath);
+				if (string.IsNullOrWhiteSpace(json))
+					return Enumerable.Empty<string>();
+
+				var root = JObject.Parse(json);
+				var textures = root
+					.DescendantsAndSelf()
+					.OfType<JProperty>()
+					.Where(prop => string.Equals(prop.Name, "texture", StringComparison.OrdinalIgnoreCase))
+					.Select(prop => prop.Value?.Type == JTokenType.String ? prop.Value.Value<string>() : null)
+					.Where(value => !string.IsNullOrWhiteSpace(value))
+					.ToList();
+
+				return textures;
+			}
+			catch (Exception ex)
+			{
+				Debug.LogWarning($"Failed to parse animation json '{jsonPath}': {ex.Message}");
+				return Enumerable.Empty<string>();
+			}
 		}
 
 		private static string FindTextureFile(string baseDir, string texReference)
