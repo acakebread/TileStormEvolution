@@ -288,11 +288,14 @@ namespace MassiveHadronLtd
 				return false;
 
 			var parts = relative.Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
-			if (parts.Length < 2)
-				return false;
+			if (parts.Length >= 2)
+			{
+				hash = parts[0];
+				return ResourceIdUtil.TryParseCanonicalHash(hash, out _);
+			}
 
-			hash = parts[0];
-			return ResourceIdUtil.TryParseCanonicalHash(hash, out _);
+			hash = HTB50.EncodeFixed(RadixHash.GetStableHash32(Path.GetFileNameWithoutExtension(normalizedFile)), 6);
+			return !string.IsNullOrWhiteSpace(hash);
 		}
 	}
 }

@@ -1,6 +1,7 @@
 ﻿//stable ish version
 
 using System;
+using System.Buffers.Binary;
 using System.Numerics;
 using System.Text;
 using System.Security.Cryptography;
@@ -107,7 +108,7 @@ namespace MassiveHadronLtd
 			byte[] hash = sha.ComputeHash(Encoding.UTF8.GetBytes(input));
 
 			// Take first 4 bytes as the 32-bit hash (little-endian)
-			return BitConverter.ToInt32(hash, 0);
+			return BinaryPrimitives.ReadInt32LittleEndian(hash);
 		}
 
 		public static long GetStableHash64(string input)
@@ -230,7 +231,7 @@ namespace MassiveHadronLtd
 				rng.GetBytes(bytes);
 			}
 
-			int value = BitConverter.ToInt32(bytes, 0);
+			int value = BinaryPrimitives.ReadInt32LittleEndian(bytes);
 
 			// Avoid zero (very rare, but makes it cleaner for "no hash" sentinel)
 			return value == 0 ? 1 : value;

@@ -60,12 +60,9 @@ namespace MassiveHadronLtd
 
 				case ImportOption.HashIdFolder:
 				{
-					string normalizedSource = Path.GetFullPath(sourceObjPath)
-						.Replace('\\', '/')
-						.ToLowerInvariant();
-
-					int hash32 = RadixHash.GetStableHash32(normalizedSource);
-					return HTB50.EncodeFixed(hash32, 6);
+					var contentHash = AssetFingerprintUtility.GetModelContentHash(sourceObjPath);
+					return contentHash == 0 ? HTB50.EncodeFixed(RadixHash.GetStableHash32(Path.GetFileNameWithoutExtension(sourceObjPath)), 6)
+						: HTB50.EncodeFixed(contentHash, 6);
 				}
 
 				case ImportOption.Root:
@@ -76,22 +73,22 @@ namespace MassiveHadronLtd
 
 		private static string ExtractImportHash(string sourceObjPath, ImportOption importOption)
 		{
+			var fileName = Path.GetFileNameWithoutExtension(sourceObjPath);
 			switch (importOption)
 			{
 				case ImportOption.AssetFileNameFolder:
-					return HTB50.EncodeFixed(RadixHash.GetStableHash32(Path.GetFileNameWithoutExtension(sourceObjPath)), 6);
+					return HTB50.EncodeFixed(RadixHash.GetStableHash32(fileName), 6);
 
 				case ImportOption.HashIdFolder:
 				{
-					string normalizedSource = Path.GetFullPath(sourceObjPath)
-						.Replace('\\', '/')
-						.ToLowerInvariant();
-					return HTB50.EncodeFixed(RadixHash.GetStableHash32(normalizedSource), 6);
+					var contentHash = AssetFingerprintUtility.GetModelContentHash(sourceObjPath);
+					return contentHash == 0 ? HTB50.EncodeFixed(RadixHash.GetStableHash32(fileName), 6)
+						: HTB50.EncodeFixed(contentHash, 6);
 				}
 
 				case ImportOption.Root:
 				default:
-					return HTB50.EncodeFixed(RadixHash.GetStableHash32(Path.GetFullPath(sourceObjPath)), 6);
+					return HTB50.EncodeFixed(RadixHash.GetStableHash32(fileName), 6);
 			}
 		}
 
