@@ -243,20 +243,16 @@ namespace ClassicTilestorm.Assets
 		}
 
 		private readonly string internalTableResourcePath;
-		private readonly string importedTableFileName;
 		private readonly string importedRootFolder;
 		private readonly Dictionary<HashId, Entry> hashToEntry = new();
 		private readonly Dictionary<string, HashId> displayToHash = new(StringComparer.OrdinalIgnoreCase);
 		private bool loaded;
 
-		public PortableManifestHashTable(string internalTableResourcePath, string importedTableFileName, string importedRootFolder)
+		public PortableManifestHashTable(string internalTableResourcePath, string importedRootFolder)
 		{
 			this.internalTableResourcePath = internalTableResourcePath;
-			this.importedTableFileName = importedTableFileName;
 			this.importedRootFolder = importedRootFolder;
 		}
-
-		private string ImportedTablePath => Path.Combine(Application.persistentDataPath, importedTableFileName);
 
 		public void ClearCache()
 		{
@@ -428,7 +424,7 @@ namespace ClassicTilestorm.Assets
 					hashId: parsedHash,
 					value: fileName,
 					kind: EntryKind.File),
-				persist: true);
+				persist: false);
 		}
 
 		private void Load()
@@ -437,8 +433,7 @@ namespace ClassicTilestorm.Assets
 			displayToHash.Clear();
 
 			LoadInternalTable();
-			LoadImportedTable();
-			SaveImportedTable();
+			LoadImportedFiles();
 
 			loaded = true;
 		}
@@ -453,19 +448,33 @@ namespace ClassicTilestorm.Assets
 				Upsert(entry, persist: false);
 		}
 
-		private void LoadImportedTable()
+		private void LoadImportedFiles()
 		{
-			if (!File.Exists(ImportedTablePath))
+			var importedRoot = Path.Combine(Application.persistentDataPath, importedRootFolder);
+			if (!Directory.Exists(importedRoot))
 				return;
 
 			try
 			{
-				foreach (var entry in ParseTableLines(File.ReadAllText(ImportedTablePath), EntryKind.File))
-					Upsert(entry, persist: false);
+				foreach (var file in Directory.EnumerateFiles(importedRoot, "*.*", SearchOption.AllDirectories))
+				{
+					if (!TryGetImportedHashFromPath(importedRoot, file, out var hash))
+						continue;
+
+					var normalizedFile = NormalizeValue(Path.GetFileName(file));
+					if (string.IsNullOrWhiteSpace(normalizedFile))
+						continue;
+
+					Upsert(new Entry(
+							hashId: hash,
+							value: normalizedFile,
+							kind: EntryKind.File),
+						persist: false);
+				}
 			}
 			catch (Exception ex)
 			{
-				Debug.LogWarning($"PortableManifestHashTable: failed to load imported table '{ImportedTablePath}': {ex.Message}");
+				Debug.LogWarning($"PortableManifestHashTable: failed to scan imported files under '{importedRoot}': {ex.Message}");
 			}
 		}
 
@@ -501,9 +510,6 @@ namespace ClassicTilestorm.Assets
 
 			if (!string.IsNullOrWhiteSpace(entry.DisplayName))
 				displayToHash[entry.DisplayName] = entry.HashId;
-
-			if (persist)
-				SaveImportedTable();
 		}
 
 		private string GetResolvedPath(Entry entry)
@@ -511,37 +517,6 @@ namespace ClassicTilestorm.Assets
 			return entry.Kind == EntryKind.Resource
 				? entry.Value
 				: ResolveImportedPath(entry.HashId, entry.Value);
-		}
-
-		private void SaveImportedTable()
-		{
-			try
-			{
-				Directory.CreateDirectory(Path.GetDirectoryName(ImportedTablePath) ?? Application.persistentDataPath);
-
-				var lines = new List<string>
-				{
-					"# MassiveHadron imported resource table",
-					"# hashId<TAB>filename"
-				};
-
-				foreach (var entry in hashToEntry.Values
-					.Where(e => e.Kind == EntryKind.File)
-					.OrderBy(e => HTB50Settings.ToString(e.HashId), StringComparer.OrdinalIgnoreCase))
-				{
-					lines.Add(string.Join("\t", new[]
-					{
-						HTB50Settings.ToString(entry.HashId) ?? string.Empty,
-						entry.Value ?? string.Empty
-					}));
-				}
-
-				File.WriteAllLines(ImportedTablePath, lines);
-			}
-			catch (Exception ex)
-			{
-				Debug.LogWarning($"PortableManifestHashTable: failed to save imported table '{ImportedTablePath}': {ex.Message}");
-			}
 		}
 
 		private static string NormalizeValue(string value)
@@ -567,6 +542,29 @@ namespace ClassicTilestorm.Assets
 				return false;
 
 			return ResourceIdUtil.TryParseCanonicalHash(identifier.Trim(), out hash);
+		}
+
+		private static bool TryGetImportedHashFromPath(string importedRoot, string filePath, out HashId hash)
+		{
+			hash = 0;
+
+			var normalizedRoot = NormalizeValue(importedRoot);
+			var normalizedFile = NormalizeValue(filePath);
+			if (string.IsNullOrWhiteSpace(normalizedRoot) || string.IsNullOrWhiteSpace(normalizedFile))
+				return false;
+
+			if (!normalizedFile.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase))
+				return false;
+
+			var relative = normalizedFile.Substring(normalizedRoot.Length).TrimStart('/');
+			if (string.IsNullOrWhiteSpace(relative))
+				return false;
+
+			var parts = relative.Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
+			if (parts.Length < 2)
+				return false;
+
+			return ResourceIdUtil.TryParseCanonicalHash(parts[0], out hash);
 		}
 	}
 
@@ -694,7 +692,7 @@ namespace ClassicTilestorm.Assets
 
 	public static class MusicResourceTable
 	{
-		private static readonly PortableManifestHashTable Table = new("AssetManifests/Music", "ImportedMusicTable.tsv", "Imported/Music");
+		private static readonly PortableManifestHashTable Table = new("AssetManifests/Music", "Imported/Music");
 
 		public static void ClearCache() => Table.ClearCache();
 		public static string GetDisplayName(string identifier) => Table.GetDisplayName(identifier);
@@ -721,7 +719,7 @@ namespace ClassicTilestorm.Assets
 
 	public static class TextureResourceTable
 	{
-		private static readonly PortableManifestHashTable Table = new("AssetManifests/Textures", "ImportedTextureTable.tsv", "Imported/Textures");
+		private static readonly PortableManifestHashTable Table = new("AssetManifests/Textures", "Imported/Textures");
 
 		public static void ClearCache() => Table.ClearCache();
 		public static string GetDisplayName(string identifier) => Table.GetDisplayName(identifier);
@@ -736,7 +734,7 @@ namespace ClassicTilestorm.Assets
 
 	public static class SkycubeResourceTable
 	{
-		private static readonly PortableManifestHashTable Table = new("AssetManifests/Skycubes", "ImportedSkycubeTable.tsv", "Imported/Skycubes");
+		private static readonly PortableManifestHashTable Table = new("AssetManifests/Skycubes", "Imported/Skycubes");
 
 		public static void ClearCache() => Table.ClearCache();
 		public static string GetDisplayName(string identifier) => Table.GetDisplayName(identifier);
@@ -762,7 +760,7 @@ namespace ClassicTilestorm.Assets
 
 	public static class SoundResourceTable
 	{
-		private static readonly PortableManifestHashTable Table = new("AssetManifests/Sounds", "ImportedSoundTable.tsv", "Imported/Sounds");
+		private static readonly PortableManifestHashTable Table = new("AssetManifests/Sounds", "Imported/Sounds");
 
 		public static void ClearCache() => Table.ClearCache();
 		public static string GetDisplayName(string identifier) => Table.GetDisplayName(identifier);

@@ -107,54 +107,12 @@ public class AssetManifestGenerator : IPreprocessBuildWithReport
 
 	private static List<string> GetAssetNames(Type assetType, string[] roots)
 	{
-		var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
 		var normalizedRoots = (roots ?? Array.Empty<string>())
 			.Where(r => !string.IsNullOrWhiteSpace(r))
 			.Select(r => r.Trim('/'))
 			.ToArray();
 
-		string[] guids = AssetDatabase.FindAssets($"t:{assetType.Name}");
-
-		foreach (string guid in guids)
-		{
-			string fullPath = AssetDatabase.GUIDToAssetPath(guid);
-
-			// Must be inside Resources
-			int resIndex = fullPath.LastIndexOf("/Resources/", StringComparison.OrdinalIgnoreCase);
-			if (resIndex < 0)
-				continue;
-
-			string resourcePath = fullPath.Substring(resIndex + "/Resources/".Length);
-			resourcePath = Path.ChangeExtension(resourcePath, null);
-
-			// 🔴 STRICT root filtering (fixes your bug)
-			if (normalizedRoots.Length > 0)
-			{
-				bool matches = false;
-
-				foreach (var root in normalizedRoots)
-				{
-					if (resourcePath.Equals(root, StringComparison.OrdinalIgnoreCase) ||
-						resourcePath.StartsWith(root + "/", StringComparison.OrdinalIgnoreCase))
-					{
-						matches = true;
-						break;
-					}
-				}
-
-				if (!matches)
-					continue;
-			}
-
-			// 🔴 KEEP filename-only (matches your runtime loader)
-			string name = Path.GetFileName(resourcePath);
-
-			if (!string.IsNullOrEmpty(name))
-				result.Add(name);
-		}
-
-		return result.ToList();
+		return ResourceUtils.GetAssetNamesFromResourcesForEditor(assetType, normalizedRoots).ToList();
 	}
 }
 #endif

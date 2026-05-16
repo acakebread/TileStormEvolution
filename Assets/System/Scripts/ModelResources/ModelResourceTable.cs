@@ -1,3 +1,4 @@
+using ClassicTilestorm.Assets;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -36,7 +37,6 @@ namespace MassiveHadronLtd
 		}
 
 		private const string InternalTableResourcePath = "AssetManifests/Models";
-		private const string ImportedTableFileName = "ImportedModelTable.tsv";
 		private const string ImportedRootFolder = "Imported";
 
 		private static readonly Dictionary<string, Entry> HashToEntry = new(StringComparer.OrdinalIgnoreCase);
@@ -44,8 +44,6 @@ namespace MassiveHadronLtd
 		private static readonly Dictionary<string, string> PathToHash = new(StringComparer.OrdinalIgnoreCase);
 		private static readonly List<Entry> CachedEntries = new();
 		private static bool loaded;
-
-		public static string ImportedTablePath => Path.Combine(Application.persistentDataPath, ImportedTableFileName);
 
 		public static void Refresh(bool forceRefresh = false)
 		{
@@ -128,7 +126,7 @@ namespace MassiveHadronLtd
 				hashId: NormalizeHash(hashId),
 				value: fileName,
 				kind: EntryKind.File),
-				persist: true,
+				persist: false,
 				absoluteImportedPath: ResolveImportedPath(hashId, fileName, filePath));
 		}
 
@@ -149,9 +147,7 @@ namespace MassiveHadronLtd
 			CachedEntries.Clear();
 
 			LoadInternalResourceTable();
-			LoadImportedTable();
-
-			SaveImportedTable();
+			LoadImportedFiles();
 			loaded = true;
 		}
 
@@ -165,19 +161,30 @@ namespace MassiveHadronLtd
 				Upsert(entry, persist: false);
 		}
 
-		private static void LoadImportedTable()
+		private static void LoadImportedFiles()
 		{
-			if (!File.Exists(ImportedTablePath))
+			var importedRoot = Path.Combine(Application.persistentDataPath, ImportedRootFolder);
+			if (!Directory.Exists(importedRoot))
 				return;
 
 			try
 			{
-				foreach (var entry in ParseTableLines(File.ReadAllText(ImportedTablePath), EntryKind.File))
-					Upsert(entry, persist: false);
+				foreach (var file in Directory.EnumerateFiles(importedRoot, "*.obj", SearchOption.AllDirectories))
+				{
+					if (!TryGetImportedHashFromPath(importedRoot, file, out var hash))
+						continue;
+
+					Upsert(new Entry(
+						hashId: NormalizeHash(hash),
+						value: NormalizeValue(Path.GetFileName(file)),
+						kind: EntryKind.File),
+						persist: false,
+						absoluteImportedPath: NormalizePath(file));
+				}
 			}
 			catch (Exception ex)
 			{
-				Debug.LogWarning($"ModelResourceTable: failed to load imported table '{ImportedTablePath}': {ex.Message}");
+				Debug.LogWarning($"ModelResourceTable: failed to scan imported models under '{importedRoot}': {ex.Message}");
 			}
 		}
 
@@ -228,40 +235,6 @@ namespace MassiveHadronLtd
 				CachedEntries[idx] = entry;
 			else
 				CachedEntries.Add(entry);
-
-			if (persist)
-				SaveImportedTable();
-		}
-
-		private static void SaveImportedTable()
-		{
-			try
-			{
-				Directory.CreateDirectory(Path.GetDirectoryName(ImportedTablePath) ?? Application.persistentDataPath);
-
-				var lines = new List<string>
-				{
-					"# MassiveHadron imported model table",
-					"# hashId<TAB>filename"
-				};
-
-				foreach (var entry in CachedEntries
-					.Where(e => e.Kind == EntryKind.File)
-					.OrderBy(e => e.HashId, StringComparer.OrdinalIgnoreCase))
-				{
-					lines.Add(string.Join("\t", new[]
-					{
-						entry.HashId ?? string.Empty,
-						entry.Value ?? string.Empty
-					}));
-				}
-
-				File.WriteAllLines(ImportedTablePath, lines);
-			}
-			catch (Exception ex)
-			{
-				Debug.LogWarning($"ModelResourceTable: failed to save imported table '{ImportedTablePath}': {ex.Message}");
-			}
 		}
 
 		private static string NormalizeHash(string hashId)
@@ -296,6 +269,30 @@ namespace MassiveHadronLtd
 				return normalized;
 
 			return NormalizePath(Path.Combine(Application.persistentDataPath, normalized));
+		}
+
+		private static bool TryGetImportedHashFromPath(string importedRoot, string filePath, out string hash)
+		{
+			hash = null;
+
+			var normalizedRoot = NormalizePath(importedRoot);
+			var normalizedFile = NormalizePath(filePath);
+			if (string.IsNullOrWhiteSpace(normalizedRoot) || string.IsNullOrWhiteSpace(normalizedFile))
+				return false;
+
+			if (!normalizedFile.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase))
+				return false;
+
+			var relative = normalizedFile.Substring(normalizedRoot.Length).TrimStart('/');
+			if (string.IsNullOrWhiteSpace(relative))
+				return false;
+
+			var parts = relative.Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
+			if (parts.Length < 2)
+				return false;
+
+			hash = parts[0];
+			return ResourceIdUtil.TryParseCanonicalHash(hash, out _);
 		}
 	}
 }
