@@ -18,7 +18,7 @@ namespace ClassicTilestorm
 			var replacementMaterial = DefinitionFactory.ResolveMaterialOverride(definition);
 			var texture = replacementMaterial != null
 				? null
-				: AnimMaterialInfoManager.GetFrameZero(DefinitionFactory.GetPrimaryTextureName(prefab));
+				: AnimMaterialInfoManager.GetFrameZero(MaterialUtils.GetPrimaryTextureName(prefab));
 			var matrix = Matrix4x4.TRS(position, rotation, scale == default ? Vector3.one : scale);
 
 			return CollectMeshRenderers(prefab, replacementMaterial, texture, matrix);

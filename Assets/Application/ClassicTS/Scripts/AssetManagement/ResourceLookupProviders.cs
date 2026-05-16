@@ -17,4 +17,9 @@ namespace ClassicTilestorm.Assets
 	{
 		public AudioClip Find(string identifier) => MusicAssets.Find(identifier);
 	}
+
+	internal sealed class GeometryMaterialsPathResolver : IResourcePathResolver
+	{
+		public string GetPath() => AssetPath.GeometryMaterialsPath;
+	}
 }

@@ -1,9 +1,15 @@
 ﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
 namespace MassiveHadronLtd
 {
+	public interface IMaterialSource
+	{
+		IEnumerable<Material> GetMaterials();
+	}
+
 	public static class MaterialUtils
 	{
 		[Serializable]
@@ -674,6 +680,87 @@ namespace MassiveHadronLtd
 			return material;
 		}
 
+		public static string GetPrimaryTextureName(GameObject gameObject)
+		{
+			if (gameObject == null)
+				return null;
+
+			var renderers = gameObject.GetComponentsInChildren<Renderer>(true);
+			for (var i = 0; i < renderers.Length; i++)
+			{
+				var renderer = renderers[i];
+				if (renderer == null)
+					continue;
+
+				var materials = renderer.sharedMaterials;
+				if (materials == null || materials.Length == 0)
+					continue;
+
+				for (var j = 0; j < materials.Length; j++)
+				{
+					var material = materials[j];
+					if (material == null || material.mainTexture == null)
+						continue;
+
+					var textureName = material.mainTexture.name;
+					if (string.IsNullOrWhiteSpace(textureName))
+						continue;
+
+					return NormalizeTextureName(textureName);
+				}
+			}
+
+			return null;
+		}
+
+		public static bool ApplyMaterialOverride(GameObject gameObject, Material replacementMaterial)
+		{
+			if (gameObject == null || replacementMaterial == null)
+				return false;
+
+			var applied = false;
+			var renderers = gameObject.GetComponentsInChildren<Renderer>(true);
+			for (var i = 0; i < renderers.Length; i++)
+			{
+				var renderer = renderers[i];
+				if (renderer == null)
+					continue;
+
+				var materials = renderer.sharedMaterials;
+				if (materials == null || materials.Length == 0)
+					continue;
+
+				renderer.sharedMaterials = BuildReplacementMaterials(materials, replacementMaterial);
+				applied = true;
+			}
+
+			return applied;
+		}
+
+		public static Material[] BuildReplacementMaterials(Material[] sourceMaterials, Material replacementMaterial)
+		{
+			if (sourceMaterials == null || sourceMaterials.Length == 0 || replacementMaterial == null)
+				return Array.Empty<Material>();
+
+			var result = new Material[sourceMaterials.Length];
+			for (var i = 0; i < sourceMaterials.Length; i++)
+			{
+				var source = sourceMaterials[i];
+				if (source == null)
+					continue;
+
+				var copy = new Material(replacementMaterial)
+				{
+					name = $"{replacementMaterial.name} ({source.name})"
+				};
+				copy.mainTextureOffset = source.mainTextureOffset;
+				copy.mainTextureScale = source.mainTextureScale;
+				result[i] = copy;
+			}
+
+			return result;
+		}
+
 		public static Color EmissiiveColour(Material mat, Color fallback = default)
 		{
 			if (mat == null) return fallback;
@@ -693,6 +780,50 @@ namespace MassiveHadronLtd
 			}
 
 			return fallback;
+		}
+
+		public static Color? GetEmissiveColor(GameObject gameObject)
+		{
+			if (gameObject == null) return null;
+
+			var materialSources = gameObject.GetComponents<MonoBehaviour>();
+			for (var i = 0; i < materialSources.Length; i++)
+			{
+				if (materialSources[i] is not IMaterialSource materialSource)
+					continue;
+
+				var materials = materialSource.GetMaterials();
+				if (materials == null)
+					continue;
+
+				foreach (var mat in materials)
+				{
+					if (mat == null)
+						continue;
+
+					var emission = GetEmissionColor(mat);
+					if (emission.HasValue)
+						return emission.Value;
+				}
+			}
+
+			var renderers = gameObject.GetComponentsInChildren<Renderer>(true);
+			foreach (var renderer in renderers)
+			{
+				if (renderer == null)
+					continue;
+
+				foreach (var mat in renderer.sharedMaterials)
+				{
+					if (mat == null) continue;
+
+					var emission = GetEmissionColor(mat);
+					if (emission.HasValue)
+						return emission.Value;
+				}
+			}
+
+			return null;
 		}
 
 		// Check if this material is intended to be emissive
@@ -730,6 +861,29 @@ namespace MassiveHadronLtd
 			}
 
 			return false;
+		}
+
+		private static string NormalizeTextureName(string name)
+		{
+			if (string.IsNullOrWhiteSpace(name))
+				return name;
+
+			var clean = System.IO.Path.GetFileNameWithoutExtension(name.Trim());
+			const string suffix = " (Instance)";
+			return clean.EndsWith(suffix, System.StringComparison.OrdinalIgnoreCase)
+				? clean.Substring(0, clean.Length - suffix.Length)
+				: clean;
+		}
+
+		private static Color? GetEmissionColor(Material material)
+		{
+			if (material == null || !material.HasProperty("_EmissionColor"))
+				return null;
+
+			var emissionColor = material.GetColor("_EmissionColor");
+			return material.IsKeywordEnabled("_EMISSION") || emissionColor.maxColorComponent > 0.01f
+				? emissionColor
+				: null;
 		}
 
 		public static void ForceMaterialRefresh(Material mat)

@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
+using MassiveHadronLtd;
 using UnityEngine;
-using ClassicTilestorm.Assets;
 
 namespace ClassicTilestorm
 {
@@ -65,7 +65,7 @@ namespace ClassicTilestorm
 
 		private static TextAsset LoadJsonAsset(string id)
 		{
-			var root = AssetPath.GeometryMaterialsPath;
+			var root = ResourceResolvers.GeometryMaterialsPathResolver?.GetPath();
 			if (string.IsNullOrEmpty(root))
 				return null;
 
@@ -100,7 +100,7 @@ namespace ClassicTilestorm
 
 		private static Texture2D LoadAnimationTexture(string textureName)
 		{
-			var root = AssetPath.GeometryMaterialsPath;
+			var root = ResourceResolvers.GeometryMaterialsPathResolver?.GetPath();
 			if (string.IsNullOrEmpty(root) || string.IsNullOrEmpty(textureName))
 				return null;
 

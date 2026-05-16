@@ -4,9 +4,9 @@ namespace ClassicTilestorm
 {
 	internal class MeshInstance
 	{
-		private Mesh mesh;
-		private Material[] unlitMats;
-		private object matrix;
+		private readonly Mesh mesh;
+		private readonly Material[] unlitMats;
+		private readonly object matrix;
 
 		public MeshInstance(Mesh mesh, Material[] unlitMats, object matrix)
 		{

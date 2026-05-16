@@ -1,12 +1,23 @@
 using System.Collections.Generic;
+using MassiveHadronLtd;
 using UnityEngine;
 
 namespace ClassicTilestorm
 {
-	public sealed class AnimMaterialBinding : MonoBehaviour
+	public sealed class AnimMaterialBinding : MonoBehaviour, IMaterialSource
 	{
 		private readonly List<AnimMaterialInstance> _materials = new();
 		public IEnumerable<AnimMaterialInstance> GetMaterials() => _materials;
+
+		IEnumerable<Material> IMaterialSource.GetMaterials()
+		{
+			for (var i = 0; i < _materials.Count; i++)
+			{
+				var material = _materials[i]?.Material;
+				if (material != null)
+					yield return material;
+			}
+		}
 
 		internal void Add(AnimMaterialInstance material)
 		{

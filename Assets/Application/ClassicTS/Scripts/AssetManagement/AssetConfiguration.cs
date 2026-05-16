@@ -21,6 +21,7 @@ namespace ClassicTilestorm.Assets
 			ResourceResolvers.TextureResolver = new TextureResourceResolver();
 			ResourceResolvers.SkyboxResolver = new SkyboxResourceResolver();
 			ResourceResolvers.MusicResolver = new MusicResourceResolver();
+			ResourceResolvers.GeometryMaterialsPathResolver = new GeometryMaterialsPathResolver();
 			ModelAssets.RefreshRegistry(forceRefresh: true);
 		}
 
