@@ -91,6 +91,7 @@ namespace ClassicTilestorm
 		private bool wasMapScrollViewEnabled;
 		private RectTransform dragIndicatorRect;
 		private Image dragIndicatorImage;
+		private ScrollListReorderDragHelper mapReorderHelper;
 
 		private bool IsReadOnlyInternalMap =>
 			!Application.isEditor && CurrentMap != null && MapCatalog.IsInternalMap(CurrentMap.HashID);
@@ -135,6 +136,7 @@ namespace ClassicTilestorm
 			PopulateMusicDropdown();
 			PopulateEffectDropdown();
 			RefreshMapList();
+			EnsureMapReorderHelper();
 
 			UpdateMapPreview();
 		}
@@ -162,6 +164,9 @@ namespace ClassicTilestorm
 
 			if (previewImage != null)
 				previewImage.texture = null;
+
+			mapReorderHelper?.Dispose();
+			mapReorderHelper = null;
 
 			UIController.ClosePanel<ColourSelectorPanel>();
 
@@ -193,7 +198,7 @@ namespace ClassicTilestorm
 
 			ScenePreviewUtil.Update();
 			orbitController?.Update();
-			UpdateMapReorderDrag();
+			mapReorderHelper?.Update();
 		}
 
 		// --------------------------------------------------------------------------------
@@ -530,6 +535,24 @@ namespace ClassicTilestorm
 			ButtonLoadSelected.onClick.AddListener(LoadSelectedMap);
 		}
 
+		private void EnsureMapReorderHelper()
+		{
+			mapReorderHelper ??= new ScrollListReorderDragHelper(
+				mapScrollView,
+				contentParent as RectTransform,
+				pos => TryGetMapItemUnderPointer(pos, out var row) ? row : null,
+				row =>
+				{
+					if (row != null && spawnedMapItems.TryGetValue(row, out var map))
+					{
+						var index = ResourceManager.Maps.IndexOf(map);
+						if (index >= 0)
+							SetSelectedMapIndex(index);
+					}
+				},
+				CommitDraggedMapOrder);
+		}
+
 		private void OnMapNameChanged(string input)
 		{
 			if (CurrentMap == null || IsReadOnlyInternalMap) return;
@@ -862,7 +885,7 @@ namespace ClassicTilestorm
 			if (InputX.GetMouseButtonUp(0))
 			{
 				if (isReorderingMaps)
-					CommitDraggedMapOrder(InputX.mousePosition);
+					CommitDraggedMapOrder(InputX.mousePosition, draggedMapItem);
 
 				HideMapDragIndicator();
 
@@ -903,16 +926,16 @@ namespace ClassicTilestorm
 			return false;
 		}
 
-		private void CommitDraggedMapOrder(Vector2 pointerPosition)
+		private void CommitDraggedMapOrder(Vector2 pointerPosition, Transform row)
 		{
-			if (draggedMapItem == null || contentParent == null)
+			if (row == null || contentParent == null)
 				return;
 
-			int targetIndex = CalculateMapDropIndex(pointerPosition, draggedMapItem);
+			int targetIndex = CalculateMapDropIndex(pointerPosition, row);
 			targetIndex = Mathf.Clamp(targetIndex, 0, Mathf.Max(0, contentParent.childCount - 1));
 
-			if (draggedMapItem.GetSiblingIndex() != targetIndex)
-				draggedMapItem.SetSiblingIndex(targetIndex);
+			if (row.GetSiblingIndex() != targetIndex)
+				row.SetSiblingIndex(targetIndex);
 
 			CommitMapOrderFromContent();
 		}
