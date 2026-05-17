@@ -17,6 +17,7 @@ namespace MassiveHadronLtd
 		private readonly float dragThreshold;
 		private readonly float edgeMargin;
 		private readonly float edgeScrollSpeed;
+		private readonly float maxEdgeScrollMultiplier;
 
 		private Transform candidateRow;
 		private Vector2 candidateStartPos;
@@ -36,7 +37,8 @@ namespace MassiveHadronLtd
 			float holdDelay = 0.5f,
 			float dragThreshold = 8f,
 			float edgeMargin = 36f,
-			float edgeScrollSpeed = 900f)
+			float edgeScrollSpeed = 900f,
+			float maxEdgeScrollMultiplier = 3f)
 		{
 			this.scrollRect = scrollRect;
 			this.contentParent = contentParent;
@@ -47,6 +49,7 @@ namespace MassiveHadronLtd
 			this.dragThreshold = dragThreshold;
 			this.edgeMargin = edgeMargin;
 			this.edgeScrollSpeed = edgeScrollSpeed;
+			this.maxEdgeScrollMultiplier = Mathf.Max(1f, maxEdgeScrollMultiplier);
 		}
 
 		public void Update()
@@ -217,18 +220,25 @@ namespace MassiveHadronLtd
 			if (localPoint.y > top - edgeMargin)
 			{
 				float amount = Mathf.InverseLerp(top - edgeMargin, top, localPoint.y);
-				normalizedDelta = amount * edgeScrollSpeed * Time.unscaledDeltaTime / Mathf.Max(1f, scrollRect.content.rect.height);
+				float speedMultiplier = Mathf.Lerp(1f, maxEdgeScrollMultiplier, amount * amount);
+				normalizedDelta = amount * speedMultiplier * edgeScrollSpeed * Time.unscaledDeltaTime / Mathf.Max(1f, scrollRect.content.rect.height);
 			}
 			else if (localPoint.y < bottom + edgeMargin)
 			{
 				float amount = Mathf.InverseLerp(bottom + edgeMargin, bottom, localPoint.y);
-				normalizedDelta = -amount * edgeScrollSpeed * Time.unscaledDeltaTime / Mathf.Max(1f, scrollRect.content.rect.height);
+				float speedMultiplier = Mathf.Lerp(1f, maxEdgeScrollMultiplier, amount * amount);
+				normalizedDelta = -amount * speedMultiplier * edgeScrollSpeed * Time.unscaledDeltaTime / Mathf.Max(1f, scrollRect.content.rect.height);
 			}
 
 			if (normalizedDelta == 0f)
 				return;
 
 			scrollRect.verticalNormalizedPosition = Mathf.Clamp01(scrollRect.verticalNormalizedPosition + normalizedDelta);
+			if (scrollRect.verticalScrollbar != null)
+				scrollRect.verticalScrollbar.value = scrollRect.verticalNormalizedPosition;
+			if (scrollRect.horizontalScrollbar != null)
+				scrollRect.horizontalScrollbar.value = scrollRect.horizontalNormalizedPosition;
+			scrollRect.Rebuild(CanvasUpdate.PostLayout);
 			UpdateGhostPosition(screenPos);
 		}
 
