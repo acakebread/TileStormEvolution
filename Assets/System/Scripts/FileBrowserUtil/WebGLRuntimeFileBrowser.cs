@@ -174,7 +174,7 @@ namespace MassiveHadronLtd.FileBrowserUtil
 					return;
 				}
 
-				string accept = request?.Extensions == null ? string.Empty : string.Join(",", request.Extensions);
+				string accept = BuildAcceptFilter(request?.Extensions);
 				MassiveHadron_OpenFilePicker(
 					title,
 					accept,
@@ -185,6 +185,45 @@ namespace MassiveHadronLtd.FileBrowserUtil
 					nameof(ReceiveComplete));
 			}
 #endif
+
+			private static string BuildAcceptFilter(IEnumerable<string> extensions)
+			{
+				if (extensions == null)
+					return string.Empty;
+
+				var tokens = new List<string>();
+
+				foreach (var ext in extensions)
+				{
+					if (string.IsNullOrWhiteSpace(ext))
+						continue;
+
+					string normalized = ext.Trim().ToLowerInvariant();
+					if (!normalized.StartsWith("."))
+						normalized = "." + normalized;
+
+					switch (normalized)
+					{
+						case ".json":
+							tokens.Add(".json");
+							tokens.Add("application/json");
+							tokens.Add("text/json");
+							break;
+
+						case ".zip":
+							tokens.Add(".zip");
+							tokens.Add("application/zip");
+							tokens.Add("application/x-zip-compressed");
+							break;
+
+						default:
+							tokens.Add(normalized);
+							break;
+					}
+				}
+
+				return string.Join(",", tokens.Distinct(StringComparer.OrdinalIgnoreCase));
+			}
 
 			public void ReceiveFile(string json)
 			{

@@ -307,7 +307,7 @@ namespace ClassicTilestorm
 #endif
 			RuntimeFileBrowser.OpenFile(
 				"Import Atomic Map",
-				".json,.zip",
+				new[] { ".json", ".zip" },
 				path =>
 				{
 					var importedMap = ResourceSerializer.ImportAtomicMap(path);
