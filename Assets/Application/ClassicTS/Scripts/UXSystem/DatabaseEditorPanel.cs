@@ -81,6 +81,11 @@ namespace ClassicTilestorm
 		private ToggleGroup toggleGroup;
 		private static int lastSelectedMapIndex = 0;
 
+		private bool IsReadOnlyInternalMap =>
+			!Application.isEditor && CurrentMap != null && MapCatalog.IsInternalMap(CurrentMap.HashID);
+
+		private bool IsInternalMap(Map map) => map != null && MapCatalog.IsInternalMap(map.HashID);
+
 		private Map CurrentMap =>
 			lastSelectedMapIndex >= 0 && lastSelectedMapIndex < ResourceManager.Maps.Count
 				? ResourceManager.Maps[lastSelectedMapIndex]
@@ -185,7 +190,7 @@ namespace ClassicTilestorm
 
 		private void OnSkyboxDropdownValueChanged(int index)
 		{
-			if (currentClone == null) return;
+			if (currentClone == null || IsReadOnlyInternalMap) return;
 
 			var selected = index >= 0 && index < skyboxDropdown.options.Count ? skyboxDropdown.options[index].text : null;
 			var newSkybox = (selected == noneSkyboxOptionText) ? null : Assets.SkycubeResourceTable.GetHashForDisplayName(selected) ?? selected;
@@ -208,7 +213,7 @@ namespace ClassicTilestorm
 
 		private void OnCharacterDropdownValueChanged(int index)
 		{
-			if (CurrentMap == null) return;
+			if (CurrentMap == null || IsReadOnlyInternalMap) return;
 
 			var selected = index >= 0 && index < characterDropdown.options.Count ? characterDropdown.options[index].text : null;
 			var newCharacter = (selected == noneCharacterOptionText) ? null : Assets.CharacterResourceTable.GetHashForDisplayName(selected) ?? selected;
@@ -225,7 +230,7 @@ namespace ClassicTilestorm
 
 		private void OnMusicDropdownValueChanged(int index)
 		{
-			if (CurrentMap == null) return;
+			if (CurrentMap == null || IsReadOnlyInternalMap) return;
 
 			var selected = index >= 0 && index < musicDropdown.options.Count ? musicDropdown.options[index].text : null;
 			var newMusic = (selected == noneMusicOptionText) ? null : Assets.MusicResourceTable.GetHashForDisplayName(selected) ?? selected;
@@ -256,7 +261,7 @@ namespace ClassicTilestorm
 
 		private void OnEffectDropdownValueChanged(int index)
 		{
-			if (currentClone == null) return;
+			if (currentClone == null || IsReadOnlyInternalMap) return;
 
 			LeakDetector.LogSnapshot("BEFORE Effect Dropdown Change");
 
@@ -290,7 +295,7 @@ namespace ClassicTilestorm
 
 		public void OnColourTogglePressed(Toggle src)
 		{
-			if (currentClone == null) return;
+			if (currentClone == null || IsReadOnlyInternalMap) return;
 			if (src == ambientColourAutoToggle) currentClone.ambient = src.isOn ? null : currentClone.AmbientRGB.ToHexString(includeAlpha: true);
 			if (src == directionalColourAutoToggle) currentClone.skyrgb = src.isOn ? null : currentClone.SkyRGB.ToHexString(includeAlpha: true);
 			currentClone.UpdateLighting();
@@ -301,6 +306,8 @@ namespace ClassicTilestorm
 
 		public void OnColourButtonPressed(Button src)
 		{
+			if (IsReadOnlyInternalMap) return;
+
 			if (src == ambientColourButton && null != ambientColourAutoToggle && ambientColourAutoToggle.isOn)
 				return;
 
@@ -328,7 +335,7 @@ namespace ClassicTilestorm
 
 		public void OnDirectionalPositionConfigTogglePressed(Toggle src)
 		{
-			if (null == currentClone) return;
+			if (null == currentClone || IsReadOnlyInternalMap) return;
 
 			if (src.isOn)
 				currentClone.skyvec = null;
@@ -343,7 +350,7 @@ namespace ClassicTilestorm
 
 		public void OnDirectionalPositionConfigButtonPressed(Button src)
 		{
-			if (currentClone == null) return;
+			if (currentClone == null || IsReadOnlyInternalMap) return;
 
 			UIController.ClosePanel<ColourSelectorPanel>();
 			UIController.ClosePanel<TextureCoordEditorPanel>();
@@ -473,7 +480,7 @@ namespace ClassicTilestorm
 
 		private void OnMapNameChanged(string input)
 		{
-			if (CurrentMap == null) return;
+			if (CurrentMap == null || IsReadOnlyInternalMap) return;
 
 			string newName = (input ?? "").Trim();
 
@@ -532,7 +539,12 @@ namespace ClassicTilestorm
 			var label = go.GetComponentInChildren<TMP_Text>();
 			if (label != null)
 			{
-				var display = $"{(string.IsNullOrWhiteSpace(map.name) ? "Unnamed" : map.name)} [{HTB50Settings.ToString(map.HashID)}]";
+				var isInternal = IsInternalMap(map);
+				var hash = HTB50Settings.ToString(map.HashID);
+				var display = $"{(string.IsNullOrWhiteSpace(map.name) ? "Unnamed" : map.name)} ";
+				display += isInternal
+					? $"<color=#7CFF9A>[{hash}]</color>"
+					: $"<color=#FF6B6B>[EX-{hash}]</color>";
 				if (map.width > 0 && map.height > 0)
 					display += $"  ({map.width}×{map.height})";
 
@@ -573,12 +585,54 @@ namespace ClassicTilestorm
 
 		private void UpdateDeleteButtonState()
 		{
-			if (ButtonDelete == null) return;
 			var hasSelection = lastSelectedMapIndex >= 0;
-			ButtonDelete.interactable = hasSelection;
 
-			if (ButtonDelete.GetComponentInChildren<TMP_Text>() is TMP_Text txt)
-				txt.text = "Delete";
+			if (ButtonDelete != null)
+			{
+				ButtonDelete.interactable = hasSelection && !IsReadOnlyInternalMap;
+
+				if (ButtonDelete.GetComponentInChildren<TMP_Text>() is TMP_Text txt)
+					txt.text = "Delete";
+			}
+
+			if (ButtonMoveUp != null)
+				ButtonMoveUp.interactable = hasSelection && (!IsReadOnlyInternalMap || Application.isEditor);
+
+			if (ButtonMoveDown != null)
+				ButtonMoveDown.interactable = hasSelection && (!IsReadOnlyInternalMap || Application.isEditor);
+
+			if (mapNameInput != null)
+				mapNameInput.interactable = !IsReadOnlyInternalMap;
+
+			if (skyboxDropdown != null)
+				skyboxDropdown.interactable = !IsReadOnlyInternalMap;
+
+			if (characterDropdown != null)
+				characterDropdown.interactable = !IsReadOnlyInternalMap;
+
+			if (musicDropdown != null)
+				musicDropdown.interactable = !IsReadOnlyInternalMap;
+
+			if (effectDropdown != null)
+				effectDropdown.interactable = !IsReadOnlyInternalMap;
+
+			if (ambientColourButton != null)
+				ambientColourButton.interactable = !IsReadOnlyInternalMap;
+
+			if (ambientColourAutoToggle != null)
+				ambientColourAutoToggle.interactable = !IsReadOnlyInternalMap;
+
+			if (directionalColourButton != null)
+				directionalColourButton.interactable = !IsReadOnlyInternalMap;
+
+			if (directionalColourAutoToggle != null)
+				directionalColourAutoToggle.interactable = !IsReadOnlyInternalMap;
+
+			if (directionalPositionConfigButton != null)
+				directionalPositionConfigButton.interactable = !IsReadOnlyInternalMap;
+
+			if (directionalPositionConfigAutoToggle != null)
+				directionalPositionConfigAutoToggle.interactable = !IsReadOnlyInternalMap;
 		}
 
 		private void PopulateDropdown(TMP_Dropdown dropdown, IEnumerable<string> items, string noneOption)
@@ -628,7 +682,7 @@ namespace ClassicTilestorm
 
 		private void DeleteMap()
 		{
-			if (lastSelectedMapIndex < 0) return;
+			if (lastSelectedMapIndex < 0 || IsReadOnlyInternalMap) return;
 
 			var idx = lastSelectedMapIndex;
 			var list = ResourceManager.Maps.ToList();
@@ -642,7 +696,7 @@ namespace ClassicTilestorm
 
 		private void MoveMapUp()
 		{
-			if (lastSelectedMapIndex <= 0) return;
+			if (lastSelectedMapIndex <= 0 || IsReadOnlyInternalMap) return;
 
 			var list = ResourceManager.Maps.ToList();
 			var i = lastSelectedMapIndex;
@@ -656,6 +710,8 @@ namespace ClassicTilestorm
 
 		private void MoveMapDown()
 		{
+			if (IsReadOnlyInternalMap) return;
+
 			var maps = ResourceManager.Maps;
 			if (lastSelectedMapIndex < 0 || lastSelectedMapIndex >= maps.Count - 1) return;
 
