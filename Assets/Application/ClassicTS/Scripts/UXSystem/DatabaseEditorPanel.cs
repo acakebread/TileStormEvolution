@@ -25,6 +25,7 @@ namespace ClassicTilestorm
 		[SerializeField] private Button ButtonMoveUp;
 		[SerializeField] private Button ButtonMoveDown;
 		private Button ButtonMoveStore;
+		private Button ButtonLoadSelected;
 
 		[SerializeField] private TMP_InputField mapNameInput;
 
@@ -448,6 +449,7 @@ namespace ClassicTilestorm
 			if (ButtonMoveUp) ButtonMoveUp.onClick.AddListener(MoveMapUp);
 			if (ButtonMoveDown) ButtonMoveDown.onClick.AddListener(MoveMapDown);
 			EnsureMoveStoreButton();
+			EnsureLoadSelectedButton();
 
 			if (closeButton != null)
 				closeButton.onClick.AddListener(() => gameObject.SetActive(false));
@@ -494,6 +496,22 @@ namespace ClassicTilestorm
 
 			ButtonMoveStore.onClick.RemoveAllListeners();
 			ButtonMoveStore.onClick.AddListener(MoveCurrentMapStorage);
+		}
+
+		private void EnsureLoadSelectedButton()
+		{
+			if (ButtonLoadSelected != null || ButtonInsert == null)
+				return;
+
+			ButtonLoadSelected = Instantiate(ButtonInsert, ButtonInsert.transform.parent);
+			ButtonLoadSelected.name = "ButtonLoadSelected";
+			ButtonLoadSelected.transform.SetAsLastSibling();
+
+			if (ButtonLoadSelected.GetComponentInChildren<TMP_Text>() is TMP_Text label)
+				label.text = "Load Selected";
+
+			ButtonLoadSelected.onClick.RemoveAllListeners();
+			ButtonLoadSelected.onClick.AddListener(LoadSelectedMap);
 		}
 
 		private void OnMapNameChanged(string input)
@@ -630,8 +648,11 @@ namespace ClassicTilestorm
 						: MapCatalog.GetStorageLocation(CurrentMap.HashID) == MapCatalog.MapStorageLocation.Internal
 							? "Move to External"
 							: "Move to Internal";
-				}
+					}
 			}
+
+			if (ButtonLoadSelected != null)
+				ButtonLoadSelected.interactable = hasSelection;
 
 			if (mapNameInput != null)
 				mapNameInput.interactable = !IsReadOnlyInternalMap;
@@ -799,6 +820,19 @@ namespace ClassicTilestorm
 				}
 			}
 			RefreshMapList();
+		}
+
+		private void LoadSelectedMap()
+		{
+			if (CurrentMap == null)
+				return;
+
+			var controller = FindObjectOfType<MainController>();
+			if (controller == null)
+				return;
+
+			ApplicationSettings.LoadMapName = HTB50Settings.ToString(CurrentMap.HashID);
+			controller.LoadMap(ApplicationSettings.LoadMapName);
 		}
 
 		private string GenerateUniqueMapName(string prefix = "Map")
