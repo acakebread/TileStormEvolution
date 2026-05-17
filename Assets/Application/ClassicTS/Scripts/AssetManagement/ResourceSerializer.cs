@@ -127,6 +127,36 @@ namespace ClassicTilestorm
 					data.maps = Array.Empty<Map>();
 				}
 
+				var externalMaps = MapCatalog.GetExternalMaps()
+					.Select(entry => entry.Map)
+					.Where(map => map != null)
+					.ToArray();
+
+				if (externalMaps.Length > 0)
+				{
+					var combined = (data.maps ?? Array.Empty<Map>()).ToList();
+					var existingHashes = combined
+						.Where(map => map != null)
+						.Select(map => map.HashID)
+						.Where(hash => hash != 0)
+						.ToHashSet();
+
+					foreach (var externalMap in externalMaps)
+					{
+						if (externalMap == null)
+							continue;
+
+						externalMap.EnsureHashID();
+						if (externalMap.HashID == 0 || existingHashes.Contains(externalMap.HashID))
+							continue;
+
+						combined.Add(externalMap);
+						existingHashes.Add(externalMap.HashID);
+					}
+
+					data.maps = combined.ToArray();
+				}
+
 				if (data.maps == null || data.definitions == null ||
 					data.maps.Length == 0 || data.definitions.Length == 0)
 				{
@@ -135,7 +165,6 @@ namespace ClassicTilestorm
 				}
 
 				Map.EnsureUniqueHashIDs(data.maps);
-				data.mapIds = data.maps.Select(m => HTB50Settings.ToString(m.HashID)).ToArray();
 
 				return data;
 			}
@@ -192,12 +221,20 @@ namespace ClassicTilestorm
 				}
 			}
 
-			data.mapIds = data.maps != null && data.maps.Length > 0
-				? data.maps.Where(m => m != null).Select(m => HTB50Settings.ToString(m.HashID)).ToArray()
+			var internalMapIds = data.maps != null && data.maps.Length > 0
+				? data.maps
+					.Where(m => m != null && MapCatalog.IsInternalMap(m.HashID))
+					.Select(m => HTB50Settings.ToString(m.HashID))
+					.ToArray()
 				: (data.mapIds ?? Array.Empty<string>());
 
 			if (data.maps != null)
 			{
+				var externalMapIds = data.maps
+					.Where(m => m != null && !MapCatalog.IsInternalMap(m.HashID))
+					.Select(m => HTB50Settings.ToString(m.HashID))
+					.ToHashSet(StringComparer.OrdinalIgnoreCase);
+
 				foreach (var map in data.maps)
 				{
 					if (map == null)
@@ -210,17 +247,10 @@ namespace ClassicTilestorm
 				{
 					if (Directory.Exists(MapCatalog.PersistentMapsFolder))
 					{
-						var allowed = data.mapIds
-							.Where(id => !string.IsNullOrWhiteSpace(id))
-							.ToHashSet(StringComparer.OrdinalIgnoreCase);
-
 						foreach (var file in Directory.EnumerateFiles(MapCatalog.PersistentMapsFolder, "*.json", SearchOption.TopDirectoryOnly))
 						{
-							var name = Path.GetFileNameWithoutExtension(file);
-							if (string.IsNullOrWhiteSpace(name))
-								continue;
-
-							if (!MapCatalog.TryGetMapHashFromFileName(file, out var fileHash) || !allowed.Contains(HTB50Settings.ToString(fileHash)))
+							if (!MapCatalog.TryGetMapHashFromFileName(file, out var fileHash) ||
+								!externalMapIds.Contains(HTB50Settings.ToString(fileHash)))
 								File.Delete(file);
 						}
 					}
@@ -230,6 +260,8 @@ namespace ClassicTilestorm
 					Debug.LogWarning($"SaveDatabase: map file cleanup skipped → {ex.Message}");
 				}
 			}
+
+			data.mapIds = internalMapIds;
 
 			var settings = new JsonSerializerSettings
 			{
@@ -241,8 +273,8 @@ namespace ClassicTilestorm
 			// Build JObject manually so we can skip empty buttons array
 			var root = new JObject();
 
-			if (data.mapIds != null && data.mapIds.Length > 0)
-				root["maps"] = JArray.FromObject(data.mapIds, JsonSerializer.Create(settings));
+			if (internalMapIds != null && internalMapIds.Length > 0)
+				root["maps"] = JArray.FromObject(internalMapIds, JsonSerializer.Create(settings));
 
 			string json = root.ToString(verbose ? Formatting.Indented : Formatting.None);
 			string definitionsJson = data.definitions != null && data.definitions.Length > 0
@@ -275,7 +307,7 @@ namespace ClassicTilestorm
 			//		  $"textures: {data.textures?.Length ?? 0}");
 
 			Debug.Log($"Database saved → {path} / {defsPath} " +
-					  $"(maps: {data.mapIds?.Length ?? 0}, " +
+					  $"(maps: {internalMapIds?.Length ?? 0}, " +
 					  $"definitions: {data.definitions?.Length ?? 0}");
 		}
 
@@ -357,22 +389,28 @@ namespace ClassicTilestorm
 					return null;
 				}
 
-				int existingIndex = Array.FindIndex(db.maps, m => m != null && m.HashID == importedMap.HashID);
-				if (existingIndex >= 0)
+				if (MapCatalog.IsInternalMap(importedMap.HashID))
 				{
-					db.maps[existingIndex] = importedMap;
-					Debug.Log($"Imported map replaced existing: {importedMap.name} [{HTB50Settings.ToString(importedMap.HashID)}]");
+					MapCatalog.DeleteCommunityMap(importedMap.HashID);
+					Debug.Log($"Imported internal map loaded into memory: {importedMap.name} [{HTB50Settings.ToString(importedMap.HashID)}]");
 				}
 				else
 				{
-					var list = db.maps.ToList();
-					list.Add(importedMap);
-					db.maps = list.ToArray();
-					Debug.Log($"Imported new map added: {importedMap.name} [{HTB50Settings.ToString(importedMap.HashID)}]");
+					int existingIndex = Array.FindIndex(db.maps, m => m != null && m.HashID == importedMap.HashID);
+					if (existingIndex >= 0)
+					{
+						db.maps[existingIndex] = importedMap;
+						Debug.Log($"Imported map replaced existing: {importedMap.name} [{HTB50Settings.ToString(importedMap.HashID)}]");
+					}
+					else
+					{
+						var list = db.maps.ToList();
+						list.Add(importedMap);
+						db.maps = list.ToArray();
+						Debug.Log($"Imported new map added: {importedMap.name} [{HTB50Settings.ToString(importedMap.HashID)}]");
+					}
 				}
 
-				Map.EnsureUniqueHashIDs(db.maps);
-				ResourceManager.SyncMapIds();
 				ResourceManager.ApplyMapChanges(importedMap);
 
 				Debug.Log($"Map imported into database: {importedMap.name} [{HTB50Settings.ToString(importedMap.HashID)}]");

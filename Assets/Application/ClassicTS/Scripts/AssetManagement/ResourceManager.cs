@@ -156,7 +156,7 @@ namespace ClassicTilestorm
 			if (_db == null) return;
 
 			_db.mapIds = _db.maps?
-				.Where(m => m != null)
+				.Where(m => m != null && MapCatalog.IsInternalMap(m.HashID))
 				.Select(m => HTB50Settings.ToString(m.HashID))
 				.ToArray()
 				?? Array.Empty<string>();
