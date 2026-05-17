@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 using System;
 using System.Collections.Generic;
 using TMPro;
@@ -76,8 +77,10 @@ namespace ClassicTilestorm
 
 		// Runtime state
 		private readonly List<Toggle> spawnedDefinitionToggles = new();
+		private readonly Dictionary<Transform, Definition> spawnedDefinitionItems = new();
 		private readonly List<string> modelOptionHashes = new();
 		private ToggleGroup toggleGroup;
+		private ScrollListReorderDragHelper definitionReorderHelper;
 
 		private static int lastSelectedDefinitionIndex = 0;
 
@@ -142,6 +145,7 @@ namespace ClassicTilestorm
 			base.OnEnable();
 			EnsurePreviewInitialized();
 			RefreshDefinitionList();
+			EnsureDefinitionReorderHelper();
 			PopulateAndSyncDropdowns();
 		}
 
@@ -152,6 +156,8 @@ namespace ClassicTilestorm
 
 			CleanupPreview();
 			ClearDefinitionListItems();
+			definitionReorderHelper?.Dispose();
+			definitionReorderHelper = null;
 			base.OnDisable();
 		}
 
@@ -165,6 +171,24 @@ namespace ClassicTilestorm
 			toggleGroup = contentParent.GetComponent<ToggleGroup>()
 				?? contentParent.gameObject.AddComponent<ToggleGroup>();
 			toggleGroup.allowSwitchOff = false;
+		}
+
+		private void EnsureDefinitionReorderHelper()
+		{
+			definitionReorderHelper ??= new ScrollListReorderDragHelper(
+				definitionScrollView,
+				contentParent as RectTransform,
+				pos => TryGetDefinitionItemUnderPointer(pos, out var row) ? row : null,
+				row =>
+				{
+					if (row != null && spawnedDefinitionItems.TryGetValue(row, out var def))
+					{
+						var index = ResourceManager.Definitions.ToList().FindIndex(d => ReferenceEquals(d, def));
+						if (index >= 0)
+							SetSelectedIndex(index);
+					}
+				},
+				CommitDraggedDefinitionOrder);
 		}
 
 		private void InitializePreviewController()
@@ -394,6 +418,7 @@ namespace ClassicTilestorm
 
 			toggle.group = toggleGroup;
 			spawnedDefinitionToggles.Add(toggle);
+			spawnedDefinitionItems[go.transform] = def;
 
 			toggle.onValueChanged.AddListener(isOn =>
 			{
@@ -415,6 +440,113 @@ namespace ClassicTilestorm
 				if (t != null) Destroy(t.gameObject);
 
 			spawnedDefinitionToggles.Clear();
+			spawnedDefinitionItems.Clear();
+		}
+
+		private bool TryGetDefinitionItemUnderPointer(Vector2 screenPos, out Transform row)
+		{
+			row = null;
+
+			var ped = new PointerEventData(EventSystem.current)
+			{
+				position = screenPos
+			};
+
+			var results = new List<RaycastResult>();
+			EventSystem.current.RaycastAll(ped, results);
+
+			foreach (var result in results)
+			{
+				var current = result.gameObject != null ? result.gameObject.transform : null;
+				while (current != null && current != contentParent)
+				{
+					if (spawnedDefinitionItems.ContainsKey(current))
+					{
+						row = current;
+						return true;
+					}
+
+					current = current.parent;
+				}
+			}
+
+			return false;
+		}
+
+		private void CommitDraggedDefinitionOrder(Vector2 pointerPosition, Transform row)
+		{
+			if (ResourceManager.database == null || contentParent == null || row == null)
+				return;
+
+			int targetIndex = CalculateDefinitionDropIndex(pointerPosition, row);
+			targetIndex = Mathf.Clamp(targetIndex, 0, Mathf.Max(0, contentParent.childCount - 1));
+
+			if (row.GetSiblingIndex() != targetIndex)
+				row.SetSiblingIndex(targetIndex);
+
+			CommitDefinitionOrderFromContent();
+		}
+
+		private int CalculateDefinitionDropIndex(Vector2 pointerPosition, Transform draggedItem)
+		{
+			if (contentParent == null)
+				return 0;
+
+			var contentRect = contentParent as RectTransform;
+			var canvas = definitionScrollView != null ? definitionScrollView.GetComponentInParent<Canvas>() : null;
+			var screenCamera = canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay ? canvas.worldCamera : null;
+			if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(contentRect, pointerPosition, screenCamera, out var localPoint))
+				return 0;
+
+			int insertIndex = 0;
+			foreach (Transform child in contentParent)
+			{
+				if (child == null || child == draggedItem)
+					continue;
+
+				if (!spawnedDefinitionItems.ContainsKey(child))
+					continue;
+
+				if (!child.TryGetComponent<RectTransform>(out var rt))
+					continue;
+
+				var childLocalPoint = contentRect.InverseTransformPoint(rt.position);
+				if (localPoint.y < childLocalPoint.y)
+					insertIndex++;
+				else
+					break;
+			}
+
+			return insertIndex;
+		}
+
+		private void CommitDefinitionOrderFromContent()
+		{
+			if (ResourceManager.database == null || contentParent == null)
+				return;
+
+			var selectedDefinition = CurrentDefinition;
+			var orderedDefinitions = new List<Definition>(ResourceManager.Definitions.Count);
+
+			foreach (Transform child in contentParent)
+			{
+				if (child == null)
+					continue;
+
+				if (spawnedDefinitionItems.TryGetValue(child, out var def) && def != null)
+					orderedDefinitions.Add(def);
+			}
+
+			if (orderedDefinitions.Count != ResourceManager.Definitions.Count)
+				return;
+
+			ResourceManager.database.definitions = orderedDefinitions.ToArray();
+			ResourceManager.OnDefininionsModified?.Invoke();
+
+			if (selectedDefinition != null)
+				lastSelectedDefinitionIndex = orderedDefinitions.FindIndex(d => ReferenceEquals(d, selectedDefinition));
+
+			RefreshDefinitionList();
 		}
 
 		private void SetSelectedIndex(int index)
@@ -659,6 +791,8 @@ namespace ClassicTilestorm
 
 		private void Update()
 		{
+			definitionReorderHelper?.Update();
+
 			if (previewCtrl == null) return;
 			orbitController.Update();
 			previewCtrl.UpdateAndRender();
