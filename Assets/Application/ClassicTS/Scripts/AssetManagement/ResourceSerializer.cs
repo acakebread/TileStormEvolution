@@ -267,6 +267,7 @@ namespace ClassicTilestorm
 #if UNITY_EDITOR
 			AssetDatabase.Refresh();
 #endif
+			MapCatalog.ClearCache();
 
 			//Debug.Log($"Database saved → {path} " +
 			//		  $"(maps: {mapsToSave?.Length ?? 0}, " +

@@ -263,9 +263,15 @@ namespace ClassicTilestorm
 
 		public void LoadDatabase()
 		{
+			#if UNITY_EDITOR
+			UnityEditor.AssetDatabase.Refresh();
+			#endif
+
+			ResourceSerializer.Initialise();
+
 			if (ResourceManager.database == null)
 			{
-				Debug.LogError("Failed to load content data from levels.json / definitions.json!");
+				Debug.LogError("Failed to reload content data from levels.json / definitions.json!");
 				return;
 			}
 
@@ -279,6 +285,11 @@ namespace ClassicTilestorm
 			{
 				Debug.LogError("Cannot save: database not loaded");
 				return;
+			}
+
+			if (CurrentMap != null)
+			{
+				ResourceManager.ApplyMapChanges(CurrentMap);
 			}
 
 			ResourceSerializer.SaveDatabase(ResourceManager.database, verbose: true);
