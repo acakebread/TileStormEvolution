@@ -473,69 +473,145 @@ namespace ClassicTilestorm
 
 			try
 			{
+				if (IsAtomicMapArchive(filepath))
+					return ImportAtomicMapArchive(filepath);
+
 				string json = File.ReadAllText(filepath);
-				var root = JObject.Parse(json);
-				var importedDefinitions = LoadImportedDefinitions(root);
-
-				var settings = new JsonSerializerSettings
-				{
-					NullValueHandling = NullValueHandling.Ignore,
-					Converters = { new AtomicMapConverter() }
-				};
-
-				var importedMap = root.ToObject<Map>(JsonSerializer.Create(settings));
-
-				if (importedMap == null || string.IsNullOrEmpty(importedMap.name))
-				{
-					Debug.LogError("Import failed: Invalid map or missing name");
-					return null;
-				}
-
-				importedMap.EnsureHashID();
-
-				var db = ResourceManager.database;
-				if (db?.maps == null)
-				{
-					Debug.LogError("Database not loaded");
-					return null;
-				}
-
-				ResourceManager.ApplyDefinitionChanges(importedDefinitions);
-
-				if (MapCatalog.IsInternalMap(importedMap.HashID))
-				{
-					MapCatalog.DeleteCommunityMap(importedMap.HashID);
-					Debug.Log($"Imported internal map loaded into memory: {importedMap.name} [{HTB50Settings.ToString(importedMap.HashID)}]");
-				}
-				else
-				{
-					int existingIndex = Array.FindIndex(db.maps, m => m != null && m.HashID == importedMap.HashID);
-					if (existingIndex >= 0)
-					{
-						db.maps[existingIndex] = importedMap;
-						Debug.Log($"Imported map replaced existing: {importedMap.name} [{HTB50Settings.ToString(importedMap.HashID)}]");
-					}
-					else
-					{
-						var list = db.maps.ToList();
-						list.Add(importedMap);
-						db.maps = list.ToArray();
-						Debug.Log($"Imported new map added: {importedMap.name} [{HTB50Settings.ToString(importedMap.HashID)}]");
-					}
-				}
-
-				ResourceManager.ApplyMapChanges(importedMap);
-
-				if (!MapCatalog.SaveCommunityMap(importedMap))
-					Debug.LogWarning($"Imported map could not be written to system cache: {importedMap.name} [{HTB50Settings.ToString(importedMap.HashID)}]");
-
-				Debug.Log($"Map imported into database: {importedMap.name} [{HTB50Settings.ToString(importedMap.HashID)}]");
-				return importedMap;
+				return ImportAtomicMapJson(json, filepath);
 			}
 			catch (Exception e)
 			{
 				Debug.LogError($"Import failed: {e.Message}");
 				return null;
+			}
+		}
+
+		private static Map ImportAtomicMapArchive(string archivePath)
+		{
+			string stagingRoot = Path.Combine(Path.GetTempPath(), $"TileStormAtomicImport_{Guid.NewGuid():N}");
+
+			try
+			{
+				Directory.CreateDirectory(stagingRoot);
+				ZipFile.ExtractToDirectory(archivePath, stagingRoot, overwriteFiles: true);
+
+				string jsonPath = Path.Combine(stagingRoot, "map_save.json");
+				if (!File.Exists(jsonPath))
+					jsonPath = Path.Combine(stagingRoot, "map.json");
+
+				if (!File.Exists(jsonPath))
+				{
+					Debug.LogError($"Import failed: archive does not contain map_save.json or map.json → {archivePath}");
+					return null;
+				}
+
+				string contentModelsRoot = Path.Combine(stagingRoot, "Content", "Models");
+				if (Directory.Exists(contentModelsRoot))
+				{
+					EnsureFolder(ApplicationSettings.SystemModelsFolder);
+					CopyDirectoryTree(contentModelsRoot, ApplicationSettings.SystemModelsFolder);
+					ModelResourceTable.Refresh(forceRefresh: true);
+				}
+
+				string json = File.ReadAllText(jsonPath);
+				return ImportAtomicMapJson(json, archivePath);
+			}
+			finally
+			{
+				TryDeleteDirectory(stagingRoot);
+			}
+		}
+
+		private static Map ImportAtomicMapJson(string json, string sourceLabel)
+		{
+			if (string.IsNullOrWhiteSpace(json))
+			{
+				Debug.LogError($"Import failed: Empty map data → {sourceLabel}");
+				return null;
+			}
+
+			var root = JObject.Parse(json);
+			var importedDefinitions = LoadImportedDefinitions(root);
+
+			var settings = new JsonSerializerSettings
+			{
+				NullValueHandling = NullValueHandling.Ignore,
+				Converters = { new AtomicMapConverter() }
+			};
+
+			var importedMap = root.ToObject<Map>(JsonSerializer.Create(settings));
+
+			if (importedMap == null || string.IsNullOrEmpty(importedMap.name))
+			{
+				Debug.LogError("Import failed: Invalid map or missing name");
+				return null;
+			}
+
+			importedMap.EnsureHashID();
+
+			var db = ResourceManager.database;
+			if (db?.maps == null)
+			{
+				Debug.LogError("Database not loaded");
+				return null;
+			}
+
+			ResourceManager.ApplyDefinitionChanges(importedDefinitions);
+
+			if (MapCatalog.IsInternalMap(importedMap.HashID))
+			{
+				MapCatalog.DeleteCommunityMap(importedMap.HashID);
+				Debug.Log($"Imported internal map loaded into memory: {importedMap.name} [{HTB50Settings.ToString(importedMap.HashID)}]");
+			}
+			else
+			{
+				int existingIndex = Array.FindIndex(db.maps, m => m != null && m.HashID == importedMap.HashID);
+				if (existingIndex >= 0)
+				{
+					db.maps[existingIndex] = importedMap;
+					Debug.Log($"Imported map replaced existing: {importedMap.name} [{HTB50Settings.ToString(importedMap.HashID)}]");
+				}
+				else
+				{
+					var list = db.maps.ToList();
+					list.Add(importedMap);
+					db.maps = list.ToArray();
+					Debug.Log($"Imported new map added: {importedMap.name} [{HTB50Settings.ToString(importedMap.HashID)}]");
+				}
+			}
+
+			ResourceManager.ApplyMapChanges(importedMap);
+
+			if (!MapCatalog.SaveCommunityMap(importedMap))
+				Debug.LogWarning($"Imported map could not be written to system cache: {importedMap.name} [{HTB50Settings.ToString(importedMap.HashID)}]");
+
+			Debug.Log($"Map imported into database: {importedMap.name} [{HTB50Settings.ToString(importedMap.HashID)}]");
+			return importedMap;
+		}
+
+		private static bool IsAtomicMapArchive(string filepath)
+		{
+			if (string.IsNullOrWhiteSpace(filepath) || !File.Exists(filepath))
+				return false;
+
+			if (string.Equals(Path.GetExtension(filepath), ".zip", StringComparison.OrdinalIgnoreCase))
+				return true;
+
+			try
+			{
+				using var stream = File.OpenRead(filepath);
+				if (stream.Length < 4)
+					return false;
+
+				int b0 = stream.ReadByte();
+				int b1 = stream.ReadByte();
+				int b2 = stream.ReadByte();
+				int b3 = stream.ReadByte();
+				return b0 == 'P' && b1 == 'K' && (b2 == 3 || b2 == 5 || b2 == 7) && (b3 == 4 || b3 == 6 || b3 == 8);
+			}
+			catch
+			{
+				return false;
 			}
 		}
 
