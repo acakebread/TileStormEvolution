@@ -90,6 +90,22 @@ using MassiveHadronLtd;
 			return hash != 0 && InternalResourceIndex != null && InternalResourceIndex.ContainsKey(hash);
 		}
 
+		public static MapStorageLocation GetStorageLocation(HashId hash)
+		{
+			if (hash == 0)
+				return MapStorageLocation.External;
+
+			if (LoadInternalMap(hash) != null)
+				return MapStorageLocation.Internal;
+
+			if (LoadCommunityMap(hash) != null)
+				return MapStorageLocation.External;
+
+			return IsInternalMap(hash)
+				? MapStorageLocation.Internal
+				: MapStorageLocation.External;
+		}
+
 		public static bool TryGetInternalResourceName(HashId hash, out string resourceName)
 		{
 			EnsureInternalIndex();
@@ -169,16 +185,16 @@ using MassiveHadronLtd;
 				return list;
 			}
 
-			public static Map LoadMap(HashId hash)
-			{
-				if (hash == 0)
-					return null;
+		public static Map LoadMap(HashId hash)
+		{
+			if (hash == 0)
+				return null;
 
 			if (CachedMaps.TryGetValue(hash, out var cached) && cached != null)
 				return cached;
 
 			var map = IsInternalMap(hash)
-				? LoadInternalMap(hash)
+				? LoadInternalMap(hash) ?? LoadCommunityMap(hash)
 				: LoadCommunityMap(hash) ?? LoadInternalMap(hash);
 			if (map != null)
 			{
@@ -270,7 +286,7 @@ using MassiveHadronLtd;
 
 		public static bool SaveMap(Map map)
 		{
-			return IsInternalMap(map?.HashID ?? 0)
+			return GetStorageLocation(map?.HashID ?? 0) == MapStorageLocation.Internal
 				? SaveInternalMap(map)
 				: SaveCommunityMap(map);
 		}
@@ -284,6 +300,25 @@ using MassiveHadronLtd;
 				return false;
 
 			var file = Directory.EnumerateFiles(PersistentMapsFolder, "*.json", SearchOption.TopDirectoryOnly)
+				.FirstOrDefault(f => TryGetMapHashFromFileName(f, out var fileHash) && fileHash == hash);
+
+			if (file == null)
+				return false;
+
+			File.Delete(file);
+			CachedMaps.Remove(hash);
+			return true;
+		}
+
+		public static bool DeleteInternalMap(HashId hash)
+		{
+			if (hash == 0)
+				return false;
+
+			if (!Directory.Exists(InternalMapsFolder))
+				return false;
+
+			var file = Directory.EnumerateFiles(InternalMapsFolder, "*.json", SearchOption.TopDirectoryOnly)
 				.FirstOrDefault(f => TryGetMapHashFromFileName(f, out var fileHash) && fileHash == hash);
 
 			if (file == null)

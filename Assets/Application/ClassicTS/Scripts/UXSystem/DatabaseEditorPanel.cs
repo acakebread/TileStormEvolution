@@ -24,6 +24,7 @@ namespace ClassicTilestorm
 		[SerializeField] private Button ButtonDelete;
 		[SerializeField] private Button ButtonMoveUp;
 		[SerializeField] private Button ButtonMoveDown;
+		private Button ButtonMoveStore;
 
 		[SerializeField] private TMP_InputField mapNameInput;
 
@@ -84,7 +85,7 @@ namespace ClassicTilestorm
 		private bool IsReadOnlyInternalMap =>
 			!Application.isEditor && CurrentMap != null && MapCatalog.IsInternalMap(CurrentMap.HashID);
 
-		private bool IsInternalMap(Map map) => map != null && MapCatalog.IsInternalMap(map.HashID);
+		private bool IsInternalMap(Map map) => map != null && MapCatalog.GetStorageLocation(map.HashID) == MapCatalog.MapStorageLocation.Internal;
 
 		private Map CurrentMap =>
 			lastSelectedMapIndex >= 0 && lastSelectedMapIndex < ResourceManager.Maps.Count
@@ -446,6 +447,7 @@ namespace ClassicTilestorm
 			if (ButtonDelete) ButtonDelete.onClick.AddListener(DeleteMap);
 			if (ButtonMoveUp) ButtonMoveUp.onClick.AddListener(MoveMapUp);
 			if (ButtonMoveDown) ButtonMoveDown.onClick.AddListener(MoveMapDown);
+			EnsureMoveStoreButton();
 
 			if (closeButton != null)
 				closeButton.onClick.AddListener(() => gameObject.SetActive(false));
@@ -476,6 +478,22 @@ namespace ClassicTilestorm
 
 			if (directionalPositionConfigButton != null)
 				directionalPositionConfigButton.onClick.AddListener(() => OnDirectionalPositionConfigButtonPressed(directionalPositionConfigButton));
+		}
+
+		private void EnsureMoveStoreButton()
+		{
+			if (!Application.isEditor || ButtonMoveStore != null || ButtonInsert == null)
+				return;
+
+			ButtonMoveStore = Instantiate(ButtonInsert, ButtonInsert.transform.parent);
+			ButtonMoveStore.name = "ButtonMoveStore";
+			ButtonMoveStore.transform.SetAsLastSibling();
+
+			if (ButtonMoveStore.GetComponentInChildren<TMP_Text>() is TMP_Text label)
+				label.text = "Move Store";
+
+			ButtonMoveStore.onClick.RemoveAllListeners();
+			ButtonMoveStore.onClick.AddListener(MoveCurrentMapStorage);
 		}
 
 		private void OnMapNameChanged(string input)
@@ -601,6 +619,20 @@ namespace ClassicTilestorm
 			if (ButtonMoveDown != null)
 				ButtonMoveDown.interactable = hasSelection && (!IsReadOnlyInternalMap || Application.isEditor);
 
+			if (ButtonMoveStore != null)
+			{
+				ButtonMoveStore.interactable = hasSelection && Application.isEditor;
+
+				if (ButtonMoveStore.GetComponentInChildren<TMP_Text>() is TMP_Text txt)
+				{
+					txt.text = CurrentMap == null
+						? "Move Store"
+						: MapCatalog.GetStorageLocation(CurrentMap.HashID) == MapCatalog.MapStorageLocation.Internal
+							? "Move to External"
+							: "Move to Internal";
+				}
+			}
+
 			if (mapNameInput != null)
 				mapNameInput.interactable = !IsReadOnlyInternalMap;
 
@@ -722,6 +754,50 @@ namespace ClassicTilestorm
 			ResourceManager.SyncMapIds();
 
 			lastSelectedMapIndex++;
+			RefreshMapList();
+		}
+
+		private void MoveCurrentMapStorage()
+		{
+			if (!Application.isEditor || CurrentMap == null)
+				return;
+
+			var map = CurrentMap;
+			var hash = map.HashID;
+			var currentLocation = MapCatalog.GetStorageLocation(hash);
+
+			var saved = currentLocation == MapCatalog.MapStorageLocation.Internal
+				? MapCatalog.SaveCommunityMap(map)
+				: MapCatalog.SaveInternalMap(map);
+
+			if (!saved)
+				return;
+
+			if (currentLocation == MapCatalog.MapStorageLocation.Internal)
+				MapCatalog.DeleteInternalMap(hash);
+			else
+				MapCatalog.DeleteCommunityMap(hash);
+
+			#if UNITY_EDITOR
+			UnityEditor.AssetDatabase.Refresh();
+			#endif
+			MapCatalog.ClearCache();
+
+			if (ResourceManager.database != null)
+				ResourceSerializer.SaveDatabase(ResourceManager.database, verbose: true);
+
+			ResourceSerializer.Initialise();
+
+			lastSelectedMapIndex = -1;
+			for (var i = 0; i < ResourceManager.Maps.Count; i++)
+			{
+				var candidate = ResourceManager.Maps[i];
+				if (candidate != null && candidate.HashID == hash)
+				{
+					lastSelectedMapIndex = i;
+					break;
+				}
+			}
 			RefreshMapList();
 		}
 
