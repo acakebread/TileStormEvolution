@@ -453,6 +453,8 @@ namespace ClassicTilestorm
 			try
 			{
 				string json = File.ReadAllText(filepath);
+				var root = JObject.Parse(json);
+				var importedDefinitions = LoadImportedDefinitions(root);
 
 				var settings = new JsonSerializerSettings
 				{
@@ -460,7 +462,7 @@ namespace ClassicTilestorm
 					Converters = { new AtomicMapConverter() }
 				};
 
-				var importedMap = JsonConvert.DeserializeObject<Map>(json, settings);
+				var importedMap = root.ToObject<Map>(JsonSerializer.Create(settings));
 
 				if (importedMap == null || string.IsNullOrEmpty(importedMap.name))
 				{
@@ -476,6 +478,8 @@ namespace ClassicTilestorm
 					Debug.LogError("Database not loaded");
 					return null;
 				}
+
+				ResourceManager.ApplyDefinitionChanges(importedDefinitions);
 
 				if (MapCatalog.IsInternalMap(importedMap.HashID))
 				{
@@ -511,6 +515,31 @@ namespace ClassicTilestorm
 			{
 				Debug.LogError($"Import failed: {e.Message}");
 				return null;
+			}
+		}
+
+		private static Definition[] LoadImportedDefinitions(JObject root)
+		{
+			if (root == null)
+				return Array.Empty<Definition>();
+
+			if (root["definitions"] is not JArray definitionsArray || definitionsArray.Count == 0)
+				return Array.Empty<Definition>();
+
+			try
+			{
+				var settings = new JsonSerializerSettings
+				{
+					NullValueHandling = NullValueHandling.Ignore,
+					Converters = { new DefinitionConverter() }
+				};
+
+				return definitionsArray.ToObject<Definition[]>(JsonSerializer.Create(settings)) ?? Array.Empty<Definition>();
+			}
+			catch (Exception ex)
+			{
+				Debug.LogWarning($"ResourceSerializer: failed to parse imported definitions → {ex.Message}");
+				return Array.Empty<Definition>();
 			}
 		}
 
