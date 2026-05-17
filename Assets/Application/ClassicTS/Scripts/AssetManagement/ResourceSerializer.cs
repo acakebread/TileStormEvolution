@@ -48,6 +48,9 @@ namespace ClassicTilestorm
 		{
 			JsonSetup.Init();
 			MapCatalog.ClearCache();
+			var removedMaps = MapCatalog.CleanupExternalMapsCollidingWithInternal();
+			if (removedMaps > 0)
+				Debug.Log($"ResourceSerializer: removed {removedMaps} external map(s) colliding with internal storage");
 			PrefabResourceTable.ClearCache();
 			TextureResourceTable.ClearCache();
 			MaterialResourceTable.ClearCache();

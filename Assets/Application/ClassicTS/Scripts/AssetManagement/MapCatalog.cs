@@ -329,6 +329,42 @@ using MassiveHadronLtd;
 			return true;
 		}
 
+		public static int CleanupExternalMapsCollidingWithInternal()
+		{
+			EnsureInternalIndex();
+
+			if (!Directory.Exists(PersistentMapsFolder))
+				return 0;
+
+			var internalHashes = GetInternalMaps(forceRefresh: true)
+				.Where(entry => entry.HashId != 0)
+				.Select(entry => entry.HashId)
+				.ToHashSet();
+
+			if (internalHashes.Count == 0)
+				return 0;
+
+			var removed = 0;
+			foreach (var file in Directory.EnumerateFiles(PersistentMapsFolder, "*.json", SearchOption.TopDirectoryOnly).ToArray())
+			{
+				if (!TryGetMapHashFromFileName(file, out var hash) || !internalHashes.Contains(hash))
+					continue;
+
+				try
+				{
+					File.Delete(file);
+					CachedMaps.Remove(hash);
+					removed++;
+				}
+				catch (Exception ex)
+				{
+					Debug.LogWarning($"MapCatalog: failed to delete colliding external map '{file}': {ex.Message}");
+				}
+			}
+
+			return removed;
+		}
+
 		public static bool TryGetMap(HashId hash, out Map map)
 		{
 			map = LoadMap(hash);
