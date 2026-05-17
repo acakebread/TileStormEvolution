@@ -303,7 +303,7 @@ namespace ClassicTilestorm
 #if UNITY_WEBGL && !UNITY_EDITOR
 			string importRoot = RuntimeFileBrowser.GetDefaultRootFolder();
 #else
-			string importRoot = ApplicationSettings.ExportFolder;
+			string importRoot = ApplicationSettings.UserFolder;
 #endif
 			RuntimeFileBrowser.OpenFile(
 				"Import Atomic Map",
@@ -345,7 +345,7 @@ namespace ClassicTilestorm
 			WebGLDownloadUtility.DownloadText(fileName, json, "application/json;charset=utf-8");
 			Debug.Log($"Map export prepared for browser download: {fileName}");
 #elif UNITY_EDITOR
-			string defaultFolder = ApplicationSettings.ExportFolder;
+			string defaultFolder = ApplicationSettings.UserFolder;
 			System.IO.Directory.CreateDirectory(defaultFolder);
 			string path = EditorUtility.SaveFilePanel("Export Map As Atomic JSON", defaultFolder, fileName, "json");
 			if (string.IsNullOrEmpty(path))

@@ -7,7 +7,7 @@ namespace MassiveHadronLtd.FileBrowserUtil
 {
 	public static class RuntimeFileBrowser
 	{
-		private const string DefaultExternalFolderName = "external";
+		private const string DefaultExternalFolderName = "External";
 
 		public static string GetDefaultRootFolder()
 		{

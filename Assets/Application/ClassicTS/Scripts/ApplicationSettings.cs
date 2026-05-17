@@ -199,7 +199,12 @@ namespace ClassicTilestorm
 		}
 
 		public static string DatabaseFolder => PreviewSettingsStatic.DatabaseFolder;
-		public static string ExportFolder => PreviewSettingsStatic.ExportFolder;
+		public static string ExportFolder => PreviewSettingsStatic.UserFolder;
+		public static string UserFolder => PreviewSettingsStatic.UserFolder;
+		public static string SystemFolder => PreviewSettingsStatic.SystemFolder;
+		public static string SystemMapsFolder => PreviewSettingsStatic.SystemMapsFolder;
+		public static string SystemDefinitionsFolder => PreviewSettingsStatic.SystemDefinitionsFolder;
+		public static string SystemModelsFolder => PreviewSettingsStatic.SystemModelsFolder;
 
 		// ====================== EDITOR HELPER (for manifest generation) ======================
 #if UNITY_EDITOR
@@ -240,6 +245,11 @@ namespace ClassicTilestorm
 	public static class PreviewSettingsStatic
 	{
 		public static readonly string DatabaseFolder = System.IO.Path.Combine(Application.persistentDataPath, "Data");
-		public static readonly string ExportFolder = System.IO.Path.Combine(Application.persistentDataPath, "Maps");
+		public static readonly string UserFolder = System.IO.Path.Combine(Application.persistentDataPath, "User");
+		public static readonly string SystemFolder = System.IO.Path.Combine(Application.persistentDataPath, "System");
+		public static readonly string SystemMapsFolder = System.IO.Path.Combine(SystemFolder, "Maps");
+		public static readonly string SystemDefinitionsFolder = System.IO.Path.Combine(SystemFolder, "Definitions");
+		public static readonly string SystemModelsFolder = System.IO.Path.Combine(SystemFolder, "Models");
+		public static readonly string ExportFolder = UserFolder;
 	}
 }

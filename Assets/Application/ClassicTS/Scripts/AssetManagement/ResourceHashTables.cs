@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using ClassicTilestorm;
 using MassiveHadronLtd;
 using UnityEngine;
 
@@ -450,31 +451,44 @@ namespace ClassicTilestorm.Assets
 
 		private void LoadImportedFiles()
 		{
-			var importedRoot = Path.Combine(Application.persistentDataPath, importedRootFolder);
-			if (!Directory.Exists(importedRoot))
-				return;
-
 			try
 			{
-				foreach (var file in Directory.EnumerateFiles(importedRoot, "*.*", SearchOption.AllDirectories))
+				foreach (var importedRoot in GetImportedRoots())
 				{
-					if (!TryGetImportedHashFromPath(importedRoot, file, out var hash))
+					if (!Directory.Exists(importedRoot))
 						continue;
 
-					var normalizedFile = NormalizeValue(Path.GetFileName(file));
-					if (string.IsNullOrWhiteSpace(normalizedFile))
-						continue;
+					foreach (var file in Directory.EnumerateFiles(importedRoot, "*.*", SearchOption.AllDirectories))
+					{
+						if (!TryGetImportedHashFromPath(importedRoot, file, out var hash))
+							continue;
 
-					Upsert(new Entry(
-							hashId: hash,
-							value: normalizedFile,
-							kind: EntryKind.File),
-						persist: false);
+						var normalizedFile = NormalizeValue(Path.GetFileName(file));
+						if (string.IsNullOrWhiteSpace(normalizedFile))
+							continue;
+
+						Upsert(new Entry(
+								hashId: hash,
+								value: normalizedFile,
+								kind: EntryKind.File),
+							persist: false);
+					}
 				}
 			}
 			catch (Exception ex)
 			{
-				Debug.LogWarning($"PortableManifestHashTable: failed to scan imported files under '{importedRoot}': {ex.Message}");
+				Debug.LogWarning($"PortableManifestHashTable: failed to scan imported files: {ex.Message}");
+			}
+		}
+
+		private IEnumerable<string> GetImportedRoots()
+		{
+			yield return Path.Combine(Application.persistentDataPath, importedRootFolder);
+
+			if (importedRootFolder.StartsWith("System/", StringComparison.OrdinalIgnoreCase))
+			{
+				var legacyFolder = "Imported/" + importedRootFolder.Substring("System/".Length);
+				yield return Path.Combine(Application.persistentDataPath, legacyFolder);
 			}
 		}
 
@@ -692,7 +706,7 @@ namespace ClassicTilestorm.Assets
 
 	public static class MusicResourceTable
 	{
-		private static readonly PortableManifestHashTable Table = new("AssetManifests/Music", "Imported/Music");
+		private static readonly PortableManifestHashTable Table = new("AssetManifests/Music", "System/Music");
 
 		public static void ClearCache() => Table.ClearCache();
 		public static string GetDisplayName(string identifier) => Table.GetDisplayName(identifier);
@@ -719,7 +733,7 @@ namespace ClassicTilestorm.Assets
 
 	public static class TextureResourceTable
 	{
-		private static readonly PortableManifestHashTable Table = new("AssetManifests/Textures", "Imported/Textures");
+		private static readonly PortableManifestHashTable Table = new("AssetManifests/Textures", "System/Textures");
 
 		public static void ClearCache() => Table.ClearCache();
 		public static string GetDisplayName(string identifier) => Table.GetDisplayName(identifier);
@@ -734,7 +748,7 @@ namespace ClassicTilestorm.Assets
 
 	public static class SkycubeResourceTable
 	{
-		private static readonly PortableManifestHashTable Table = new("AssetManifests/Skycubes", "Imported/Skycubes");
+		private static readonly PortableManifestHashTable Table = new("AssetManifests/Skycubes", "System/Skycubes");
 
 		public static void ClearCache() => Table.ClearCache();
 		public static string GetDisplayName(string identifier) => Table.GetDisplayName(identifier);
@@ -760,7 +774,7 @@ namespace ClassicTilestorm.Assets
 
 	public static class SoundResourceTable
 	{
-		private static readonly PortableManifestHashTable Table = new("AssetManifests/Sounds", "Imported/Sounds");
+		private static readonly PortableManifestHashTable Table = new("AssetManifests/Sounds", "System/Sounds");
 
 		public static void ClearCache() => Table.ClearCache();
 		public static string GetDisplayName(string identifier) => Table.GetDisplayName(identifier);

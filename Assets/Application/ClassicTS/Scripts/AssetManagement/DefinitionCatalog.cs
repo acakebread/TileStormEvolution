@@ -57,9 +57,8 @@ namespace ClassicTilestorm
 		private static bool ExternalDefinitionsLoaded;
 
 		private const string FileHashSeparator = "__";
-		private const string PersistentDefinitionsFolderName = "Definitions";
-
-		public static string PersistentDefinitionsFolder => Path.Combine(Application.persistentDataPath, PersistentDefinitionsFolderName);
+		public static string PersistentDefinitionsFolder => ApplicationSettings.SystemDefinitionsFolder;
+		private static string LegacyPersistentDefinitionsFolder => Path.Combine(Application.persistentDataPath, "Definitions");
 		public static string InternalDefinitionsFile => Path.Combine(ApplicationSettings.JsonDataProjectPath, "definitions.json");
 
 		public static void ClearCache()
@@ -213,10 +212,10 @@ namespace ClassicTilestorm
 
 		public static bool DeleteExternalDefinition(HashId hash)
 		{
-			if (hash == 0 || !Directory.Exists(PersistentDefinitionsFolder))
+			if (hash == 0)
 				return false;
 
-			var file = Directory.EnumerateFiles(PersistentDefinitionsFolder, "*.json", SearchOption.TopDirectoryOnly)
+			var file = EnumerateExternalDefinitionFiles()
 				.FirstOrDefault(f => TryGetDefinitionHashFromFileName(f, out var fileHash) && fileHash == hash);
 
 			if (file == null)
@@ -231,9 +230,6 @@ namespace ClassicTilestorm
 		{
 			EnsureInternalDefinitions();
 
-			if (!Directory.Exists(PersistentDefinitionsFolder))
-				return 0;
-
 			var internalHashes = GetInternalDefinitions(forceRefresh: true)
 				.Where(entry => entry.Definition != null)
 				.Select(entry => entry.HashId)
@@ -243,7 +239,7 @@ namespace ClassicTilestorm
 				return 0;
 
 			var removed = 0;
-			foreach (var file in Directory.EnumerateFiles(PersistentDefinitionsFolder, "*.json", SearchOption.TopDirectoryOnly).ToArray())
+			foreach (var file in EnumerateExternalDefinitionFiles().ToArray())
 			{
 				if (!TryGetDefinitionHashFromFileName(file, out var hash) || !internalHashes.Contains(hash))
 					continue;
@@ -323,15 +319,12 @@ namespace ClassicTilestorm
 			ExternalDefinitions = new List<DefinitionEntry>();
 			ExternalDefinitionIndex = new Dictionary<HashId, DefinitionEntry>();
 
-			if (!Directory.Exists(PersistentDefinitionsFolder))
-				return;
-
 			var internalHashes = GetInternalDefinitions(forceRefresh: false)
 				.Where(entry => entry.Definition != null)
 				.Select(entry => entry.HashId)
 				.ToHashSet();
 
-			foreach (var file in Directory.EnumerateFiles(PersistentDefinitionsFolder, "*.json", SearchOption.TopDirectoryOnly))
+			foreach (var file in EnumerateExternalDefinitionFiles())
 			{
 				if (!TryGetDefinitionHashFromFileName(file, out var hash))
 					continue;
@@ -347,6 +340,25 @@ namespace ClassicTilestorm
 				ExternalDefinitions.Add(entry);
 				ExternalDefinitionIndex[hash] = entry;
 			}
+		}
+
+		private static IEnumerable<string> EnumerateExternalDefinitionFiles()
+		{
+			foreach (var folder in GetExternalDefinitionFolders())
+			{
+				if (!Directory.Exists(folder))
+					continue;
+
+				foreach (var file in Directory.EnumerateFiles(folder, "*.json", SearchOption.TopDirectoryOnly))
+					yield return file;
+			}
+		}
+
+		private static IEnumerable<string> GetExternalDefinitionFolders()
+		{
+			yield return PersistentDefinitionsFolder;
+			if (!string.Equals(PersistentDefinitionsFolder, LegacyPersistentDefinitionsFolder, StringComparison.OrdinalIgnoreCase))
+				yield return LegacyPersistentDefinitionsFolder;
 		}
 
 		private static IEnumerable<DefinitionEntry> ParseDefinitionEntries(string json, DefinitionStorageLocation storageLocation, string filePath)

@@ -302,9 +302,9 @@ namespace ClassicTilestorm
 
 				try
 				{
-					if (Directory.Exists(MapCatalog.PersistentMapsFolder))
+					if (Directory.Exists(ApplicationSettings.SystemMapsFolder))
 					{
-						foreach (var file in Directory.EnumerateFiles(MapCatalog.PersistentMapsFolder, "*.json", SearchOption.TopDirectoryOnly))
+						foreach (var file in Directory.EnumerateFiles(ApplicationSettings.SystemMapsFolder, "*.json", SearchOption.TopDirectoryOnly))
 						{
 							if (!MapCatalog.TryGetMapHashFromFileName(file, out var fileHash) ||
 								!externalMapIds.Contains(HTB50Settings.ToString(fileHash)))
@@ -439,11 +439,7 @@ namespace ClassicTilestorm
 
 		public static string GetDefaultMapExportFolder()
 		{
-			string documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-			if (!string.IsNullOrWhiteSpace(documents))
-				return Path.Combine(documents, "MHCommunity", "Maps");
-
-			return Path.Combine(Application.persistentDataPath, "Maps");
+			return ApplicationSettings.UserFolder;
 		}
 
 		public static Map ImportAtomicMap(string filepath)
@@ -526,7 +522,7 @@ namespace ClassicTilestorm
 				string json = BuildAtomicMapJson(originalMap, verbose, crop);
 
 				var folder = string.IsNullOrEmpty(filepath)
-					? Application.persistentDataPath
+					? GetDefaultMapExportFolder()
 					: filepath;
 
 				EnsureFolder(folder);

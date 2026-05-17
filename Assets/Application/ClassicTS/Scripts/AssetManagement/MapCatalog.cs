@@ -60,7 +60,8 @@ using MassiveHadronLtd;
 			private static string InternalResourcesRoot => $"{ApplicationSettings.JsonDataResourcePath}/Maps";
 			private const string InternalManifestPath = "AssetManifests/Maps";
 			private const string FileHashSeparator = "__";
-			private const string PersistentMapsFolderName = "Maps";
+			private static string PersistentMapsFolder => ApplicationSettings.SystemMapsFolder;
+			private static string LegacyPersistentMapsFolder => Path.Combine(Application.persistentDataPath, "Maps");
 
 			private static readonly Dictionary<HashId, Map> CachedMaps = new();
 			private static Dictionary<HashId, string> InternalResourceIndex;
@@ -71,8 +72,6 @@ using MassiveHadronLtd;
 				Converters = { new DatabaseMapConverter() },
 				NullValueHandling = NullValueHandling.Ignore
 		};
-
-		public static string PersistentMapsFolder => Path.Combine(Application.persistentDataPath, PersistentMapsFolderName);
 
 		public static string InternalMapsFolder => Path.Combine(ApplicationSettings.JsonDataProjectPath, "Maps");
 
@@ -296,10 +295,7 @@ using MassiveHadronLtd;
 			if (hash == 0)
 				return false;
 
-			if (!Directory.Exists(PersistentMapsFolder))
-				return false;
-
-			var file = Directory.EnumerateFiles(PersistentMapsFolder, "*.json", SearchOption.TopDirectoryOnly)
+			var file = EnumerateCommunityMapFiles()
 				.FirstOrDefault(f => TryGetMapHashFromFileName(f, out var fileHash) && fileHash == hash);
 
 			if (file == null)
@@ -333,9 +329,6 @@ using MassiveHadronLtd;
 		{
 			EnsureInternalIndex();
 
-			if (!Directory.Exists(PersistentMapsFolder))
-				return 0;
-
 			var internalHashes = GetInternalMaps(forceRefresh: true)
 				.Where(entry => entry.HashId != 0)
 				.Select(entry => entry.HashId)
@@ -345,7 +338,7 @@ using MassiveHadronLtd;
 				return 0;
 
 			var removed = 0;
-			foreach (var file in Directory.EnumerateFiles(PersistentMapsFolder, "*.json", SearchOption.TopDirectoryOnly).ToArray())
+			foreach (var file in EnumerateCommunityMapFiles().ToArray())
 			{
 				if (!TryGetMapHashFromFileName(file, out var hash) || !internalHashes.Contains(hash))
 					continue;
@@ -391,13 +384,29 @@ using MassiveHadronLtd;
 
 		private static Map LoadCommunityMap(HashId hash)
 		{
-			if (!Directory.Exists(PersistentMapsFolder))
-				return null;
-
-			var file = Directory.EnumerateFiles(PersistentMapsFolder, "*.json", SearchOption.TopDirectoryOnly)
+			var file = EnumerateCommunityMapFiles()
 				.FirstOrDefault(f => TryGetMapHashFromFileName(f, out var fileHash) && fileHash == hash);
 
 			return file != null ? LoadMapFromFile(file) : null;
+		}
+
+		private static IEnumerable<string> EnumerateCommunityMapFiles()
+		{
+			foreach (var folder in GetCommunityMapFolders())
+			{
+				if (!Directory.Exists(folder))
+					continue;
+
+				foreach (var file in Directory.EnumerateFiles(folder, "*.json", SearchOption.TopDirectoryOnly))
+					yield return file;
+			}
+		}
+
+		private static IEnumerable<string> GetCommunityMapFolders()
+		{
+			yield return PersistentMapsFolder;
+			if (!string.Equals(PersistentMapsFolder, LegacyPersistentMapsFolder, StringComparison.OrdinalIgnoreCase))
+				yield return LegacyPersistentMapsFolder;
 		}
 
 			private static Map LoadInternalMap(HashId hash)
