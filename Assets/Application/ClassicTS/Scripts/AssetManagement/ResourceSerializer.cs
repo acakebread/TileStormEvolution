@@ -501,6 +501,9 @@ namespace ClassicTilestorm
 
 				ResourceManager.ApplyMapChanges(importedMap);
 
+				if (!MapCatalog.SaveCommunityMap(importedMap))
+					Debug.LogWarning($"Imported map could not be written to system cache: {importedMap.name} [{HTB50Settings.ToString(importedMap.HashID)}]");
+
 				Debug.Log($"Map imported into database: {importedMap.name} [{HTB50Settings.ToString(importedMap.HashID)}]");
 				return importedMap;
 			}
