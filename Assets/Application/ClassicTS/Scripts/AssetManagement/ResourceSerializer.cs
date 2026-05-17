@@ -417,7 +417,7 @@ namespace ClassicTilestorm
 			return Resources.Load<TextAsset>($"{root}/{fileName}.json");
 		}
 
-		public static string BuildAtomicMapJson(Map originalMap, bool verbose = false, bool crop = true)
+		public static string BuildAtomicMapJson(Map originalMap, bool verbose = false, bool crop = true, bool filteredDefs = false)
 		{
 			if (originalMap == null)
 				return null;
@@ -425,7 +425,7 @@ namespace ClassicTilestorm
 			var map = crop ? CreateCroppedCopy(originalMap) : originalMap.Clone();
 			map.Optimise();
 
-			using var _ = AtomicSerializationContext.PushVerbose(verbose);
+			using var _ = AtomicSerializationContext.PushExportOptions(verbose, filteredDefs);
 
 			var settings = new JsonSerializerSettings
 			{
@@ -543,7 +543,7 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public static void ExportAtomicMap(Map originalMap, string filepath = null, bool verbose = false, bool crop = true)
+		public static void ExportAtomicMap(Map originalMap, string filepath = null, bool verbose = false, bool crop = true, bool filteredDefs = false)
 		{
 			if (originalMap == null) return;
 
@@ -551,15 +551,30 @@ namespace ClassicTilestorm
 
 			try
 			{
-				string json = BuildAtomicMapJson(originalMap, verbose, crop);
+				string json = BuildAtomicMapJson(originalMap, verbose, crop, filteredDefs);
 
-				var folder = string.IsNullOrEmpty(filepath)
-					? GetDefaultMapExportFolder()
-					: filepath;
-
-				EnsureFolder(folder);
 				string safeName = SanitizeFileName(string.IsNullOrWhiteSpace(map.name) ? "Untitled" : map.name);
-				string path = Path.Combine(folder, $"{safeName}__{HTB50Settings.ToString(map.HashID)}.json");
+				string defaultFileName = $"{safeName}__{HTB50Settings.ToString(map.HashID)}.json";
+				string path;
+
+				if (string.IsNullOrWhiteSpace(filepath))
+				{
+					var folder = GetDefaultMapExportFolder();
+					EnsureFolder(folder);
+					path = Path.Combine(folder, defaultFileName);
+				}
+				else if (Path.HasExtension(filepath))
+				{
+					var directory = Path.GetDirectoryName(filepath);
+					if (!string.IsNullOrEmpty(directory))
+						EnsureFolder(directory);
+					path = filepath;
+				}
+				else
+				{
+					EnsureFolder(filepath);
+					path = Path.Combine(filepath, defaultFileName);
+				}
 
 				WriteJsonIfChanged(path, json);
 

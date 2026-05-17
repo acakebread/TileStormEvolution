@@ -14,16 +14,26 @@ namespace ClassicTilestorm
 	internal static class AtomicSerializationContext
 	{
 		private static readonly AsyncLocal<int> VerboseDepth = new();
+		private static readonly AsyncLocal<int> FilteredDefinitionsDepth = new();
 
 		public static bool IsVerbose => VerboseDepth.Value > 0;
+		public static bool IsFilteredDefinitions => FilteredDefinitionsDepth.Value > 0;
 
 		public static IDisposable PushVerbose(bool verbose)
+			=> PushExportOptions(verbose, false);
+
+		public static IDisposable PushExportOptions(bool verbose, bool filteredDefinitions)
 		{
-			if (!verbose)
+			if (!verbose && !filteredDefinitions)
 				return NoopScope.Instance;
 
-			VerboseDepth.Value = VerboseDepth.Value + 1;
-			return new Scope();
+			if (verbose)
+				VerboseDepth.Value = VerboseDepth.Value + 1;
+
+			if (filteredDefinitions)
+				FilteredDefinitionsDepth.Value = FilteredDefinitionsDepth.Value + 1;
+
+			return new Scope(verbose, filteredDefinitions);
 		}
 
 		public static string StripAtomicComment(string value)
@@ -46,7 +56,15 @@ namespace ClassicTilestorm
 
 		private sealed class Scope : IDisposable
 		{
+			private readonly bool verbose;
+			private readonly bool filteredDefinitions;
 			private bool disposed;
+
+			public Scope(bool verbose, bool filteredDefinitions)
+			{
+				this.verbose = verbose;
+				this.filteredDefinitions = filteredDefinitions;
+			}
 
 			public void Dispose()
 			{
@@ -54,7 +72,11 @@ namespace ClassicTilestorm
 					return;
 
 				disposed = true;
-				VerboseDepth.Value = Math.Max(0, VerboseDepth.Value - 1);
+				if (verbose)
+					VerboseDepth.Value = Math.Max(0, VerboseDepth.Value - 1);
+
+				if (filteredDefinitions)
+					FilteredDefinitionsDepth.Value = Math.Max(0, FilteredDefinitionsDepth.Value - 1);
 			}
 		}
 
@@ -544,6 +566,7 @@ namespace ClassicTilestorm
 			var usedDefs = usedHashes
 				.Select(h => ResourceManager.GetDefinition(h))
 				.Where(d => d != null)
+				.Where(d => !AtomicSerializationContext.IsFilteredDefinitions || !DefinitionCatalog.IsInternalDefinition(d.HashID))
 				.ToArray();
 
 			if (usedDefs.Length > 0)
