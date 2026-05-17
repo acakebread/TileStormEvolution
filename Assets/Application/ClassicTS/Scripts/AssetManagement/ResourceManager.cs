@@ -48,11 +48,14 @@ namespace ClassicTilestorm
 		public static IList<string> MapIds => _db?.mapIds ?? Array.Empty<string>();
 		public static IList<Definition> Definitions => _db?.definitions ?? Array.Empty<Definition>();
 		public static IReadOnlyList<MapCatalog.MapEntry> AvailableMapEntries => MapCatalog.GetAvailableMaps();
+		public static IReadOnlyList<DefinitionCatalog.DefinitionEntry> AvailableDefinitionEntries => DefinitionCatalog.GetAvailableDefinitions();
 		//public static IList<TextureInfo> TextureInfos => _db?.textures ?? Array.Empty<TextureInfo>();
 
 		public static bool HasDefinition(int id) => Definitions.Any(def => def.HashID == id);
 
 		public static Definition GetDefinition(HashId id) => Definitions.FirstOrDefault(d => d.HashID == id);
+
+		public static bool IsDefinitionInternal(HashId hashId) => DefinitionCatalog.IsInternalDefinition(hashId);
 
 		//public static TextureInfo GetTextureInfo(string id)
 		//	=> string.IsNullOrEmpty(id) ? null : TextureInfos.FirstOrDefault(ts => ts.id == id);
@@ -101,13 +104,13 @@ namespace ClassicTilestorm
 			HashId hash32 = RadixHash.GetStableHash32(def.name);
 			def.HashID = hash32;
 
-			if (ensureUniqueHash)
+			if (def.HashID == 0 || ensureUniqueHash)
 			{
 				var existing = new HashSet<HashId>(
-					Definitions.Where(d => d.HashID != 0 ).Select(d => d.HashID));
+					Definitions.Where(d => d.HashID != 0).Select(d => d.HashID));
 
 				int attempt = 1;
-				while (existing.Contains(def.HashID))
+				while (def.HashID == 0 || existing.Contains(def.HashID))
 				{
 					hash32 = RadixHash.GetStableHash32(def.name + attempt);
 					def.HashID = hash32;

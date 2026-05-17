@@ -9,92 +9,59 @@
     "name": "blocker"
   },
   {
-    "id": "4JT6tJ",
-    "name": "rainbow tile",
-    "model": "Cixj6h",
-    "material": "0chrTr",
-    "flags": "Move"
-  },
-  {
-    "id": "3ExQpJ",
-    "name": "slide and roll",
-    "model": "5inhyd",
-    "flags": "Move, Roll"
-  },
-  {
     "id": "A8krJn",
-    "name": "med trim tile",
+    "name": "new med trim tile",
     "model": "6hAyvU"
   },
   {
     "id": "4CRGn4",
-    "name": "med well",
+    "name": "new med well",
     "model": "A68Juw"
   },
   {
     "id": "EaHCxc",
-    "name": "med torch",
+    "name": "new med torch",
     "model": "3FU1ca"
   },
   {
     "id": "79kM6i",
-    "name": "med cage",
+    "name": "new med cage",
     "model": "5ce3XQ"
   },
   {
     "id": "Cr4C7J",
-    "name": "med stocks",
+    "name": "new med stocks",
     "model": "1380Jm"
   },
   {
     "id": "Chir6n",
-    "name": "med boundary tile 01",
+    "name": "new med boundary tile 01",
     "model": "Dh6Epm"
   },
   {
     "id": "21jdt4",
-    "name": "med trim tile inner corner",
+    "name": "new med trim tile inner corner",
     "model": "DiA9nE"
   },
   {
     "id": "2U6rti",
-    "name": "med trim tile outer corner",
+    "name": "new med trim tile outer corner",
     "model": "6NxTtW"
   },
   {
     "id": "CNwAWn",
-    "name": "med trim tile wedge",
+    "name": "new med trim tile wedge",
     "model": "4vWDUu"
   },
   {
     "id": "EPtjqa",
-    "name": "med house 01",
+    "name": "new med house 01",
     "model": "0pGqCA"
   },
   {
     "id": "CCcC7e",
-    "name": "med house 02",
+    "name": "new med house 02",
     "model": "98Hhtp"
-  },
-  {
-    "id": "Dhxx26",
-    "name": "tutankhamun",
-    "model": "5jjXT4"
-  },
-  {
-    "id": "038hvM",
-    "name": "sphinx",
-    "model": "8kmUEG"
-  },
-  {
-    "id": "2fi9Qe",
-    "name": "anubis",
-    "model": "9YfFTM"
-  },
-  {
-    "id": "3dhrwu",
-    "name": "temple",
-    "model": "413fPj"
   },
   {
     "id": "2An3fe",
@@ -245,21 +212,6 @@
     "connections": "N"
   },
   {
-    "id": "6d5t6k",
-    "name": "egy tile boundary",
-    "model": "7r3rYC"
-  },
-  {
-    "id": "0ACD6e",
-    "name": "egy boundary obelisk",
-    "model": "DWjFt5"
-  },
-  {
-    "id": "52Gwa3",
-    "name": "egy tile pyramid",
-    "model": "42Vnkf"
-  },
-  {
     "id": "5E4P2K",
     "name": "egy tile slide",
     "model": "8qHrjR",
@@ -291,6 +243,13 @@
     "connections": "NSEW"
   },
   {
+    "id": "CNKtmM",
+    "name": "egy tile corner corner",
+    "model": "AMCrG2",
+    "flags": "Move",
+    "connections": "NE"
+  },
+  {
     "id": "APAQMR",
     "name": "egy tile straight",
     "model": "C2kDf8",
@@ -298,11 +257,14 @@
     "connections": "NS"
   },
   {
-    "id": "CNKtmM",
-    "name": "egy tile corner corner",
-    "model": "AMCrG2",
-    "flags": "Move",
-    "connections": "NE"
+    "id": "6d5t6k",
+    "name": "egy tile boundary",
+    "model": "7r3rYC"
+  },
+  {
+    "id": "23UUn0",
+    "name": "egy boundary",
+    "model": "4ieTpu"
   },
   {
     "id": "Aa47m9",
@@ -315,9 +277,29 @@
     "model": "AQy92G"
   },
   {
-    "id": "23UUn0",
-    "name": "egy boundary",
-    "model": "4ieTpu"
+    "id": "Dhxx26",
+    "name": "egypt tutankhamun",
+    "model": "5jjXT4"
+  },
+  {
+    "id": "2fi9Qe",
+    "name": "egypt anubis",
+    "model": "9YfFTM"
+  },
+  {
+    "id": "038hvM",
+    "name": "egypt sphinx",
+    "model": "8kmUEG"
+  },
+  {
+    "id": "52Gwa3",
+    "name": "egypt tile pyramid",
+    "model": "42Vnkf"
+  },
+  {
+    "id": "0ACD6e",
+    "name": "egy boundary obelisk",
+    "model": "DWjFt5"
   },
   {
     "id": "EDQx80",
@@ -604,6 +586,11 @@
     "model": "3GQNA9"
   },
   {
+    "id": "3dhrwu",
+    "name": "jungle temple",
+    "model": "413fPj"
+  },
+  {
     "id": "9Aq8d4",
     "name": "jun statue",
     "model": "4DkCeW"
@@ -678,11 +665,5 @@
     "name": "test no nav slide",
     "model": "7xHwTd",
     "flags": "Move"
-  },
-  {
-    "id": "0fKa65",
-    "name": "test import",
-    "model": "C37Hai",
-    "flags": "Move, Sway"
   }
 ]
