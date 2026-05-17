@@ -36,7 +36,7 @@ namespace MassiveHadronLtd
 			Action<Vector2, Transform> onDrop,
 			float holdDelay = 0.5f,
 			float dragThreshold = 8f,
-			float edgeMargin = 36f,
+			float edgeMargin = 72f,
 			float edgeScrollSpeed = 900f,
 			float maxEdgeScrollMultiplier = 3f)
 		{
@@ -278,7 +278,7 @@ namespace MassiveHadronLtd
 			ghostLayout.ignoreLayout = true;
 
 			ghostImage.raycastTarget = false;
-			ghostImage.sprite = Resources.GetBuiltinResource<Sprite>("UI/Skin/UISprite.psd");
+			ghostImage.sprite = CreateFallbackSprite();
 			ghostImage.type = Image.Type.Sliced;
 			ghostImage.color = new Color(0.58f, 0.86f, 1f, 0.12f);
 
@@ -292,6 +292,30 @@ namespace MassiveHadronLtd
 			ghostRect.pivot = new Vector2(0.5f, 0.5f);
 			ghostRect.sizeDelta = Vector2.zero;
 			ghostRect.gameObject.SetActive(false);
+		}
+
+		private static Sprite CreateFallbackSprite()
+		{
+			var texture = new Texture2D(2, 2, TextureFormat.RGBA32, mipChain: false)
+			{
+				name = "ListDragGhostTexture",
+				hideFlags = HideFlags.HideAndDontSave
+			};
+
+			texture.SetPixels(new[]
+			{
+				Color.white, Color.white,
+				Color.white, Color.white
+			});
+			texture.Apply(updateMipmaps: false, makeNoLongerReadable: true);
+
+			return Sprite.Create(
+				texture,
+				new Rect(0f, 0f, 2f, 2f),
+				new Vector2(0.5f, 0.5f),
+				100f,
+				0,
+				SpriteMeshType.FullRect);
 		}
 	}
 }
