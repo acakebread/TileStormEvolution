@@ -1,6 +1,7 @@
 ﻿using System;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 using System.Collections.Generic;
 using System.Linq;
 using TMPro;
@@ -75,13 +76,21 @@ namespace ClassicTilestorm
 
 		#endregion
 
-		// ────────────────────────────────────────────────────────────────────────────────
+		// --------------------------------------------------------------------------------
 		//   Private Fields
-		// ────────────────────────────────────────────────────────────────────────────────
+		// --------------------------------------------------------------------------------
 
 		private readonly List<Toggle> spawnedMapToggles = new List<Toggle>();
+		private readonly Dictionary<Transform, Map> spawnedMapItems = new Dictionary<Transform, Map>();
 		private ToggleGroup toggleGroup;
 		private static int lastSelectedMapIndex = 0;
+		private Transform draggedMapItem;
+		private Vector2 draggedMapStartPos;
+		private float draggedMapStartTime;
+		private bool isReorderingMaps;
+		private bool wasMapScrollViewEnabled;
+		private RectTransform dragIndicatorRect;
+		private Image dragIndicatorImage;
 
 		private bool IsReadOnlyInternalMap =>
 			!Application.isEditor && CurrentMap != null && MapCatalog.IsInternalMap(CurrentMap.HashID);
@@ -101,9 +110,9 @@ namespace ClassicTilestorm
 		// Ref-counted tinted cubemap used by the current preview
 		private Ref<Cubemap> _previewTintedRef;
 
-		// ────────────────────────────────────────────────────────────────────────────────
+		// --------------------------------------------------------------------------------
 		//   Unity Lifecycle
-		// ────────────────────────────────────────────────────────────────────────────────
+		// --------------------------------------------------------------------------------
 
 		protected override void Awake()
 		{
@@ -137,6 +146,12 @@ namespace ClassicTilestorm
 				orbitController.OnTransformChanged -= ApplyOrbitToPreviewCamera;
 				orbitController = null;
 			}
+
+			HideMapDragIndicator();
+			DestroyMapDragIndicator();
+
+			if (mapScrollView != null)
+				mapScrollView.enabled = true;
 
 			ClearMapListItems();
 
@@ -178,11 +193,12 @@ namespace ClassicTilestorm
 
 			ScenePreviewUtil.Update();
 			orbitController?.Update();
+			UpdateMapReorderDrag();
 		}
 
-		// ────────────────────────────────────────────────────────────────────────────────
+		// --------------------------------------------------------------------------------
 		//   Dropdowns
-		// ────────────────────────────────────────────────────────────────────────────────
+		// --------------------------------------------------------------------------------
 
 		private void PopulateSkyboxDropdown() =>
 			PopulateDropdown(skyboxDropdown, Assets.ProjectAssets.GetSkycubeNames(), noneSkyboxOptionText);
@@ -276,9 +292,9 @@ namespace ClassicTilestorm
 			LeakDetector.LogSnapshot("AFTER Effect Dropdown Change");
 		}
 
-		// ────────────────────────────────────────────────────────────────────────────────
+		// --------------------------------------------------------------------------------
 		//   Colour Pickers + Directional Position Config
-		// ────────────────────────────────────────────────────────────────────────────────
+		// --------------------------------------------------------------------------------
 
 		private void SyncColorTogglesToCurrentMap()
 		{
@@ -387,9 +403,9 @@ namespace ClassicTilestorm
 			}
 		}
 
-		// ────────────────────────────────────────────────────────────────────────────────
+		// --------------------------------------------------------------------------------
 		//   Orbit / Preview Camera
-		// ────────────────────────────────────────────────────────────────────────────────
+		// --------------------------------------------------------------------------------
 
 		private void InitializeOrbitController()
 		{
@@ -438,9 +454,9 @@ namespace ClassicTilestorm
 			cam.fieldOfView = fieldOfView;
 		}
 
-		// ────────────────────────────────────────────────────────────────────────────────
+		// --------------------------------------------------------------------------------
 		//   Map List & Selection
-		// ────────────────────────────────────────────────────────────────────────────────
+		// --------------------------------------------------------------------------------
 
 		private void InitializeUIReferences()
 		{
@@ -566,6 +582,7 @@ namespace ClassicTilestorm
 
 			toggle.group = toggleGroup;
 			spawnedMapToggles.Add(toggle);
+			spawnedMapItems[go.transform] = map;
 
 			toggle.onValueChanged.AddListener(isOn =>
 			{
@@ -594,6 +611,13 @@ namespace ClassicTilestorm
 				if (t != null) Destroy(t.gameObject);
 
 			spawnedMapToggles.Clear();
+			spawnedMapItems.Clear();
+			draggedMapItem = null;
+			isReorderingMaps = false;
+			HideMapDragIndicator();
+			DestroyMapDragIndicator();
+			if (mapScrollView != null)
+				mapScrollView.enabled = true;
 		}
 
 		private void SetSelectedMapIndex(int index)
@@ -710,9 +734,9 @@ namespace ClassicTilestorm
 			dropdown.SetValueWithoutNotify(index >= 0 ? index : 0);
 		}
 
-		// ────────────────────────────────────────────────────────────────────────────────
+		// --------------------------------------------------------------------------------
 		//   Map CRUD Operations
-		// ────────────────────────────────────────────────────────────────────────────────
+		// --------------------------------------------------------------------------------
 
 		private void InsertMap()
 		{
@@ -778,6 +802,269 @@ namespace ClassicTilestorm
 			RefreshMapList();
 		}
 
+		private void UpdateMapReorderDrag()
+		{
+			if (contentParent == null || EventSystem.current == null || IsReadOnlyInternalMap)
+				return;
+
+			if (InputX.GetMouseButtonDown(0))
+			{
+				if (TryGetMapItemUnderPointer(InputX.mousePosition, out var row))
+				{
+					draggedMapItem = row;
+					draggedMapStartPos = InputX.mousePosition;
+					draggedMapStartTime = Time.unscaledTime;
+					isReorderingMaps = false;
+				}
+			}
+
+			if (draggedMapItem == null)
+				return;
+
+			if (InputX.GetMouseButton(0))
+			{
+				if (!isReorderingMaps)
+				{
+					if (draggedMapItem == null)
+						return;
+
+					if (Vector2.Distance(draggedMapStartPos, InputX.mousePosition) < 8f)
+						return;
+
+					if (Time.unscaledTime - draggedMapStartTime < 0.5f)
+						return;
+
+					if (!TryGetMapItemUnderPointer(InputX.mousePosition, out var currentRow) || currentRow != draggedMapItem)
+					{
+						draggedMapItem = null;
+						return;
+					}
+
+					isReorderingMaps = true;
+					wasMapScrollViewEnabled = mapScrollView != null && mapScrollView.enabled;
+					if (mapScrollView != null)
+						mapScrollView.enabled = false;
+
+					ShowMapDragIndicator(draggedMapItem, InputX.mousePosition);
+
+					if (spawnedMapItems.TryGetValue(draggedMapItem, out var map))
+					{
+						var selectedIndex = ResourceManager.Maps.IndexOf(map);
+						if (selectedIndex >= 0)
+							SetSelectedMapIndex(selectedIndex);
+					}
+				}
+
+				UpdateMapDragIndicatorPosition(InputX.mousePosition);
+				return;
+			}
+
+			if (InputX.GetMouseButtonUp(0))
+			{
+				if (isReorderingMaps)
+					CommitDraggedMapOrder(InputX.mousePosition);
+
+				HideMapDragIndicator();
+
+				if (mapScrollView != null)
+					mapScrollView.enabled = wasMapScrollViewEnabled;
+
+				draggedMapItem = null;
+				isReorderingMaps = false;
+			}
+		}
+
+		private bool TryGetMapItemUnderPointer(Vector2 screenPos, out Transform row)
+		{
+			row = null;
+
+			var ped = new PointerEventData(EventSystem.current)
+			{
+				position = screenPos
+			};
+
+			var results = new List<RaycastResult>();
+			EventSystem.current.RaycastAll(ped, results);
+
+			foreach (var result in results)
+			{
+				var current = result.gameObject != null ? result.gameObject.transform : null;
+				while (current != null && current != contentParent)
+				{
+					if (spawnedMapItems.ContainsKey(current))
+					{
+						row = current;
+						return true;
+					}
+					current = current.parent;
+				}
+			}
+
+			return false;
+		}
+
+		private void CommitDraggedMapOrder(Vector2 pointerPosition)
+		{
+			if (draggedMapItem == null || contentParent == null)
+				return;
+
+			int targetIndex = CalculateMapDropIndex(pointerPosition, draggedMapItem);
+			targetIndex = Mathf.Clamp(targetIndex, 0, Mathf.Max(0, contentParent.childCount - 1));
+
+			if (draggedMapItem.GetSiblingIndex() != targetIndex)
+				draggedMapItem.SetSiblingIndex(targetIndex);
+
+			CommitMapOrderFromContent();
+		}
+
+		private void ShowMapDragIndicator(Transform row, Vector2 screenPos)
+		{
+			if (row == null)
+				return;
+
+			EnsureMapDragIndicator();
+			if (dragIndicatorRect == null)
+				return;
+
+			var canvas = dragIndicatorRect.GetComponentInParent<Canvas>();
+			var canvasRect = canvas != null ? canvas.transform as RectTransform : null;
+			if (canvasRect == null)
+				return;
+
+			if (!row.TryGetComponent<RectTransform>(out var rowRect))
+				return;
+
+			dragIndicatorRect.gameObject.SetActive(true);
+			dragIndicatorRect.SetAsLastSibling();
+
+			var size = rowRect.rect.size;
+			dragIndicatorRect.sizeDelta = size;
+			UpdateMapDragIndicatorPosition(screenPos);
+		}
+
+		private void UpdateMapDragIndicatorPosition(Vector2 screenPos)
+		{
+			if (dragIndicatorRect == null || !dragIndicatorRect.gameObject.activeSelf)
+				return;
+
+			var canvas = dragIndicatorRect.GetComponentInParent<Canvas>();
+			var canvasRect = canvas != null ? canvas.transform as RectTransform : null;
+			if (canvasRect == null)
+				return;
+
+			var screenCamera = canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera;
+			if (RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, screenPos, screenCamera, out var localPoint))
+			{
+				dragIndicatorRect.anchoredPosition = localPoint;
+			}
+		}
+
+		private void HideMapDragIndicator()
+		{
+			if (dragIndicatorRect != null)
+				dragIndicatorRect.gameObject.SetActive(false);
+		}
+
+		private void DestroyMapDragIndicator()
+		{
+			if (dragIndicatorRect != null)
+			{
+				Destroy(dragIndicatorRect.gameObject);
+				dragIndicatorRect = null;
+				dragIndicatorImage = null;
+			}
+		}
+
+		private void EnsureMapDragIndicator()
+		{
+			if (dragIndicatorRect != null)
+				return;
+
+			var canvas = contentParent != null ? contentParent.GetComponentInParent<Canvas>() : null;
+			if (canvas == null)
+				return;
+
+			var go = new GameObject("MapDragIndicator", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Outline));
+			go.transform.SetParent(canvas.transform, false);
+
+			dragIndicatorRect = go.GetComponent<RectTransform>();
+			dragIndicatorRect.anchorMin = new Vector2(0.5f, 0.5f);
+			dragIndicatorRect.anchorMax = new Vector2(0.5f, 0.5f);
+			dragIndicatorRect.pivot = new Vector2(0.5f, 0.5f);
+			dragIndicatorRect.localScale = Vector3.one;
+
+			dragIndicatorImage = go.GetComponent<Image>();
+			dragIndicatorImage.raycastTarget = false;
+			dragIndicatorImage.color = new Color(0.65f, 0.9f, 1f, 0.12f);
+
+			var outline = go.GetComponent<Outline>();
+			outline.effectColor = new Color(0.65f, 0.9f, 1f, 0.95f);
+			outline.effectDistance = new Vector2(2f, -2f);
+			outline.useGraphicAlpha = true;
+
+			go.SetActive(false);
+		}
+
+		private int CalculateMapDropIndex(Vector2 pointerPosition, Transform draggedItem)
+		{
+			if (contentParent == null)
+				return 0;
+
+			var canvas = mapScrollView != null ? mapScrollView.GetComponentInParent<Canvas>() : null;
+			var screenCamera = canvas != null ? canvas.worldCamera : null;
+			if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(contentParent as RectTransform, pointerPosition, screenCamera, out var localPoint))
+				return 0;
+
+			int insertIndex = 0;
+			foreach (Transform child in contentParent)
+			{
+				if (child == null || child == draggedItem)
+					continue;
+
+				if (!spawnedMapItems.ContainsKey(child))
+					continue;
+
+				if (!child.TryGetComponent<RectTransform>(out var rt))
+					continue;
+
+				var childLocalPoint = (contentParent as RectTransform).InverseTransformPoint(rt.position);
+				if (localPoint.y < childLocalPoint.y)
+					insertIndex++;
+				else
+					break;
+			}
+
+			return insertIndex;
+		}
+
+		private void CommitMapOrderFromContent()
+		{
+			if (ResourceManager.database == null || contentParent == null)
+				return;
+
+			var selectedMap = CurrentMap;
+			var orderedMaps = new List<Map>(ResourceManager.Maps.Count);
+
+			foreach (Transform child in contentParent)
+			{
+				if (child == null)
+					continue;
+
+				if (spawnedMapItems.TryGetValue(child, out var map) && map != null)
+					orderedMaps.Add(map);
+			}
+
+			if (orderedMaps.Count != ResourceManager.Maps.Count)
+				return;
+
+			ResourceManager.database.maps = orderedMaps.ToArray();
+			ResourceManager.SyncMapIds();
+
+			if (selectedMap != null)
+				lastSelectedMapIndex = orderedMaps.FindIndex(m => ReferenceEquals(m, selectedMap));
+
+			RefreshMapList();
+		}
 		private void MoveCurrentMapStorage()
 		{
 			if (!Application.isEditor || CurrentMap == null)
@@ -852,9 +1139,9 @@ namespace ClassicTilestorm
 			return candidate;
 		}
 
-		// ────────────────────────────────────────────────────────────────────────────────
+		// --------------------------------------------------------------------------------
 		//   Preview Management  (THIS IS THE PART THAT WAS LEAKING)
-		// ────────────────────────────────────────────────────────────────────────────────
+		// --------------------------------------------------------------------------------
 
 		private bool InitialiseMapPreview()
 		{
