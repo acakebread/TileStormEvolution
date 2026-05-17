@@ -236,9 +236,21 @@ namespace ClassicTilestorm
 			writer.WriteValue(HTB50Settings.ToString(def.HashID));
 
 			if (!string.IsNullOrEmpty(def.name)) { writer.WritePropertyName("name"); serializer.Serialize(writer, def.name); }
-			if (!string.IsNullOrEmpty(def.model)) { writer.WritePropertyName("model"); serializer.Serialize(writer, def.model); }
+			if (!string.IsNullOrEmpty(def.model))
+			{
+				writer.WritePropertyName("model");
+				writer.WriteValue(AtomicSerializationContext.IsVerbose
+					? AtomicSerializationContext.AppendAtomicComment(def.model, ModelAssets.GetDisplayNameForHash(def.model))
+					: def.model);
+			}
 			//if (!string.IsNullOrEmpty(def.texture)) { writer.WritePropertyName("texture"); serializer.Serialize(writer, def.texture); }
-			if (!string.IsNullOrEmpty(def.material)) { writer.WritePropertyName("material"); serializer.Serialize(writer, def.material); }
+			if (!string.IsNullOrEmpty(def.material))
+			{
+				writer.WritePropertyName("material");
+				writer.WriteValue(AtomicSerializationContext.IsVerbose
+					? AtomicSerializationContext.AppendAtomicComment(def.material, MaterialResourceTable.GetDisplayName(def.material))
+					: def.material);
+			}
 
 			// Gameplay flags
 			var activeFlags = new List<string>();
@@ -296,7 +308,9 @@ namespace ClassicTilestorm
 			}
 
 			serializer.Populate(jo.CreateReader(), def);
-			def.material = MaterialResourceTable.ToHashOrOriginal(def.material);
+			def.model = ModelAssets.GetHashForDisplayName(AtomicSerializationContext.StripAtomicComment(def.model))
+				?? AtomicSerializationContext.StripAtomicComment(def.model);
+			def.material = MaterialResourceTable.ToHashOrOriginal(AtomicSerializationContext.StripAtomicComment(def.material));
 
 			// Gameplay flags
 			if (jo["flags"]?.Value<string>() is { } flagsStr && !string.IsNullOrEmpty(flagsStr))

@@ -425,6 +425,8 @@ namespace ClassicTilestorm
 			var map = crop ? CreateCroppedCopy(originalMap) : originalMap.Clone();
 			map.Optimise();
 
+			using var _ = AtomicSerializationContext.PushVerbose(verbose);
+
 			var settings = new JsonSerializerSettings
 			{
 				NullValueHandling = NullValueHandling.Ignore,
