@@ -154,6 +154,41 @@ namespace ClassicTilestorm
 			}
 		}
 
+		public static void ApplyDefinitionChanges(IEnumerable<Definition> importedDefinitions)
+		{
+			if (_db == null || importedDefinitions == null)
+				return;
+
+			var currentDefinitions = (_db.definitions ?? Array.Empty<Definition>()).ToList();
+			var changed = false;
+
+			foreach (var def in importedDefinitions)
+			{
+				if (def == null)
+					continue;
+
+				if (DefinitionCatalog.IsInternalDefinition(def.HashID))
+					continue;
+
+				if (!DefinitionCatalog.SaveExternalDefinition(def))
+					continue;
+
+				int existingIndex = currentDefinitions.FindIndex(d => d != null && d.HashID == def.HashID);
+				if (existingIndex >= 0)
+					currentDefinitions[existingIndex] = def;
+				else
+					currentDefinitions.Add(def);
+
+				changed = true;
+			}
+
+			if (!changed)
+				return;
+
+			_db.definitions = currentDefinitions.ToArray();
+			OnDefininionsModified?.Invoke();
+		}
+
 		public static void SyncMapIds()
 		{
 			if (_db == null) return;

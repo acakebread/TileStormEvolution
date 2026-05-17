@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Collections.Generic;
+using System.Threading;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
@@ -10,6 +11,82 @@ using UnityEngine;
 
 namespace ClassicTilestorm
 {
+	internal static class AtomicSerializationContext
+	{
+		private static readonly AsyncLocal<int> VerboseDepth = new();
+		private static readonly AsyncLocal<int> FilteredDefinitionsDepth = new();
+
+		public static bool IsVerbose => VerboseDepth.Value > 0;
+		public static bool IsFilteredDefinitions => FilteredDefinitionsDepth.Value > 0;
+
+		public static IDisposable PushVerbose(bool verbose)
+			=> PushExportOptions(verbose, false);
+
+		public static IDisposable PushExportOptions(bool verbose, bool filteredDefinitions)
+		{
+			if (!verbose && !filteredDefinitions)
+				return NoopScope.Instance;
+
+			if (verbose)
+				VerboseDepth.Value = VerboseDepth.Value + 1;
+
+			if (filteredDefinitions)
+				FilteredDefinitionsDepth.Value = FilteredDefinitionsDepth.Value + 1;
+
+			return new Scope(verbose, filteredDefinitions);
+		}
+
+		public static string StripAtomicComment(string value)
+		{
+			if (string.IsNullOrEmpty(value))
+				return value;
+
+			int hashPos = value.IndexOf('#');
+			return hashPos >= 0 ? value.Substring(0, hashPos).TrimEnd() : value;
+		}
+
+		public static string AppendAtomicComment(string content, string name)
+		{
+			if (!IsVerbose || string.IsNullOrWhiteSpace(content))
+				return content;
+
+			string displayName = string.IsNullOrWhiteSpace(name) ? "unknown" : name.Trim();
+			return $"{content}#{displayName}";
+		}
+
+		private sealed class Scope : IDisposable
+		{
+			private readonly bool verbose;
+			private readonly bool filteredDefinitions;
+			private bool disposed;
+
+			public Scope(bool verbose, bool filteredDefinitions)
+			{
+				this.verbose = verbose;
+				this.filteredDefinitions = filteredDefinitions;
+			}
+
+			public void Dispose()
+			{
+				if (disposed)
+					return;
+
+				disposed = true;
+				if (verbose)
+					VerboseDepth.Value = Math.Max(0, VerboseDepth.Value - 1);
+
+				if (filteredDefinitions)
+					FilteredDefinitionsDepth.Value = Math.Max(0, FilteredDefinitionsDepth.Value - 1);
+			}
+		}
+
+		private sealed class NoopScope : IDisposable
+		{
+			public static readonly NoopScope Instance = new();
+			public void Dispose() { }
+		}
+	}
+
 	public abstract class MapSerializer : JsonConverter
 	{
 		protected readonly bool IsAtomic;
@@ -254,10 +331,10 @@ namespace ClassicTilestorm
 				((Map.IVariantAccess)map).Variants = ParseTableToVariants(tableArray);
 			}
 
-			map.music = MusicResourceTable.ToHashOrOriginal(map.music);
-			map.skybox = SkycubeResourceTable.ToHashOrOriginal(map.skybox);
-			map.character = CharacterResourceTable.ToHashOrOriginal(map.character);
-			map.effect = EffectResourceTable.ToHashOrOriginal(map.effect);
+			map.music = MusicResourceTable.ToHashOrOriginal(AtomicSerializationContext.StripAtomicComment(map.music));
+			map.skybox = SkycubeResourceTable.ToHashOrOriginal(AtomicSerializationContext.StripAtomicComment(map.skybox));
+			map.character = CharacterResourceTable.ToHashOrOriginal(AtomicSerializationContext.StripAtomicComment(map.character));
+			map.effect = EffectResourceTable.ToHashOrOriginal(AtomicSerializationContext.StripAtomicComment(map.effect));
 
 			map.EnsureHashID();
 			return map;
@@ -352,7 +429,7 @@ namespace ClassicTilestorm
 						? def.name
 						: "unknown";
 
-					finalValue = $"{content}#{name}";
+					finalValue = AtomicSerializationContext.AppendAtomicComment(content, name);
 				}
 				else
 				{
@@ -394,6 +471,9 @@ namespace ClassicTilestorm
 				var propValue = prop.ValueProvider?.GetValue(map);
 
 				if (propValue == null && serializer.NullValueHandling == NullValueHandling.Ignore)
+					continue;
+
+				if (IsAtomic && TryWriteAtomicStringProperty(writer, name, propValue as string))
 					continue;
 
 				if (name == "tiles" && map.tiles != null && map.tiles.Length > 0)
@@ -462,6 +542,9 @@ namespace ClassicTilestorm
 				if (propValue == null && serializer.NullValueHandling == NullValueHandling.Ignore)
 					continue;
 
+				if (IsAtomic && TryWriteAtomicStringProperty(writer, name, propValue as string))
+					continue;
+
 				writer.WritePropertyName(name);
 				serializer.Serialize(writer, propValue);
 			}
@@ -483,6 +566,7 @@ namespace ClassicTilestorm
 			var usedDefs = usedHashes
 				.Select(h => ResourceManager.GetDefinition(h))
 				.Where(d => d != null)
+				.Where(d => !AtomicSerializationContext.IsFilteredDefinitions || !DefinitionCatalog.IsInternalDefinition(d.HashID))
 				.ToArray();
 
 			if (usedDefs.Length > 0)
@@ -543,6 +627,32 @@ namespace ClassicTilestorm
 		private static bool IsSuppressedInDatabaseFormat(string propertyName)
 		{
 			return propertyName is "definitions" or "textures" or "version" or "author" or "exportedFrom";
+		}
+
+		private bool TryWriteAtomicStringProperty(JsonWriter writer, string propertyName, string value)
+		{
+			string augmented = GetAtomicCommentValue(propertyName, value);
+			if (augmented == null)
+				return false;
+
+			writer.WritePropertyName(propertyName);
+			writer.WriteValue(augmented);
+			return true;
+		}
+
+		private static string GetAtomicCommentValue(string propertyName, string value)
+		{
+			if (string.IsNullOrWhiteSpace(value) || !AtomicSerializationContext.IsVerbose)
+				return null;
+
+			return propertyName switch
+			{
+				"character" => AtomicSerializationContext.AppendAtomicComment(value, CharacterResourceTable.GetDisplayName(value)),
+				"music" => AtomicSerializationContext.AppendAtomicComment(value, MusicResourceTable.GetDisplayName(value)),
+				"effect" => AtomicSerializationContext.AppendAtomicComment(value, EffectResourceTable.GetDisplayName(value)),
+				"skybox" => AtomicSerializationContext.AppendAtomicComment(value, SkycubeResourceTable.GetDisplayName(value)),
+				_ => null,
+			};
 		}
 	}
 

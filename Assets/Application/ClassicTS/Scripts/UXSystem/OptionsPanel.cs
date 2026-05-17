@@ -77,7 +77,7 @@ namespace ClassicTilestorm
 #if UNITY_WEBGL && !UNITY_EDITOR
 						string importRoot = RuntimeFileBrowser.GetDefaultRootFolder();
 #else
-						string importRoot = RuntimeFileBrowser.GetDefaultRootFolder();
+						string importRoot = ApplicationSettings.UserFolder;
 #endif
 						RuntimeFileBrowser.OpenObjFile(
 							"Import Wavefront Model",

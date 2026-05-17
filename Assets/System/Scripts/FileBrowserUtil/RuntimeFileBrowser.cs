@@ -1,13 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnityEngine;
 
 namespace MassiveHadronLtd.FileBrowserUtil
 {
 	public static class RuntimeFileBrowser
 	{
-		private const string DefaultExternalFolderName = "external";
+		private const string DefaultExternalFolderName = "External";
 
 		public static string GetDefaultRootFolder()
 		{
@@ -56,11 +57,11 @@ namespace MassiveHadronLtd.FileBrowserUtil
 #if UNITY_WEBGL && !UNITY_EDITOR
 			WebGLRuntimeFileBrowser.OpenFile(title, extensions, onSelected, rootFolder, onCancelled);
 #elif UNITY_EDITOR
-			string extension = FirstExtension(extensions);
-			var path = UnityEditor.EditorUtility.OpenFilePanel(
+			var filters = BuildEditorFilters(extensions);
+			var path = UnityEditor.EditorUtility.OpenFilePanelWithFilters(
 				string.IsNullOrWhiteSpace(title) ? "Select File" : title,
 				ResolveEditorStartFolder(rootFolder, startFolder),
-				extension);
+				filters);
 
 			if (string.IsNullOrWhiteSpace(path))
 			{
@@ -85,11 +86,12 @@ namespace MassiveHadronLtd.FileBrowserUtil
 			return GetDefaultRootFolder();
 		}
 
-		private static string FirstExtension(IEnumerable<string> extensions)
+		private static string[] BuildEditorFilters(IEnumerable<string> extensions)
 		{
 			if (extensions == null)
-				return string.Empty;
+				return new[] { "All files", "*" };
 
+			var normalizedExtensions = new List<string>();
 			foreach (var ext in extensions)
 			{
 				if (string.IsNullOrWhiteSpace(ext))
@@ -98,10 +100,21 @@ namespace MassiveHadronLtd.FileBrowserUtil
 				string normalized = ext.Trim();
 				if (normalized.StartsWith("."))
 					normalized = normalized.Substring(1);
-				return normalized;
+				normalizedExtensions.Add(normalized.ToLowerInvariant());
 			}
 
-			return string.Empty;
+			if (normalizedExtensions.Count == 0)
+				return new[] { "All files", "*" };
+
+			var filters = new List<string>
+			{
+				"Atomic Map Files",
+				string.Join(",", normalizedExtensions.Distinct(StringComparer.OrdinalIgnoreCase))
+			};
+
+			filters.Add("All files");
+			filters.Add("*");
+			return filters.ToArray();
 		}
 
 		private static string EnsureFolder(string folder)

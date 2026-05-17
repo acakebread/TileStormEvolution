@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using ClassicTilestorm;
 using UnityEngine;
 
 namespace MassiveHadronLtd
@@ -37,7 +38,8 @@ namespace MassiveHadronLtd
 		}
 
 		private const string InternalTableResourcePath = "AssetManifests/Models";
-		private const string ImportedRootFolder = "Imported";
+		private const string ImportedRootFolder = "System/Models";
+		private const string LegacyImportedRootFolder = "Imported";
 
 		private static readonly Dictionary<string, Entry> HashToEntry = new(StringComparer.OrdinalIgnoreCase);
 		private static readonly Dictionary<string, string> DisplayToHash = new(StringComparer.OrdinalIgnoreCase);
@@ -163,28 +165,30 @@ namespace MassiveHadronLtd
 
 		private static void LoadImportedFiles()
 		{
-			var importedRoot = Path.Combine(Application.persistentDataPath, ImportedRootFolder);
-			if (!Directory.Exists(importedRoot))
-				return;
-
 			try
 			{
-				foreach (var file in Directory.EnumerateFiles(importedRoot, "*.obj", SearchOption.AllDirectories))
+				foreach (var importedRoot in GetImportedRoots())
 				{
-					if (!TryGetImportedHashFromPath(importedRoot, file, out var hash))
+					if (!Directory.Exists(importedRoot))
 						continue;
 
-					Upsert(new Entry(
-						hashId: NormalizeHash(hash),
-						value: NormalizeValue(Path.GetFileName(file)),
-						kind: EntryKind.File),
-						persist: false,
-						absoluteImportedPath: NormalizePath(file));
+					foreach (var file in Directory.EnumerateFiles(importedRoot, "*.obj", SearchOption.AllDirectories))
+					{
+						if (!TryGetImportedHashFromPath(importedRoot, file, out var hash))
+							continue;
+
+						Upsert(new Entry(
+							hashId: NormalizeHash(hash),
+							value: NormalizeValue(Path.GetFileName(file)),
+							kind: EntryKind.File),
+							persist: false,
+							absoluteImportedPath: NormalizePath(file));
+					}
 				}
 			}
 			catch (Exception ex)
 			{
-				Debug.LogWarning($"ModelResourceTable: failed to scan imported models under '{importedRoot}': {ex.Message}");
+				Debug.LogWarning($"ModelResourceTable: failed to scan imported models: {ex.Message}");
 			}
 		}
 
@@ -257,6 +261,13 @@ namespace MassiveHadronLtd
 				return null;
 
 			return NormalizePath(Path.Combine(Application.persistentDataPath, ImportedRootFolder, safeHash, safeFile));
+		}
+
+		private static IEnumerable<string> GetImportedRoots()
+		{
+			yield return Path.Combine(Application.persistentDataPath, ImportedRootFolder);
+			if (!string.Equals(ImportedRootFolder, LegacyImportedRootFolder, StringComparison.OrdinalIgnoreCase))
+				yield return Path.Combine(Application.persistentDataPath, LegacyImportedRootFolder);
 		}
 
 		private static string ResolveImportedPathFromAny(string value)

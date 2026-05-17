@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using ClassicTilestorm;
 using Newtonsoft.Json;
 using MassiveHadronLtd;
 using UnityEngine;
@@ -107,18 +108,25 @@ namespace ClassicTilestorm
 			if (string.IsNullOrWhiteSpace(id))
 				return null;
 
-			var importedRoot = Path.Combine(Application.persistentDataPath, "Imported");
-			if (!Directory.Exists(importedRoot))
-				return null;
-
 			try
 			{
-				return Directory.EnumerateFiles(importedRoot, $"{id}.json", SearchOption.AllDirectories)
-					.FirstOrDefault();
+				foreach (var importedRoot in new[] { ApplicationSettings.SystemModelsFolder, Path.Combine(Application.persistentDataPath, "Imported") })
+				{
+					if (!Directory.Exists(importedRoot))
+						continue;
+
+					var match = Directory.EnumerateFiles(importedRoot, $"{id}.json", SearchOption.AllDirectories)
+						.FirstOrDefault();
+
+					if (!string.IsNullOrWhiteSpace(match))
+						return match;
+				}
+
+				return null;
 			}
 			catch (Exception ex)
 			{
-				Debug.LogWarning($"AnimMaterialInfoManager: failed to scan imported animations under '{importedRoot}': {ex.Message}");
+				Debug.LogWarning($"AnimMaterialInfoManager: failed to scan imported animations: {ex.Message}");
 				return null;
 			}
 		}

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using ClassicTilestorm;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 
@@ -34,8 +35,8 @@ namespace MassiveHadronLtd
 			string importFolderName = GetImportFolderName(sourceObjPath, modelName, importOption);
 
 			string importRoot = string.IsNullOrEmpty(importFolderName)
-				? Path.Combine(Application.persistentDataPath, "Imported")
-				: Path.Combine(Application.persistentDataPath, "Imported", importFolderName);
+				? ApplicationSettings.SystemModelsFolder
+				: Path.Combine(ApplicationSettings.SystemModelsFolder, importFolderName);
 
 			Directory.CreateDirectory(importRoot);
 
