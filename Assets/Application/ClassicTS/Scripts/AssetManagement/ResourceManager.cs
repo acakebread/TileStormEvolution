@@ -47,6 +47,7 @@ namespace ClassicTilestorm
 		public static IList<Map> Maps => _db?.maps ?? Array.Empty<Map>();
 		public static IList<string> MapIds => _db?.mapIds ?? Array.Empty<string>();
 		public static IList<Definition> Definitions => _db?.definitions ?? Array.Empty<Definition>();
+		public static IReadOnlyList<MapCatalog.MapEntry> AvailableMapEntries => MapCatalog.GetAvailableMaps();
 		//public static IList<TextureInfo> TextureInfos => _db?.textures ?? Array.Empty<TextureInfo>();
 
 		public static bool HasDefinition(int id) => Definitions.Any(def => def.HashID == id);
@@ -155,7 +156,7 @@ namespace ClassicTilestorm
 			if (_db == null) return;
 
 			_db.mapIds = _db.maps?
-				.Where(m => m != null)
+				.Where(m => m != null && MapCatalog.IsInternalMap(m.HashID))
 				.Select(m => HTB50Settings.ToString(m.HashID))
 				.ToArray()
 				?? Array.Empty<string>();

@@ -6,39 +6,104 @@ using Newtonsoft.Json;
 using UnityEngine;
 using MassiveHadronLtd;
 
-namespace ClassicTilestorm
-{
-	public static class MapCatalog
+	namespace ClassicTilestorm
 	{
-		private static string InternalResourcesRoot => $"{ApplicationSettings.JsonDataResourcePath}/Maps";
-		private const string InternalManifestPath = "AssetManifests/Maps";
-		private const string FileHashSeparator = "__";
-		private const string PersistentMapsFolderName = "Maps";
-
-		private static readonly Dictionary<HashId, Map> CachedMaps = new();
-		private static Dictionary<HashId, string> InternalResourceIndex;
-		private static bool InternalResourceIndexLoaded;
-		private static readonly JsonSerializerSettings MapSerializerSettings = new()
+		public static class MapCatalog
 		{
-			Converters = { new DatabaseMapConverter() },
-			NullValueHandling = NullValueHandling.Ignore
+			public enum MapStorageLocation
+			{
+				Internal = 0,
+				External = 1
+			}
+
+			public readonly struct MapEntry
+			{
+				public HashId HashId { get; }
+				public Map Map { get; }
+				public MapStorageLocation StorageLocation { get; }
+				public string ResourceName { get; }
+				public string FilePath { get; }
+
+				public MapEntry(HashId hashId, Map map, MapStorageLocation storageLocation, string resourceName = null, string filePath = null)
+				{
+					HashId = hashId;
+					Map = map;
+					StorageLocation = storageLocation;
+					ResourceName = string.IsNullOrWhiteSpace(resourceName) ? null : resourceName;
+					FilePath = string.IsNullOrWhiteSpace(filePath) ? null : filePath;
+				}
+
+				public string DisplayName => Map != null && !string.IsNullOrWhiteSpace(Map.name)
+					? Map.name
+					: !string.IsNullOrWhiteSpace(ResourceName)
+						? Path.GetFileNameWithoutExtension(ResourceName)
+						: !string.IsNullOrWhiteSpace(FilePath)
+							? Path.GetFileNameWithoutExtension(FilePath)
+							: null;
+
+				public bool IsInternal => StorageLocation == MapStorageLocation.Internal;
+				public bool IsExternal => StorageLocation == MapStorageLocation.External;
+			}
+
+			private readonly struct InternalManifestEntry
+			{
+				public readonly HashId HashId;
+				public readonly string ResourceName;
+
+				public InternalManifestEntry(HashId hashId, string resourceName)
+				{
+					HashId = hashId;
+					ResourceName = resourceName;
+				}
+			}
+
+			private static string InternalResourcesRoot => $"{ApplicationSettings.JsonDataResourcePath}/Maps";
+			private const string InternalManifestPath = "AssetManifests/Maps";
+			private const string FileHashSeparator = "__";
+			private const string PersistentMapsFolderName = "Maps";
+
+			private static readonly Dictionary<HashId, Map> CachedMaps = new();
+			private static Dictionary<HashId, string> InternalResourceIndex;
+			private static List<InternalManifestEntry> InternalManifestEntries;
+			private static bool InternalResourceIndexLoaded;
+			private static readonly JsonSerializerSettings MapSerializerSettings = new()
+			{
+				Converters = { new DatabaseMapConverter() },
+				NullValueHandling = NullValueHandling.Ignore
 		};
 
 		public static string PersistentMapsFolder => Path.Combine(Application.persistentDataPath, PersistentMapsFolderName);
 
 		public static string InternalMapsFolder => Path.Combine(ApplicationSettings.JsonDataProjectPath, "Maps");
 
-		public static void ClearCache()
-		{
-			CachedMaps.Clear();
-			InternalResourceIndex = null;
-			InternalResourceIndexLoaded = false;
-		}
+			public static void ClearCache()
+			{
+				CachedMaps.Clear();
+				InternalResourceIndex = null;
+				InternalManifestEntries = null;
+				InternalResourceIndexLoaded = false;
+			}
 
 		public static bool IsInternalMap(HashId hash)
 		{
 			EnsureInternalIndex();
 			return hash != 0 && InternalResourceIndex != null && InternalResourceIndex.ContainsKey(hash);
+		}
+
+		public static MapStorageLocation GetStorageLocation(HashId hash)
+		{
+			if (hash == 0)
+				return MapStorageLocation.External;
+
+			if (LoadInternalMap(hash) != null)
+				return MapStorageLocation.Internal;
+
+			if (LoadCommunityMap(hash) != null)
+				return MapStorageLocation.External;
+
+			return IsInternalMap(hash)
+				? MapStorageLocation.Internal
+				: MapStorageLocation.External;
 		}
 
 		public static bool TryGetInternalResourceName(HashId hash, out string resourceName)
@@ -48,8 +113,8 @@ namespace ClassicTilestorm
 			return InternalResourceIndex != null && InternalResourceIndex.TryGetValue(hash, out resourceName) && !string.IsNullOrWhiteSpace(resourceName);
 		}
 
-		public static IReadOnlyList<Map> LoadMaps(IEnumerable<string> mapIds)
-		{
+			public static IReadOnlyList<Map> LoadMaps(IEnumerable<string> mapIds)
+			{
 			if (mapIds == null)
 				return Array.Empty<Map>();
 
@@ -64,8 +129,61 @@ namespace ClassicTilestorm
 				}
 			}
 
-			return list;
-		}
+				return list;
+			}
+
+			public static IReadOnlyList<MapEntry> GetAvailableMaps(bool forceRefresh = false)
+			{
+				var entries = new List<MapEntry>();
+				entries.AddRange(GetInternalMaps(forceRefresh));
+				entries.AddRange(GetExternalMaps(forceRefresh));
+				return entries;
+			}
+
+			public static IReadOnlyList<MapEntry> GetInternalMaps(bool forceRefresh = false)
+			{
+				EnsureInternalIndex(forceRefresh);
+				if (InternalManifestEntries == null || InternalManifestEntries.Count == 0)
+					return Array.Empty<MapEntry>();
+
+				var list = new List<MapEntry>(InternalManifestEntries.Count);
+				foreach (var entry in InternalManifestEntries)
+				{
+					if (entry.HashId == 0)
+						continue;
+
+					var map = LoadInternalMap(entry.HashId);
+					if (map == null)
+						continue;
+
+					list.Add(new MapEntry(entry.HashId, map, MapStorageLocation.Internal, entry.ResourceName));
+				}
+
+				return list;
+			}
+
+			public static IReadOnlyList<MapEntry> GetExternalMaps(bool forceRefresh = false)
+			{
+				if (!Directory.Exists(PersistentMapsFolder))
+					return Array.Empty<MapEntry>();
+
+				var list = new List<MapEntry>();
+				foreach (var file in Directory.EnumerateFiles(PersistentMapsFolder, "*.json", SearchOption.TopDirectoryOnly))
+				{
+					if (!TryGetMapHashFromFileName(file, out var hash))
+						continue;
+
+					var map = LoadMapFromFile(file);
+					if (map == null)
+						continue;
+
+					map.EnsureHashID();
+					list.Add(new MapEntry(map.HashID, map, MapStorageLocation.External, filePath: file));
+					CachedMaps[map.HashID] = map;
+				}
+
+				return list;
+			}
 
 		public static Map LoadMap(HashId hash)
 		{
@@ -76,7 +194,7 @@ namespace ClassicTilestorm
 				return cached;
 
 			var map = IsInternalMap(hash)
-				? LoadInternalMap(hash)
+				? LoadInternalMap(hash) ?? LoadCommunityMap(hash)
 				: LoadCommunityMap(hash) ?? LoadInternalMap(hash);
 			if (map != null)
 			{
@@ -168,7 +286,7 @@ namespace ClassicTilestorm
 
 		public static bool SaveMap(Map map)
 		{
-			return IsInternalMap(map?.HashID ?? 0)
+			return GetStorageLocation(map?.HashID ?? 0) == MapStorageLocation.Internal
 				? SaveInternalMap(map)
 				: SaveCommunityMap(map);
 		}
@@ -190,6 +308,61 @@ namespace ClassicTilestorm
 			File.Delete(file);
 			CachedMaps.Remove(hash);
 			return true;
+		}
+
+		public static bool DeleteInternalMap(HashId hash)
+		{
+			if (hash == 0)
+				return false;
+
+			if (!Directory.Exists(InternalMapsFolder))
+				return false;
+
+			var file = Directory.EnumerateFiles(InternalMapsFolder, "*.json", SearchOption.TopDirectoryOnly)
+				.FirstOrDefault(f => TryGetMapHashFromFileName(f, out var fileHash) && fileHash == hash);
+
+			if (file == null)
+				return false;
+
+			File.Delete(file);
+			CachedMaps.Remove(hash);
+			return true;
+		}
+
+		public static int CleanupExternalMapsCollidingWithInternal()
+		{
+			EnsureInternalIndex();
+
+			if (!Directory.Exists(PersistentMapsFolder))
+				return 0;
+
+			var internalHashes = GetInternalMaps(forceRefresh: true)
+				.Where(entry => entry.HashId != 0)
+				.Select(entry => entry.HashId)
+				.ToHashSet();
+
+			if (internalHashes.Count == 0)
+				return 0;
+
+			var removed = 0;
+			foreach (var file in Directory.EnumerateFiles(PersistentMapsFolder, "*.json", SearchOption.TopDirectoryOnly).ToArray())
+			{
+				if (!TryGetMapHashFromFileName(file, out var hash) || !internalHashes.Contains(hash))
+					continue;
+
+				try
+				{
+					File.Delete(file);
+					CachedMaps.Remove(hash);
+					removed++;
+				}
+				catch (Exception ex)
+				{
+					Debug.LogWarning($"MapCatalog: failed to delete colliding external map '{file}': {ex.Message}");
+				}
+			}
+
+			return removed;
 		}
 
 		public static bool TryGetMap(HashId hash, out Map map)
@@ -227,9 +400,9 @@ namespace ClassicTilestorm
 			return file != null ? LoadMapFromFile(file) : null;
 		}
 
-		private static Map LoadInternalMap(HashId hash)
-		{
-			EnsureInternalIndex();
+			private static Map LoadInternalMap(HashId hash)
+			{
+				EnsureInternalIndex();
 			if (TryGetInternalResourceName(hash, out var resourceName))
 			{
 				var asset = Resources.Load<TextAsset>($"{InternalResourcesRoot}/{resourceName}");
@@ -261,17 +434,21 @@ namespace ClassicTilestorm
 			return null;
 		}
 
-		private static void EnsureInternalIndex()
-		{
-			if (InternalResourceIndexLoaded)
-				return;
+			private static void EnsureInternalIndex()
+				=> EnsureInternalIndex(false);
 
-			InternalResourceIndexLoaded = true;
-			InternalResourceIndex = new Dictionary<HashId, string>();
-
-			var manifest = Resources.Load<TextAsset>(InternalManifestPath);
-			if (manifest != null && !string.IsNullOrWhiteSpace(manifest.text))
+			private static void EnsureInternalIndex(bool forceRefresh)
 			{
+				if (InternalResourceIndexLoaded && !forceRefresh)
+					return;
+
+				InternalResourceIndexLoaded = true;
+				InternalResourceIndex = new Dictionary<HashId, string>();
+				InternalManifestEntries = new List<InternalManifestEntry>();
+
+				var manifest = Resources.Load<TextAsset>(InternalManifestPath);
+				if (manifest != null && !string.IsNullOrWhiteSpace(manifest.text))
+				{
 				foreach (var line in manifest.text.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
 				{
 					var trimmed = line.Trim();
@@ -288,7 +465,10 @@ namespace ClassicTilestorm
 							continue;
 						var resourceName = parts[parts.Length - 1].Trim();
 						if (hash != 0 && !string.IsNullOrWhiteSpace(resourceName))
+						{
 							InternalResourceIndex[hash] = resourceName;
+							InternalManifestEntries.Add(new InternalManifestEntry(hash, resourceName));
+						}
 					}
 					catch
 					{
