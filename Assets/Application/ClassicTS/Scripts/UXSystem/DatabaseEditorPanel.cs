@@ -1137,7 +1137,7 @@ namespace ClassicTilestorm
 			if (CurrentMap == null)
 				return;
 
-			var controller = FindObjectOfType<MainController>();
+			var controller = FindAnyObjectByType<MainController>();
 			if (controller == null)
 				return;
 

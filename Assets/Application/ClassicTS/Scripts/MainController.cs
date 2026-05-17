@@ -332,22 +332,42 @@ namespace ClassicTilestorm
 			}
 
 			var map = CurrentMap;
-			string fileName = $"{BuildExportFileBase(map)}.json";
+			bool archiveRequired = ResourceSerializer.MapRequiresArchive(map);
+			string fileName = $"{BuildExportFileBase(map)}{(archiveRequired ? ".zip" : ".json")}";
 			const bool filteredDefs = true; // Flip to true when we want stripped release-style exports.
 
 #if UNITY_WEBGL && !UNITY_EDITOR
-			string json = ResourceSerializer.BuildAtomicMapJson(map, verbose: true, crop: true, filteredDefs: filteredDefs);
-			if (string.IsNullOrEmpty(json))
+			if (archiveRequired)
 			{
-				Debug.LogError("Failed to build export JSON.");
-				return;
+				byte[] archive = ResourceSerializer.BuildAtomicMapArchiveBytes(map, verbose: true, crop: true, filteredDefs: filteredDefs);
+				if (archive == null || archive.Length == 0)
+				{
+					Debug.LogError("Failed to build export archive.");
+					return;
+				}
+
+				WebGLDownloadUtility.DownloadBytes(fileName, archive, "application/zip");
+				Debug.Log($"Map package prepared for browser download: {fileName}");
 			}
-			WebGLDownloadUtility.DownloadText(fileName, json, "application/json;charset=utf-8");
-			Debug.Log($"Map export prepared for browser download: {fileName}");
+			else
+			{
+				string json = ResourceSerializer.BuildAtomicMapJson(map, verbose: true, crop: true, filteredDefs: filteredDefs);
+				if (string.IsNullOrEmpty(json))
+				{
+					Debug.LogError("Failed to build export JSON.");
+					return;
+				}
+				WebGLDownloadUtility.DownloadText(fileName, json, "application/json;charset=utf-8");
+				Debug.Log($"Map export prepared for browser download: {fileName}");
+			}
 #elif UNITY_EDITOR
 			string defaultFolder = ApplicationSettings.UserFolder;
 			System.IO.Directory.CreateDirectory(defaultFolder);
-			string path = EditorUtility.SaveFilePanel("Export Map As Atomic JSON", defaultFolder, fileName, "json");
+			string path = EditorUtility.SaveFilePanel(
+				archiveRequired ? "Export Map Package" : "Export Map As Atomic JSON",
+				defaultFolder,
+				fileName,
+				archiveRequired ? "zip" : "json");
 			if (string.IsNullOrEmpty(path))
 			{
 				Debug.Log("Export cancelled by user.");

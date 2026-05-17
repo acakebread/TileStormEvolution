@@ -140,5 +140,22 @@ mergeInto(LibraryManager.library, {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  },
+
+  MassiveHadron_DownloadBytes: function (filenamePtr, dataPtr, length, mimeTypePtr) {
+    var filename = UTF8ToString(filenamePtr);
+    var mimeType = UTF8ToString(mimeTypePtr) || 'application/octet-stream';
+    var bytes = HEAPU8.slice(dataPtr, dataPtr + length);
+
+    var blob = new Blob([bytes], { type: mimeType });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = filename || 'download.bin';
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 });

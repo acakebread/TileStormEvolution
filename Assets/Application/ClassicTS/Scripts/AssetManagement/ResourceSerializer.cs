@@ -5,6 +5,7 @@ using UnityEditor;
 #endif
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -42,6 +43,9 @@ namespace ClassicTilestorm
 	{
 		private static void EnsureFolder(string path)
 		{
+			if (string.IsNullOrWhiteSpace(path))
+				return;
+
 			if (!Directory.Exists(path)) Directory.CreateDirectory(path);
 		}
 
@@ -442,6 +446,23 @@ namespace ClassicTilestorm
 			return ApplicationSettings.UserFolder;
 		}
 
+		public static bool MapRequiresArchive(Map originalMap)
+		{
+			if (originalMap == null)
+				return false;
+
+			foreach (var definition in GetUsedDefinitions(originalMap))
+			{
+				if (definition == null || DefinitionCatalog.IsInternalDefinition(definition.HashID))
+					continue;
+
+				if (!string.IsNullOrWhiteSpace(definition.model) && TryResolveExternalModelPath(definition.model, out _))
+					return true;
+			}
+
+			return false;
+		}
+
 		public static Map ImportAtomicMap(string filepath)
 		{
 			if (!File.Exists(filepath))
@@ -551,6 +572,15 @@ namespace ClassicTilestorm
 
 			try
 			{
+				bool archiveRequired = MapRequiresArchive(originalMap);
+				if (archiveRequired)
+				{
+					string archivePath = ResolveAtomicArchivePath(filepath, map);
+					WriteAtomicMapArchive(originalMap, archivePath, verbose, crop, filteredDefs);
+					Debug.Log($"ATOMIC MAP PACKAGE EXPORTED{(crop ? " (auto-cropped)" : "")} → {archivePath} ({map.width}×{map.height})");
+					return;
+				}
+
 				string json = BuildAtomicMapJson(originalMap, verbose, crop, filteredDefs);
 
 				string safeName = SanitizeFileName(string.IsNullOrWhiteSpace(map.name) ? "Untitled" : map.name);
@@ -565,6 +595,9 @@ namespace ClassicTilestorm
 				}
 				else if (Path.HasExtension(filepath))
 				{
+					if (!string.Equals(Path.GetExtension(filepath), ".json", StringComparison.OrdinalIgnoreCase))
+						filepath = Path.ChangeExtension(filepath, ".json");
+
 					var directory = Path.GetDirectoryName(filepath);
 					if (!string.IsNullOrEmpty(directory))
 						EnsureFolder(directory);
@@ -583,6 +616,226 @@ namespace ClassicTilestorm
 			catch (Exception ex)
 			{
 				Debug.LogError($"Failed to export atomic map '{map?.name ?? "unknown"}': {ex.Message}");
+			}
+		}
+
+		public static byte[] BuildAtomicMapArchiveBytes(Map originalMap, bool verbose = false, bool crop = true, bool filteredDefs = false)
+		{
+			if (originalMap == null)
+				return null;
+
+			string stagingRoot = Path.Combine(Path.GetTempPath(), $"TileStormAtomicExport_{Guid.NewGuid():N}");
+			string archivePath = null;
+
+			try
+			{
+				Directory.CreateDirectory(stagingRoot);
+				BuildAtomicMapArchiveStaging(originalMap, stagingRoot, verbose, crop, filteredDefs);
+
+				archivePath = Path.Combine(Path.GetTempPath(), $"TileStormAtomicExport_{Guid.NewGuid():N}.zip");
+				if (File.Exists(archivePath))
+					File.Delete(archivePath);
+
+				ZipFile.CreateFromDirectory(stagingRoot, archivePath, System.IO.Compression.CompressionLevel.Fastest, includeBaseDirectory: false);
+				return File.ReadAllBytes(archivePath);
+			}
+			catch (Exception ex)
+			{
+				Debug.LogError($"Failed to build atomic map archive for '{originalMap?.name ?? "unknown"}': {ex.Message}");
+				return null;
+			}
+			finally
+			{
+				TryDeleteDirectory(stagingRoot);
+				TryDeleteFile(archivePath);
+			}
+		}
+
+		private static string ResolveAtomicArchivePath(string filepath, Map map)
+		{
+			string safeName = SanitizeFileName(string.IsNullOrWhiteSpace(map?.name) ? "Untitled" : map.name);
+			string defaultFileName = $"{safeName}__{HTB50Settings.ToString(map?.HashID ?? 0)}.zip";
+
+			if (string.IsNullOrWhiteSpace(filepath))
+			{
+				var folder = GetDefaultMapExportFolder();
+				EnsureFolder(folder);
+				return Path.Combine(folder, defaultFileName);
+			}
+
+			if (Path.HasExtension(filepath))
+			{
+				if (!string.Equals(Path.GetExtension(filepath), ".zip", StringComparison.OrdinalIgnoreCase))
+					filepath = Path.ChangeExtension(filepath, ".zip");
+
+				var directory = Path.GetDirectoryName(filepath);
+				if (!string.IsNullOrWhiteSpace(directory))
+					EnsureFolder(directory);
+				return filepath;
+			}
+
+			EnsureFolder(filepath);
+			return Path.Combine(filepath, defaultFileName);
+		}
+
+		private static void WriteAtomicMapArchive(Map originalMap, string archivePath, bool verbose, bool crop, bool filteredDefs)
+		{
+			string stagingRoot = Path.Combine(Path.GetTempPath(), $"TileStormAtomicExport_{Guid.NewGuid():N}");
+
+			try
+			{
+				Directory.CreateDirectory(stagingRoot);
+				BuildAtomicMapArchiveStaging(originalMap, stagingRoot, verbose, crop, filteredDefs);
+
+				if (File.Exists(archivePath))
+					File.Delete(archivePath);
+
+				string archiveDirectory = Path.GetDirectoryName(archivePath);
+				if (!string.IsNullOrWhiteSpace(archiveDirectory))
+					EnsureFolder(archiveDirectory);
+
+				ZipFile.CreateFromDirectory(stagingRoot, archivePath, System.IO.Compression.CompressionLevel.Fastest, includeBaseDirectory: false);
+			}
+			finally
+			{
+				TryDeleteDirectory(stagingRoot);
+			}
+		}
+
+		private static void BuildAtomicMapArchiveStaging(Map originalMap, string stagingRoot, bool verbose, bool crop, bool filteredDefs)
+		{
+			string json = BuildAtomicMapJson(originalMap, verbose, crop, filteredDefs);
+			File.WriteAllText(Path.Combine(stagingRoot, "map_save.json"), json);
+
+			string contentRoot = Path.Combine(stagingRoot, "Content");
+			EnsureFolder(contentRoot);
+
+			foreach (var modelRoot in GetAtomicArchiveModelRoots(originalMap))
+			{
+				if (string.IsNullOrWhiteSpace(modelRoot) || !Directory.Exists(modelRoot))
+					continue;
+
+				string relativeModelRoot = GetArchiveContentRelativePath(modelRoot);
+				string destinationRoot = Path.Combine(contentRoot, relativeModelRoot);
+				CopyDirectoryTree(modelRoot, destinationRoot);
+			}
+		}
+
+		private static IEnumerable<string> GetAtomicArchiveModelRoots(Map originalMap)
+		{
+			if (originalMap == null)
+				return Enumerable.Empty<string>();
+
+			var roots = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+			foreach (var definition in GetUsedDefinitions(originalMap))
+			{
+				if (definition == null || DefinitionCatalog.IsInternalDefinition(definition.HashID))
+					continue;
+
+				if (string.IsNullOrWhiteSpace(definition.model) || !TryResolveExternalModelPath(definition.model, out var modelPath))
+					continue;
+
+				string modelRoot = Path.GetDirectoryName(modelPath);
+				if (!string.IsNullOrWhiteSpace(modelRoot))
+					roots.Add(Path.GetFullPath(modelRoot));
+			}
+
+			return roots.OrderBy(p => p, StringComparer.OrdinalIgnoreCase);
+		}
+
+		private static bool TryResolveExternalModelPath(string modelHash, out string filePath)
+		{
+			filePath = null;
+
+			if (string.IsNullOrWhiteSpace(modelHash))
+				return false;
+
+			if (!ModelResourceTable.TryGetEntry(modelHash, out var entry))
+				return false;
+
+			if (entry.Kind != ModelResourceTable.EntryKind.File)
+				return false;
+
+			filePath = entry.FilePath;
+			return !string.IsNullOrWhiteSpace(filePath) && File.Exists(filePath);
+		}
+
+		private static IEnumerable<Definition> GetUsedDefinitions(Map originalMap)
+		{
+			if (originalMap == null)
+				return Enumerable.Empty<Definition>();
+
+			var usedHashes = (((Map.IVariantAccess)originalMap).Variants ?? Array.Empty<Variant>())
+				.Where(v => v.hash != 0)
+				.Select(v => v.hash)
+				.Distinct()
+				.ToArray();
+
+			return usedHashes
+				.Select(ResourceManager.GetDefinition)
+				.Where(d => d != null)
+				.ToArray();
+		}
+
+		private static string GetArchiveContentRelativePath(string absolutePath)
+		{
+			if (string.IsNullOrWhiteSpace(absolutePath))
+				return null;
+
+			string normalized = Path.GetFullPath(absolutePath);
+			try
+			{
+				string relative = Path.GetRelativePath(ApplicationSettings.SystemFolder, normalized);
+				if (!string.IsNullOrWhiteSpace(relative) && !relative.StartsWith("..", StringComparison.Ordinal))
+					return relative;
+			}
+			catch
+			{
+				// Fall back to the filename-based layout below.
+			}
+
+			string fallback = Path.GetFileName(normalized);
+			return string.IsNullOrWhiteSpace(fallback) ? "Content" : fallback;
+		}
+
+		private static void CopyDirectoryTree(string sourceDirectory, string destinationDirectory)
+		{
+			EnsureFolder(destinationDirectory);
+
+			foreach (string file in Directory.EnumerateFiles(sourceDirectory, "*", SearchOption.AllDirectories))
+			{
+				string relative = Path.GetRelativePath(sourceDirectory, file);
+				string destination = Path.Combine(destinationDirectory, relative);
+				string destinationParent = Path.GetDirectoryName(destination);
+				EnsureFolder(destinationParent);
+				File.Copy(file, destination, true);
+			}
+		}
+
+		private static void TryDeleteDirectory(string path)
+		{
+			try
+			{
+				if (!string.IsNullOrWhiteSpace(path) && Directory.Exists(path))
+					Directory.Delete(path, recursive: true);
+			}
+			catch (Exception ex)
+			{
+				Debug.LogWarning($"ResourceSerializer: failed to clean temporary directory '{path}': {ex.Message}");
+			}
+		}
+
+		private static void TryDeleteFile(string path)
+		{
+			try
+			{
+				if (!string.IsNullOrWhiteSpace(path) && File.Exists(path))
+					File.Delete(path);
+			}
+			catch (Exception ex)
+			{
+				Debug.LogWarning($"ResourceSerializer: failed to clean temporary file '{path}': {ex.Message}");
 			}
 		}
 
