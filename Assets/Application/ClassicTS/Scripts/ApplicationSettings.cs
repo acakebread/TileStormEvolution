@@ -205,6 +205,11 @@ namespace ClassicTilestorm
 		public static string SystemMapsFolder => PreviewSettingsStatic.SystemMapsFolder;
 		public static string SystemDefinitionsFolder => PreviewSettingsStatic.SystemDefinitionsFolder;
 		public static string SystemModelsFolder => PreviewSettingsStatic.SystemModelsFolder;
+		public static string SystemMaterialsFolder => PreviewSettingsStatic.SystemMaterialsFolder;
+		public static string SystemTexturesFolder => PreviewSettingsStatic.SystemTexturesFolder;
+		public static string SystemSkycubesFolder => PreviewSettingsStatic.SystemSkycubesFolder;
+		public static string SystemMusicFolder => PreviewSettingsStatic.SystemMusicFolder;
+		public static string SystemSoundsFolder => PreviewSettingsStatic.SystemSoundsFolder;
 
 		// ====================== EDITOR HELPER (for manifest generation) ======================
 #if UNITY_EDITOR
@@ -250,6 +255,11 @@ namespace ClassicTilestorm
 		public static readonly string SystemMapsFolder = System.IO.Path.Combine(SystemFolder, "Maps");
 		public static readonly string SystemDefinitionsFolder = System.IO.Path.Combine(SystemFolder, "Definitions");
 		public static readonly string SystemModelsFolder = System.IO.Path.Combine(SystemFolder, "Models");
+		public static readonly string SystemMaterialsFolder = System.IO.Path.Combine(SystemFolder, "Materials");
+		public static readonly string SystemTexturesFolder = System.IO.Path.Combine(SystemFolder, "Textures");
+		public static readonly string SystemSkycubesFolder = System.IO.Path.Combine(SystemFolder, "Skycubes");
+		public static readonly string SystemMusicFolder = System.IO.Path.Combine(SystemFolder, "Music");
+		public static readonly string SystemSoundsFolder = System.IO.Path.Combine(SystemFolder, "Sounds");
 		public static readonly string ExportFolder = UserFolder;
 	}
 }

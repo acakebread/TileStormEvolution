@@ -41,6 +41,8 @@ namespace ClassicTilestorm
 
 	public static class ResourceSerializer
 	{
+		private delegate bool TryResolveResourceKeyDelegate(string identifier, out string resourcePath);
+
 		private static void EnsureFolder(string path)
 		{
 			if (string.IsNullOrWhiteSpace(path))
@@ -451,6 +453,12 @@ namespace ClassicTilestorm
 			if (originalMap == null)
 				return false;
 
+			if (TryResolveImportedFileResource(originalMap.music, MusicResourceTable.TryResolveResourceKey, out _))
+				return true;
+
+			if (TryResolveImportedFileResource(originalMap.skybox, SkycubeResourceTable.TryResolveResourceKey, out _))
+				return true;
+
 			foreach (var definition in GetUsedDefinitions(originalMap))
 			{
 				if (definition == null || DefinitionCatalog.IsInternalDefinition(definition.HashID))
@@ -505,13 +513,7 @@ namespace ClassicTilestorm
 					return null;
 				}
 
-				string contentModelsRoot = Path.Combine(stagingRoot, "Content", "Models");
-				if (Directory.Exists(contentModelsRoot))
-				{
-					EnsureFolder(ApplicationSettings.SystemModelsFolder);
-					CopyDirectoryTree(contentModelsRoot, ApplicationSettings.SystemModelsFolder);
-					ModelResourceTable.Refresh(forceRefresh: true);
-				}
+				RestoreAtomicMapArchiveContent(stagingRoot);
 
 				string json = File.ReadAllText(jsonPath);
 				return ImportAtomicMapJson(json, archivePath);
@@ -795,6 +797,12 @@ namespace ClassicTilestorm
 				string destinationRoot = Path.Combine(contentRoot, relativeModelRoot);
 				CopyDirectoryTree(modelRoot, destinationRoot);
 			}
+
+			CopyAtomicArchiveSourceRoot(ApplicationSettings.SystemMaterialsFolder, contentRoot, "Materials");
+			CopyAtomicArchiveSourceRoot(ApplicationSettings.SystemTexturesFolder, contentRoot, "Textures");
+			CopyAtomicArchiveSourceRoot(ApplicationSettings.SystemMusicFolder, contentRoot, "Music");
+			CopyAtomicArchiveSourceRoot(ApplicationSettings.SystemSoundsFolder, contentRoot, "Sounds");
+			CopyAtomicArchiveSourceRoot(ApplicationSettings.SystemSkycubesFolder, contentRoot, "SkyCubes");
 		}
 
 		private static IEnumerable<string> GetAtomicArchiveModelRoots(Map originalMap)
@@ -873,6 +881,94 @@ namespace ClassicTilestorm
 
 			string fallback = Path.GetFileName(normalized);
 			return string.IsNullOrWhiteSpace(fallback) ? "Content" : fallback;
+		}
+
+		private static void RestoreAtomicMapArchiveContent(string stagingRoot)
+		{
+			string contentRoot = Path.Combine(stagingRoot, "Content");
+			if (!Directory.Exists(contentRoot))
+				return;
+
+			CopyAtomicArchiveRoot(contentRoot, ApplicationSettings.SystemModelsFolder, "Models");
+			CopyAtomicArchiveRoot(contentRoot, ApplicationSettings.SystemMaterialsFolder, "Materials");
+			CopyAtomicArchiveRoot(contentRoot, ApplicationSettings.SystemTexturesFolder, "Textures");
+			CopyAtomicArchiveRoot(contentRoot, ApplicationSettings.SystemMusicFolder, "Music");
+			CopyAtomicArchiveRoot(contentRoot, ApplicationSettings.SystemSoundsFolder, "Sounds");
+			CopyAtomicArchiveRoot(contentRoot, ApplicationSettings.SystemSkycubesFolder, "SkyCubes", "Skycubes");
+
+			RefreshImportedContentCaches();
+		}
+
+		private static void CopyAtomicArchiveSourceRoot(string sourceRoot, string contentRoot, string archiveFolderName)
+		{
+			if (string.IsNullOrWhiteSpace(sourceRoot) || string.IsNullOrWhiteSpace(contentRoot) || string.IsNullOrWhiteSpace(archiveFolderName))
+				return;
+
+			if (!Directory.Exists(sourceRoot))
+				return;
+
+			string destinationRoot = Path.Combine(contentRoot, archiveFolderName);
+			CopyDirectoryTree(sourceRoot, destinationRoot);
+		}
+
+		private static void CopyAtomicArchiveRoot(string contentRoot, string destinationRoot, params string[] candidateFolderNames)
+		{
+			if (string.IsNullOrWhiteSpace(contentRoot) || string.IsNullOrWhiteSpace(destinationRoot))
+				return;
+
+			string sourceFolder = FindExistingChildDirectory(contentRoot, candidateFolderNames);
+			if (string.IsNullOrWhiteSpace(sourceFolder) || !Directory.Exists(sourceFolder))
+				return;
+
+			EnsureFolder(destinationRoot);
+			CopyDirectoryTree(sourceFolder, destinationRoot);
+		}
+
+		private static string FindExistingChildDirectory(string parentFolder, params string[] candidateFolderNames)
+		{
+			if (string.IsNullOrWhiteSpace(parentFolder) || candidateFolderNames == null || candidateFolderNames.Length == 0)
+				return null;
+
+			foreach (var candidate in candidateFolderNames)
+			{
+				if (string.IsNullOrWhiteSpace(candidate))
+					continue;
+
+				string fullPath = Path.Combine(parentFolder, candidate);
+				if (Directory.Exists(fullPath))
+					return fullPath;
+			}
+
+			return null;
+		}
+
+		private static bool TryResolveImportedFileResource(string identifier, TryResolveResourceKeyDelegate tryResolveResourceKey, out string resourcePath)
+		{
+			resourcePath = null;
+
+			if (string.IsNullOrWhiteSpace(identifier) || tryResolveResourceKey == null)
+				return false;
+
+			if (!tryResolveResourceKey(identifier, out var resolved) || string.IsNullOrWhiteSpace(resolved))
+				return false;
+
+			if (!File.Exists(resolved))
+				return false;
+
+			resourcePath = resolved;
+			return true;
+		}
+
+		private static void RefreshImportedContentCaches()
+		{
+			ModelResourceTable.Refresh(forceRefresh: true);
+			TextureResourceTable.ClearCache();
+			MaterialResourceTable.ClearCache();
+			SkycubeResourceTable.ClearCache();
+			MusicResourceTable.ClearCache();
+			SoundResourceTable.ClearCache();
+			ImportedResourceLoader.ClearCache();
+			ProjectAssets.RefreshAllNameCaches();
 		}
 
 		private static void CopyDirectoryTree(string sourceDirectory, string destinationDirectory)
