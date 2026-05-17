@@ -163,8 +163,13 @@ namespace MassiveHadronLtd
 			float width = scrollRect != null && scrollRect.viewport != null ? scrollRect.viewport.rect.width : rowRect.rect.width;
 			ghostLayout.preferredWidth = width;
 			ghostLayout.preferredHeight = rowRect.rect.height;
-			ghostRect.anchorMin = new Vector2(0.5f, 0.5f);
-			ghostRect.anchorMax = new Vector2(0.5f, 0.5f);
+			var ghostParent = scrollRect != null && scrollRect.viewport != null
+				? scrollRect.viewport
+				: (contentParent != null ? contentParent.GetComponentInParent<Canvas>()?.transform : null);
+			if (ghostParent != null)
+				ghostRect.SetParent(ghostParent, false);
+			ghostRect.anchorMin = new Vector2(0f, 0.5f);
+			ghostRect.anchorMax = new Vector2(1f, 0.5f);
 			ghostRect.pivot = new Vector2(0.5f, 0.5f);
 			ghostRect.sizeDelta = new Vector2(width, rowRect.rect.height);
 			ghostRect.SetAsLastSibling();
@@ -177,15 +182,20 @@ namespace MassiveHadronLtd
 			if (ghostRect == null || !ghostRect.gameObject.activeSelf)
 				return;
 
-			var canvas = ghostRect.GetComponentInParent<Canvas>();
-			var canvasRect = canvas != null ? canvas.transform as RectTransform : null;
-			if (canvasRect == null)
+			var anchorRect = scrollRect != null && scrollRect.viewport != null
+				? scrollRect.viewport
+				: (contentParent != null ? contentParent.GetComponentInParent<Canvas>()?.transform as RectTransform : null);
+			if (anchorRect == null)
 				return;
 
+			var canvas = anchorRect.GetComponentInParent<Canvas>();
 			var screenCamera = canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay ? canvas.worldCamera : null;
 
-			if (RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, screenPos, screenCamera, out var localPoint))
-				ghostRect.anchoredPosition = localPoint;
+			if (RectTransformUtility.ScreenPointToLocalPointInRectangle(anchorRect, screenPos, screenCamera, out var localPoint))
+			{
+				var centerOffsetY = anchorRect.rect.height * (0.5f - anchorRect.pivot.y);
+				ghostRect.anchoredPosition = new Vector2(0f, localPoint.y - centerOffsetY);
+			}
 		}
 
 		private void ApplyAutoScroll(Vector2 screenPos)
