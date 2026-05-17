@@ -3,6 +3,7 @@ using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Newtonsoft.Json;
@@ -51,6 +52,10 @@ namespace ClassicTilestorm
 			var removedMaps = MapCatalog.CleanupExternalMapsCollidingWithInternal();
 			if (removedMaps > 0)
 				Debug.Log($"ResourceSerializer: removed {removedMaps} external map(s) colliding with internal storage");
+			DefinitionCatalog.ClearCache();
+			var removedDefinitions = DefinitionCatalog.CleanupExternalDefinitionsCollidingWithInternal();
+			if (removedDefinitions > 0)
+				Debug.Log($"ResourceSerializer: removed {removedDefinitions} external definition(s) colliding with internal storage");
 			PrefabResourceTable.ClearCache();
 			TextureResourceTable.ClearCache();
 			MaterialResourceTable.ClearCache();
@@ -160,6 +165,35 @@ namespace ClassicTilestorm
 					data.maps = combined.ToArray();
 				}
 
+				var externalDefinitions = DefinitionCatalog.GetExternalDefinitions()
+					.Select(entry => entry.Definition)
+					.Where(def => def != null)
+					.ToArray();
+
+				if (externalDefinitions.Length > 0)
+				{
+					var combinedDefinitions = (data.definitions ?? Array.Empty<Definition>()).ToList();
+					var existingDefinitionHashes = combinedDefinitions
+						.Where(def => def != null)
+						.Select(def => def.HashID)
+						.Where(hash => hash != 0)
+						.ToHashSet();
+
+					foreach (var externalDefinition in externalDefinitions)
+					{
+						if (externalDefinition == null)
+							continue;
+
+						if (externalDefinition.HashID == 0 || existingDefinitionHashes.Contains(externalDefinition.HashID))
+							continue;
+
+						combinedDefinitions.Add(externalDefinition);
+						existingDefinitionHashes.Add(externalDefinition.HashID);
+					}
+
+					data.definitions = combinedDefinitions.ToArray();
+				}
+
 				if (data.maps == null || data.definitions == null ||
 					data.maps.Length == 0 || data.definitions.Length == 0)
 				{
@@ -224,6 +258,26 @@ namespace ClassicTilestorm
 				}
 			}
 
+			var internalDefinitions = new List<Definition>();
+			var externalDefinitions = new List<Definition>();
+			var seenDefinitionHashes = new HashSet<HashId>();
+
+			if (data.definitions != null)
+			{
+				foreach (var def in data.definitions)
+				{
+					if (def == null || seenDefinitionHashes.Contains(def.HashID))
+						continue;
+
+					seenDefinitionHashes.Add(def.HashID);
+
+					if (DefinitionCatalog.GetStorageLocation(def.HashID) == DefinitionCatalog.DefinitionStorageLocation.Internal)
+						internalDefinitions.Add(def);
+					else
+						externalDefinitions.Add(def);
+				}
+			}
+
 			var internalMapIds = data.maps != null && data.maps.Length > 0
 				? data.maps
 					.Where(m => m != null && MapCatalog.GetStorageLocation(m.HashID) == MapCatalog.MapStorageLocation.Internal)
@@ -280,8 +334,8 @@ namespace ClassicTilestorm
 				root["maps"] = JArray.FromObject(internalMapIds, JsonSerializer.Create(settings));
 
 			string json = root.ToString(verbose ? Formatting.Indented : Formatting.None);
-			string definitionsJson = data.definitions != null && data.definitions.Length > 0
-				? JArray.FromObject(data.definitions, JsonSerializer.Create(settings)).ToString(verbose ? Formatting.Indented : Formatting.None)
+			string definitionsJson = internalDefinitions.Count > 0
+				? JArray.FromObject(internalDefinitions, JsonSerializer.Create(settings)).ToString(verbose ? Formatting.Indented : Formatting.None)
 				: "[]";
 
 			string path = string.IsNullOrEmpty(filepath)
@@ -299,10 +353,43 @@ namespace ClassicTilestorm
 			EnsureFolder(Path.GetDirectoryName(defsPath));
 			WriteJsonIfChanged(defsPath, definitionsJson);
 
+			try
+			{
+				var externalDefinitionHashes = externalDefinitions
+					.Where(def => def != null)
+					.Select(def => HTB50Settings.ToString(def.HashID))
+					.ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+				foreach (var externalDefinition in externalDefinitions)
+				{
+					if (externalDefinition == null)
+						continue;
+
+					DefinitionCatalog.SaveExternalDefinition(externalDefinition);
+				}
+
+				if (Directory.Exists(DefinitionCatalog.PersistentDefinitionsFolder))
+				{
+					foreach (var file in Directory.EnumerateFiles(DefinitionCatalog.PersistentDefinitionsFolder, "*.json", SearchOption.TopDirectoryOnly).ToArray())
+					{
+						if (!DefinitionCatalog.TryGetDefinitionHashFromFileName(file, out var fileHash) ||
+							!externalDefinitionHashes.Contains(HTB50Settings.ToString(fileHash)))
+						{
+							File.Delete(file);
+						}
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				Debug.LogWarning($"SaveDatabase: definition file cleanup skipped → {ex.Message}");
+			}
+
 #if UNITY_EDITOR
 			AssetDatabase.Refresh();
 #endif
 			MapCatalog.ClearCache();
+			DefinitionCatalog.ClearCache();
 
 			//Debug.Log($"Database saved → {path} " +
 			//		  $"(maps: {mapsToSave?.Length ?? 0}, " +

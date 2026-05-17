@@ -7,6 +7,9 @@ using TMPro;
 using System.Linq;
 using MassiveHadronLtd;
 using ClassicTilestorm.Assets;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace ClassicTilestorm
 {
@@ -24,6 +27,7 @@ namespace ClassicTilestorm
 		[SerializeField] private Button ButtonDelete;
 		[SerializeField] private Button ButtonMoveUp;
 		[SerializeField] private Button ButtonMoveDown;
+		private Button ButtonMoveStore;
 
 		[Header("Preview")]
 		[SerializeField] private RawImage previewImage;
@@ -216,6 +220,23 @@ namespace ClassicTilestorm
 			if (ButtonDelete) ButtonDelete.onClick.AddListener(DeleteDefinition);
 			if (ButtonMoveUp) ButtonMoveUp.onClick.AddListener(MoveDefinitionUp);
 			if (ButtonMoveDown) ButtonMoveDown.onClick.AddListener(MoveDefinitionDown);
+			EnsureMoveStoreButton();
+		}
+
+		private void EnsureMoveStoreButton()
+		{
+			if (!Application.isEditor || ButtonMoveStore != null || ButtonInsert == null)
+				return;
+
+			ButtonMoveStore = Instantiate(ButtonInsert, ButtonInsert.transform.parent);
+			ButtonMoveStore.name = "ButtonMoveStore";
+			ButtonMoveStore.transform.SetAsLastSibling();
+
+			if (ButtonMoveStore.GetComponentInChildren<TMP_Text>() is TMP_Text label)
+				label.text = "Move Store";
+
+			ButtonMoveStore.onClick.RemoveAllListeners();
+			ButtonMoveStore.onClick.AddListener(MoveCurrentDefinitionStorage);
 		}
 
 		private void InitializeDropdownListeners()
@@ -429,7 +450,11 @@ namespace ClassicTilestorm
 			if (label != null)
 			{
 				var usage = ResourceManager.DefinitionUsageCount(def.HashID);
-				var hashDisplay = 0 == def.HashID ? "(no hashid)" : $"hash: {HTB50Settings.ToString(def.HashID)}";
+				var hashDisplay = 0 == def.HashID
+					? "(no hashid)"
+					: DefinitionCatalog.IsInternalDefinition(def.HashID)
+						? $"<color=#7CFF9A>{HTB50Settings.ToString(def.HashID)}</color>"
+						: $"<color=#FF6B6B>EX-{HTB50Settings.ToString(def.HashID)}</color>";
 				label.text = $"{def?.name ?? "???"}  [{usage}]  ({hashDisplay})";
 			}
 		}
@@ -587,13 +612,32 @@ namespace ClassicTilestorm
 			if (ButtonDelete == null) return;
 
 			bool hasSelection = lastSelectedDefinitionIndex >= 0;
-			bool isUsed = hasSelection && ResourceManager.IsDefinitionUsed(CurrentDefinition.HashID);
+			bool isDefault = hasSelection && CurrentDefinition != null && CurrentDefinition.HashID == 0;
+			bool isUsed = hasSelection && !isDefault && ResourceManager.IsDefinitionUsed(CurrentDefinition.HashID);
 
-			ButtonDelete.interactable = hasSelection && !isUsed;
+			ButtonDelete.interactable = hasSelection && !isDefault && !isUsed;
 
 			if (ButtonDelete.GetComponentInChildren<TMP_Text>() is TMP_Text btnText)
 			{
-				btnText.text = isUsed ? "Delete (used)" : "Delete";
+				btnText.text = isDefault
+					? "Delete (default)"
+					: isUsed
+						? "Delete (used)"
+						: "Delete";
+			}
+
+			if (ButtonMoveStore != null)
+			{
+				ButtonMoveStore.interactable = hasSelection && Application.isEditor && !isDefault;
+
+				if (ButtonMoveStore.GetComponentInChildren<TMP_Text>() is TMP_Text moveText)
+				{
+					moveText.text = CurrentDefinition == null
+						? "Move Store"
+						: DefinitionCatalog.IsInternalDefinition(CurrentDefinition.HashID)
+							? "Move to External"
+							: "Move to Internal";
+				}
 			}
 		}
 
@@ -885,6 +929,72 @@ namespace ClassicTilestorm
 
 			ResourceManager.MoveDefinitionDown(lastSelectedDefinitionIndex);
 			lastSelectedDefinitionIndex++;
+			RefreshDefinitionList();
+		}
+
+		private void MoveCurrentDefinitionStorage()
+		{
+			if (!Application.isEditor || CurrentDefinition == null || CurrentDefinition.HashID == 0)
+				return;
+
+			var def = CurrentDefinition;
+			var hash = def.HashID;
+			var currentLocation = DefinitionCatalog.GetStorageLocation(hash);
+
+			var list = ResourceManager.Definitions.ToList();
+			if (currentLocation == DefinitionCatalog.DefinitionStorageLocation.Internal)
+			{
+				list.RemoveAll(d => d != null && d.HashID == hash);
+				list.Add(def);
+				ResourceManager.database.definitions = list.ToArray();
+				DefinitionCatalog.SaveInternalDefinitions(ResourceManager.Definitions.Where(d => d != null && DefinitionCatalog.IsInternalDefinition(d.HashID)).Where(d => d.HashID != hash));
+				DefinitionCatalog.SaveExternalDefinition(def);
+			}
+			else
+			{
+				list.RemoveAll(d => d != null && d.HashID == hash);
+
+				int insertIndex = 0;
+				for (int i = 0; i < lastSelectedDefinitionIndex; i++)
+				{
+					var candidate = ResourceManager.Definitions[i];
+					if (candidate != null && DefinitionCatalog.IsInternalDefinition(candidate.HashID))
+						insertIndex++;
+				}
+
+				insertIndex = Mathf.Clamp(insertIndex, 0, list.Count);
+				list.Insert(insertIndex, def);
+				ResourceManager.database.definitions = list.ToArray();
+
+				var internalDefs = ResourceManager.Definitions
+					.Where(d => d != null && d.HashID != hash && DefinitionCatalog.IsInternalDefinition(d.HashID))
+					.ToList();
+				internalDefs.Insert(insertIndex, def);
+				DefinitionCatalog.SaveInternalDefinitions(internalDefs);
+				DefinitionCatalog.DeleteExternalDefinition(hash);
+			}
+
+#if UNITY_EDITOR
+			AssetDatabase.Refresh();
+#endif
+			DefinitionCatalog.ClearCache();
+
+			if (ResourceManager.database != null)
+				ResourceSerializer.SaveDatabase(ResourceManager.database, verbose: true);
+
+			ResourceSerializer.Initialise();
+
+			lastSelectedDefinitionIndex = -1;
+			for (var i = 0; i < ResourceManager.Definitions.Count; i++)
+			{
+				var candidate = ResourceManager.Definitions[i];
+				if (candidate != null && candidate.HashID == hash)
+				{
+					lastSelectedDefinitionIndex = i;
+					break;
+				}
+			}
+
 			RefreshDefinitionList();
 		}
 	}

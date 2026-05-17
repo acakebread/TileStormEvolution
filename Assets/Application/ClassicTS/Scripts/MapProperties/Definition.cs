@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -146,6 +147,46 @@ namespace ClassicTilestorm
 			string.IsNullOrWhiteSpace(model) &&
 			//string.IsNullOrWhiteSpace(texture) &&
 			string.IsNullOrWhiteSpace(material);
+
+		public Definition Clone() => new()
+		{
+			HashID = HashID,
+			name = name,
+			model = model,
+			//texture = texture,
+			material = material,
+		};
+
+		public void EnsureHashID(IEnumerable<Definition> existingDefinitions = null)
+		{
+			if (HashID == 0 && IsDefaultEquivalent())
+				return;
+
+			if (HashID != 0 && existingDefinitions != null)
+			{
+				bool duplicate = existingDefinitions.Any(d => d != null && !ReferenceEquals(d, this) && d.HashID == HashID);
+				if (!duplicate)
+					return;
+			}
+			else if (HashID != 0)
+			{
+				return;
+			}
+
+			var used = existingDefinitions?
+				.Where(d => d != null && !ReferenceEquals(d, this) && d.HashID != 0)
+				.Select(d => d.HashID)
+				.ToHashSet() ?? new HashSet<HashId>();
+
+			HashId candidate;
+			do
+			{
+				candidate = RadixHash.GetSecureRandomHash32();
+			}
+			while (candidate == 0 || used.Contains(candidate));
+
+			HashID = candidate;
+		}
 	}
 
 	// ===================================================================
