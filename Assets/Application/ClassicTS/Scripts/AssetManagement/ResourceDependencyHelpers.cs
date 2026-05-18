@@ -1,5 +1,4 @@
 using System;
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -103,7 +102,7 @@ namespace ClassicTilestorm
 			return !string.IsNullOrWhiteSpace(filePath) && File.Exists(filePath);
 		}
 
-		internal static bool TryRelocateModelToUncategorised(string modelHash)
+		internal static bool TryRelocateModelToImmutable(string modelHash)
 		{
 			if (string.IsNullOrWhiteSpace(modelHash))
 				return false;
@@ -111,12 +110,10 @@ namespace ClassicTilestorm
 			if (!ModelResourceTable.TryGetEntry(modelHash, out var entry))
 				return false;
 
-			bool shouldDeleteSourceTree = entry.Kind == ModelResourceTable.EntryKind.File;
-
 			if (entry.Kind == ModelResourceTable.EntryKind.Resource && TryResolveInternalModelSourcePath(modelHash, out var existingResourcePath))
 			{
-				var uncategorisedRoot = Path.Combine(Application.dataPath, "Application", "Resources", AssetPath.UncategorisedRootFolder, AssetPath.GeometryFolder);
-				if (IsPathUnderRoot(existingResourcePath, uncategorisedRoot))
+				var immutableRoot = Path.Combine(Application.dataPath, "Application", "Resources", AssetPath.ImmutableRootFolder, AssetPath.GeometryFolder);
+				if (IsPathUnderRoot(existingResourcePath, immutableRoot))
 					return true;
 			}
 
@@ -129,16 +126,18 @@ namespace ClassicTilestorm
 				return false;
 			}
 
-			var destinationRoot = Path.Combine(Application.dataPath, "Application", "Resources", AssetPath.UncategorisedRootFolder, AssetPath.GeometryFolder);
+			var destinationRoot = Path.Combine(Application.dataPath, "Application", "Resources", AssetPath.ImmutableRootFolder, AssetPath.GeometryFolder);
 			var importedPath = WavefrontAssetImporter.ImportWavefrontModel(
 				sourcePath,
 				WavefrontAssetImporter.ImportOption.HashIdFolder,
 				destinationRoot,
-				registerImported: false);
+				registerImported: false,
+				forcedFolderName: modelHash,
+				forcedHashId: modelHash);
 			if (string.IsNullOrWhiteSpace(importedPath) || !File.Exists(importedPath))
 				return false;
 
-			if (shouldDeleteSourceTree)
+			if (entry.Kind == ModelResourceTable.EntryKind.File)
 			{
 				var sourceRoot = Path.GetDirectoryName(sourcePath);
 				TryDeleteDirectoryTree(sourceRoot);
@@ -189,15 +188,15 @@ namespace ClassicTilestorm
 		{
 			try
 			{
-				DeleteAssetAndMeta(sourceObjPath);
-
 				var mtlRelative = FindMtlRelativePath(sourceObjPath);
-				if (string.IsNullOrWhiteSpace(mtlRelative))
-					return;
-
 				var sourceDir = Path.GetDirectoryName(sourceObjPath);
-				var sourceMtlPath = Path.Combine(sourceDir, mtlRelative);
-				DeleteAssetAndMeta(sourceMtlPath);
+				var sourceMtlPath = string.IsNullOrWhiteSpace(mtlRelative) || string.IsNullOrWhiteSpace(sourceDir)
+					? null
+					: Path.Combine(sourceDir, mtlRelative);
+
+				DeleteAssetAndMeta(sourceObjPath);
+				if (!string.IsNullOrWhiteSpace(sourceMtlPath))
+					DeleteAssetAndMeta(sourceMtlPath);
 			}
 			catch (Exception ex)
 			{

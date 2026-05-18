@@ -314,7 +314,7 @@ using ClassicTilestorm.Assets;
 			if (targetLocation == MapStorageLocation.Internal)
 			{
 				PromoteDefinitionsToInternal(usedDefinitions);
-				PromoteModelsToUncategorised(usedModelHashes);
+				PromoteModelsToImmutable(usedModelHashes);
 			}
 			else
 			{
@@ -422,11 +422,11 @@ using ClassicTilestorm.Assets;
 				if (ResourceManager.ModelUsageCount(modelHash) != 1)
 					continue;
 
-				ResourceDependencyHelpers.TryRelocateModelToUncategorised(modelHash);
+				ResourceDependencyHelpers.TryRelocateModelToImmutable(modelHash);
 			}
 		}
 
-		private static void PromoteModelsToUncategorised(IEnumerable<string> modelHashes)
+		private static void PromoteModelsToImmutable(IEnumerable<string> modelHashes)
 		{
 			foreach (var modelHash in modelHashes ?? Array.Empty<string>())
 			{
@@ -436,7 +436,7 @@ using ClassicTilestorm.Assets;
 				if (ResourceManager.ModelUsageCount(modelHash) != 1)
 					continue;
 
-				ResourceDependencyHelpers.TryRelocateModelToUncategorised(modelHash);
+				ResourceDependencyHelpers.TryRelocateModelToImmutable(modelHash);
 			}
 		}
 

@@ -22,7 +22,7 @@ namespace MassiveHadronLtd
 		/// </summary>
 		/// <param name="sourceObjPath">Full path to the source .obj file</param>
 		/// <param name="importOption">Folder strategy for the imported asset set.</param>
-		public static string ImportWavefrontModel(string sourceObjPath, ImportOption importOption = ImportOption.HashIdFolder, string destinationRoot = null, bool registerImported = true)
+		public static string ImportWavefrontModel(string sourceObjPath, ImportOption importOption = ImportOption.HashIdFolder, string destinationRoot = null, bool registerImported = true, string forcedFolderName = null, string forcedHashId = null)
 		{
 			if (string.IsNullOrEmpty(sourceObjPath) || !File.Exists(sourceObjPath))
 			{
@@ -32,7 +32,7 @@ namespace MassiveHadronLtd
 
 			string objFileName = Path.GetFileName(sourceObjPath);
 			string modelName = Path.GetFileNameWithoutExtension(sourceObjPath);
-			string importFolderName = GetImportFolderName(sourceObjPath, modelName, importOption);
+			string importFolderName = GetImportFolderName(sourceObjPath, modelName, importOption, forcedFolderName);
 
 			string rootBase = string.IsNullOrWhiteSpace(destinationRoot)
 				? ApplicationSettings.SystemModelsFolder
@@ -51,14 +51,17 @@ namespace MassiveHadronLtd
 
 			CopyDependenciesWithStructure(sourceObjPath, importRoot);
 			if (registerImported)
-				ModelResourceTable.RegisterImported(ExtractImportHash(sourceObjPath, importOption), destObjPath);
+				ModelResourceTable.RegisterImported(string.IsNullOrWhiteSpace(forcedHashId) ? ExtractImportHash(sourceObjPath, importOption) : forcedHashId, destObjPath);
 
 			Debug.Log($"Import completed: {importRoot}");
 			return destObjPath;
 		}
 
-		private static string GetImportFolderName(string sourceObjPath, string modelName, ImportOption importOption)
+		private static string GetImportFolderName(string sourceObjPath, string modelName, ImportOption importOption, string forcedFolderName = null)
 		{
+			if (!string.IsNullOrWhiteSpace(forcedFolderName))
+				return SanitizeFolderName(forcedFolderName);
+
 			switch (importOption)
 			{
 				case ImportOption.AssetFileNameFolder:

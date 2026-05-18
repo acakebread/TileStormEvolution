@@ -1,12 +1,12 @@
-﻿#if UNITY_EDITOR
+#if UNITY_EDITOR
+using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
-using System;
-using System.Collections.Generic;
 using ClassicTilestorm;
 using ClassicTilestorm.Assets;
 using MassiveHadronLtd;
@@ -29,19 +29,23 @@ public class AssetManifestGenerator : IPreprocessBuildWithReport
 		if (!Directory.Exists(manifestFolder))
 			Directory.CreateDirectory(manifestFolder);
 
-		// 🔴 CRITICAL: load ApplicationSettings so AssetPath values are valid
 		ApplicationSettings.Editor_ForceLoadInstance();
-
-		// 🔴 Register all roots
 		AssetConfiguration.Initialize();
 
 		foreach (var (manifestName, assetType, getRoots) in AssetManifestConfig.GetAllManifestDefinitions())
 		{
 			var roots = getRoots().ToArray();
 
+			if (string.Equals(manifestName, "Models", StringComparison.OrdinalIgnoreCase))
+			{
+				var modelEntries = GetModelEntries(roots).ToList();
+				WriteModelManifest(manifestName, modelEntries);
+				Debug.Log($"Generated {manifestName}: {modelEntries.Count} assets");
+				continue;
+			}
+
 			var names = GetAssetNames(assetType, roots);
 			WriteManifest(manifestName, names);
-
 			Debug.Log($"Generated {manifestName}: {names.Count} assets");
 		}
 
@@ -61,8 +65,7 @@ public class AssetManifestGenerator : IPreprocessBuildWithReport
 			.OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
 			.ToList();
 
-		if (string.Equals(manifestName, "Models", StringComparison.OrdinalIgnoreCase) ||
-			string.Equals(manifestName, "Prefabs", StringComparison.OrdinalIgnoreCase) ||
+		if (string.Equals(manifestName, "Prefabs", StringComparison.OrdinalIgnoreCase) ||
 			string.Equals(manifestName, "Textures", StringComparison.OrdinalIgnoreCase) ||
 			string.Equals(manifestName, "Music", StringComparison.OrdinalIgnoreCase) ||
 			string.Equals(manifestName, "SkyCubes", StringComparison.OrdinalIgnoreCase) ||
@@ -78,6 +81,21 @@ public class AssetManifestGenerator : IPreprocessBuildWithReport
 		}
 
 		File.WriteAllLines(path, sorted);
+	}
+
+	private static void WriteModelManifest(string manifestName, IEnumerable<ModelManifestEntry> entries)
+	{
+		string path = $"Assets/Resources/{AssetManifestConfig.ManifestRootFolder}/{manifestName}.txt";
+		var lines = entries
+			.Where(e => !string.IsNullOrWhiteSpace(e.DisplayName) && !string.IsNullOrWhiteSpace(e.HashId))
+			.GroupBy(e => e.HashId, StringComparer.OrdinalIgnoreCase)
+			.Select(g => g.First())
+			.OrderBy(e => e.DisplayName, StringComparer.OrdinalIgnoreCase)
+			.Select(e => $"{e.HashId}\t{e.DisplayName}")
+			.ToList();
+
+		lines.Insert(0, "# hashId<TAB>resourceName");
+		File.WriteAllLines(path, lines);
 	}
 
 	private static void WriteMapManifest()
@@ -114,6 +132,78 @@ public class AssetManifestGenerator : IPreprocessBuildWithReport
 
 		return ResourceUtils.GetAssetNamesFromResourcesForEditor(assetType, normalizedRoots).ToList();
 	}
+
+	private static IEnumerable<ModelManifestEntry> GetModelEntries(string[] roots)
+	{
+		var normalizedRoots = (roots ?? Array.Empty<string>())
+			.Where(r => !string.IsNullOrWhiteSpace(r))
+			.Select(r => r.Trim('/'))
+			.Distinct(StringComparer.OrdinalIgnoreCase)
+			.ToArray();
+
+		foreach (var resFolder in ResourceUtils.GetAllResourcesFolders(skipDotFolders: true))
+		{
+			foreach (var root in normalizedRoots)
+			{
+				string fullPath = Path.Combine(resFolder, root).Replace('\\', '/');
+				if (!Directory.Exists(fullPath))
+					continue;
+
+				foreach (var file in Directory.EnumerateFiles(fullPath, "*.*", SearchOption.AllDirectories))
+				{
+					var ext = Path.GetExtension(file);
+					if (!string.Equals(ext, ".obj", StringComparison.OrdinalIgnoreCase) &&
+						!string.Equals(ext, ".fbx", StringComparison.OrdinalIgnoreCase))
+						continue;
+
+					string displayName = Path.GetFileNameWithoutExtension(file);
+					string hashId = TryGetFolderBasedModelHash(file, out var folderHash)
+						? folderHash
+						: HTB50.EncodeFixed(RadixHash.GetStableHash32(displayName), 6);
+
+					yield return new ModelManifestEntry(hashId, displayName);
+				}
+			}
+		}
+	}
+
+	private static bool TryGetFolderBasedModelHash(string filePath, out string hashId)
+	{
+		hashId = null;
+		if (string.IsNullOrWhiteSpace(filePath))
+			return false;
+
+		var normalized = filePath.Replace('\\', '/');
+		var parts = normalized.Split('/');
+		for (int i = 0; i < parts.Length; i++)
+		{
+			if (!string.Equals(parts[i], AssetPath.ImmutableRootFolder, StringComparison.OrdinalIgnoreCase) &&
+				!string.Equals(parts[i], "Community", StringComparison.OrdinalIgnoreCase))
+				continue;
+
+			for (int j = i + 1; j < parts.Length; j++)
+			{
+				if (ResourceIdUtil.TryParseCanonicalHash(parts[j], out _))
+				{
+					hashId = parts[j];
+					return true;
+				}
+			}
+		}
+
+		return false;
+	}
+
+	private readonly struct ModelManifestEntry
+	{
+		public string HashId { get; }
+		public string DisplayName { get; }
+
+		public ModelManifestEntry(string hashId, string displayName)
+		{
+			HashId = hashId;
+			DisplayName = displayName;
+		}
+	}
 }
 #endif
-
