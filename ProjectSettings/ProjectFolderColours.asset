@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &1
+MonoBehaviour:
+  m_ObjectHideFlags: 53
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 0}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp-Editor:ClassicTilestorm.Editor:ProjectFolderColourSettings
+  defaultFolderColour: {r: 0.83, g: 0.2, b: 0.2, a: 0.18}
+  entries:
+  - folderGuid: b8410c6f94158814680b422c3af527b3
+    colour: {r: 1, g: 0.2, b: 0.2, a: 1}
