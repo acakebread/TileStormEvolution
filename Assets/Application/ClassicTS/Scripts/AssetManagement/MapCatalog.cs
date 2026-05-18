@@ -307,16 +307,19 @@ using ClassicTilestorm.Assets;
 			var usedDefinitions = ResourceManager.GetUsedDefinitions(map)
 				.Where(def => def != null)
 				.ToArray();
+			var usedModelHashes = ResourceManager.GetUsedModelHashes(map)
+				.Where(modelHash => !string.IsNullOrWhiteSpace(modelHash))
+				.ToArray();
 
 			if (targetLocation == MapStorageLocation.Internal)
 			{
 				PromoteDefinitionsToInternal(usedDefinitions);
-				PromoteModelsToUncategorised(map);
+				PromoteModelsToUncategorised(usedModelHashes);
 			}
 			else
 			{
+				ExportUniqueModelsToExternal(usedModelHashes);
 				ExportUniqueDefinitionsToExternal(map, usedDefinitions);
-				ExportUniqueModelsToExternal(map);
 			}
 
 			var saved = targetLocation == MapStorageLocation.Internal
@@ -409,9 +412,9 @@ using ClassicTilestorm.Assets;
 			DefinitionCatalog.SaveInternalDefinitions(remainingInternalDefinitions);
 		}
 
-		private static void ExportUniqueModelsToExternal(Map map)
+		private static void ExportUniqueModelsToExternal(IEnumerable<string> modelHashes)
 		{
-			foreach (var modelHash in ResourceManager.GetUsedModelHashes(map))
+			foreach (var modelHash in modelHashes ?? Array.Empty<string>())
 			{
 				if (string.IsNullOrWhiteSpace(modelHash))
 					continue;
@@ -423,9 +426,9 @@ using ClassicTilestorm.Assets;
 			}
 		}
 
-		private static void PromoteModelsToUncategorised(Map map)
+		private static void PromoteModelsToUncategorised(IEnumerable<string> modelHashes)
 		{
-			foreach (var modelHash in ResourceManager.GetUsedModelHashes(map))
+			foreach (var modelHash in modelHashes ?? Array.Empty<string>())
 			{
 				if (string.IsNullOrWhiteSpace(modelHash))
 					continue;
