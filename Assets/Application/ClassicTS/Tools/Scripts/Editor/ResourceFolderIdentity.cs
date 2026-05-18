@@ -8,7 +8,7 @@ namespace ClassicTilestorm.Assets
 {
 	internal static class ResourceFolderIdentity
 	{
-		public const string SeedFileName = ".tilestorm-resource-folder";
+		public const string SeedFileName = ".massive-hadron-resource-folder";
 
 		public static bool TryComputeHashForAssetPath(string assetPath, bool createSeedIfMissing, out string hashId)
 		{

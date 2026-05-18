@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
@@ -52,14 +53,14 @@ public class AssetManifestGenerator : IPreprocessBuildWithReport
 		ApplicationSettings.Editor_ForceLoadInstance();
 		AssetConfiguration.Initialize();
 
-		var remaps = BuildLegacyHashRemap();
-		int changedFiles = ApplyHashRemapToJsonFiles(remaps);
+		var remaps = BuildLegacyHashRemaps();
+		int changedFiles = ApplyHashRemapsToJsonFiles(remaps);
 
 		GenerateAllManifests();
 		ProjectAssets.RefreshAllNameCaches();
 		MapCatalog.ClearCache();
 
-		Debug.Log($"<color=cyan>Resource hash seed migration complete.</color> Remaps: {remaps.Count}, json files changed: {changedFiles}.");
+		Debug.Log($"<color=cyan>Resource hash seed migration complete.</color> Remaps: {CountRemaps(remaps)}, json files changed: {changedFiles}.");
 	}
 
 	private static int WriteHashedManifest(string manifestName, IEnumerable<ResourceManifestEntry> entries)
@@ -73,9 +74,9 @@ public class AssetManifestGenerator : IPreprocessBuildWithReport
 		return sorted.Count;
 	}
 
-	private static IReadOnlyDictionary<string, string> BuildLegacyHashRemap()
+	private static IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> BuildLegacyHashRemaps()
 	{
-		var candidates = new List<ResourceManifestEntry>();
+		var remaps = new Dictionary<string, IReadOnlyDictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
 
 		foreach (var (manifestName, assetType, getRoots) in AssetManifestConfig.GetAllManifestDefinitions())
 		{
@@ -83,38 +84,40 @@ public class AssetManifestGenerator : IPreprocessBuildWithReport
 				manifestName,
 				GetResourceEntries(manifestName, assetType, getRoots().ToArray()));
 
-			candidates.AddRange(entries.Where(e =>
+			var candidates = entries.Where(e =>
 				!e.HasForcedHash &&
 				!string.IsNullOrWhiteSpace(e.LegacyHashId) &&
-				!string.Equals(e.LegacyHashId, e.HashId, StringComparison.OrdinalIgnoreCase)));
-		}
+				!string.Equals(e.LegacyHashId, e.HashId, StringComparison.OrdinalIgnoreCase));
 
-		var remaps = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-		foreach (var group in candidates.GroupBy(e => e.LegacyHashId, StringComparer.OrdinalIgnoreCase))
-		{
-			var newHashes = group
-				.Select(e => e.HashId)
-				.Where(h => !string.IsNullOrWhiteSpace(h))
-				.Distinct(StringComparer.OrdinalIgnoreCase)
-				.ToArray();
-
-			if (newHashes.Length == 1)
+			var manifestRemaps = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+			foreach (var group in candidates.GroupBy(e => e.LegacyHashId, StringComparer.OrdinalIgnoreCase))
 			{
-				remaps[group.Key] = newHashes[0];
-				continue;
+				var newHashes = group
+					.Select(e => e.HashId)
+					.Where(h => !string.IsNullOrWhiteSpace(h))
+					.Distinct(StringComparer.OrdinalIgnoreCase)
+					.ToArray();
+
+				if (newHashes.Length == 1)
+				{
+					manifestRemaps[group.Key] = newHashes[0];
+					continue;
+				}
+
+				Debug.LogWarning(
+					$"Resource hash migration skipped ambiguous {manifestName} legacy hash '{group.Key}'. " +
+					$"Candidates: {string.Join(", ", group.Select(e => $"{e.ResourceKey}->{e.HashId}"))}");
 			}
 
-			Debug.LogWarning(
-				$"Resource hash migration skipped ambiguous legacy hash '{group.Key}'. " +
-				$"Candidates: {string.Join(", ", group.Select(e => $"{e.ResourceKey}->{e.HashId}"))}");
+			remaps[manifestName] = manifestRemaps;
 		}
 
 		return remaps;
 	}
 
-	private static int ApplyHashRemapToJsonFiles(IReadOnlyDictionary<string, string> remaps)
+	private static int ApplyHashRemapsToJsonFiles(IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> remaps)
 	{
-		if (remaps == null || remaps.Count == 0)
+		if (remaps == null || CountRemaps(remaps) == 0)
 			return 0;
 
 		int changedFiles = 0;
@@ -127,7 +130,7 @@ public class AssetManifestGenerator : IPreprocessBuildWithReport
 			if (string.IsNullOrWhiteSpace(text))
 				continue;
 
-			string updated = ReplaceExactHashTokens(text, remaps);
+			string updated = ReplaceTypedHashFields(text, remaps);
 			if (string.Equals(text, updated, StringComparison.Ordinal))
 				continue;
 
@@ -150,24 +153,60 @@ public class AssetManifestGenerator : IPreprocessBuildWithReport
 		}
 	}
 
-	private static string ReplaceExactHashTokens(string input, IReadOnlyDictionary<string, string> remaps)
+	private static string ReplaceTypedHashFields(string input, IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> remaps)
 	{
-		string output = input;
-		var replacements = remaps
-			.Where(pair => !string.IsNullOrWhiteSpace(pair.Key) &&
-				!string.IsNullOrWhiteSpace(pair.Value) &&
-				!string.Equals(pair.Key, pair.Value, StringComparison.OrdinalIgnoreCase))
-			.Select((pair, index) => (OldHash: pair.Key, NewHash: pair.Value, Placeholder: $"__TS_HASH_REMAP_{index}__"))
-			.ToArray();
+		if (string.IsNullOrEmpty(input))
+			return input;
 
-		foreach (var replacement in replacements)
-			output = output.Replace($"\"{replacement.OldHash}\"", $"\"{replacement.Placeholder}\"");
+		return Regex.Replace(
+			input,
+			"\"(?<field>model|material|music|skybox|sound|texture|prefab)\"\\s*:\\s*\"(?<hash>[^\"]+)\"",
+			match =>
+			{
+				string field = match.Groups["field"].Value;
+				string hash = match.Groups["hash"].Value;
+				string manifestName = GetManifestNameForJsonField(field);
+				if (string.IsNullOrWhiteSpace(manifestName) ||
+					!remaps.TryGetValue(manifestName, out var manifestRemaps) ||
+					!manifestRemaps.TryGetValue(hash, out var replacement) ||
+					string.IsNullOrWhiteSpace(replacement))
+				{
+					return match.Value;
+				}
 
-		foreach (var replacement in replacements)
-			output = output.Replace($"\"{replacement.Placeholder}\"", $"\"{replacement.NewHash}\"");
-
-		return output;
+				return match.Value.Replace($"\"{hash}\"", $"\"{replacement}\"");
+			},
+			RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 	}
+
+	private static string GetManifestNameForJsonField(string field)
+	{
+		if (string.IsNullOrWhiteSpace(field))
+			return null;
+
+		switch (field.Trim().ToLowerInvariant())
+		{
+			case "model":
+				return "Models";
+			case "material":
+				return "Materials";
+			case "music":
+				return "Music";
+			case "skybox":
+				return "SkyCubes";
+			case "sound":
+				return "Sounds";
+			case "texture":
+				return "Textures";
+			case "prefab":
+				return "Prefabs";
+			default:
+				return null;
+		}
+	}
+
+	private static int CountRemaps(IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> remaps)
+		=> remaps?.Values.Sum(map => map?.Count ?? 0) ?? 0;
 
 	private static void WriteMapManifest()
 	{
