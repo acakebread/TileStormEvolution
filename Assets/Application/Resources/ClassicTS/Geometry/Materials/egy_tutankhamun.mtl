@@ -1,6 +1,6 @@
 # MTL file - created by a modified js OBJExporter
 
-newmtl ind_tile_boundary_02
+newmtl egy_tutankhamun
 Tr 0.0000
 Tf 1.0000 1.0000 1.0000
 illum 1
@@ -9,6 +9,5 @@ Pds 1
 Pl 1
 Ka 1 1 1
 Kd 1 1 1
-map_Kd Ind_pipes_00.tga
+map_Kd Egypt_00.tga
 Ke 0 0 0
-

@@ -1,6 +1,6 @@
 # Modified by OBJRotate180 (Mesh rotated 180 degrees around Y-axis)
 # Original file: ind_wall.obj
-mtllib Materials/ind_wall.mtl
+mtllib Materials/_ind_wall.mtl
 v -0.499995 1.456923 -0.281229
 v 0.499999 1.456923 -0.281210
 v -0.499993 1.456923 -0.499981
@@ -345,7 +345,7 @@ vn -0.000011 0.795940 0.605375
 vn -0.000011 0.795940 0.605375
 o wall_fh
 o wall_fh
-usemtl ind_wall
+usemtl _ind_wall
 f 1/1/1 2/2/2 3/3/3
 f 4/4/4 5/5/5 6/6/6
 f 7/7/7 8/8/8 9/9/9

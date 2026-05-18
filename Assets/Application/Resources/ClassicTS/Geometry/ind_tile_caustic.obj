@@ -1,6 +1,6 @@
 # Modified by OBJRotate180 (Mesh rotated 180 degrees around Y-axis)
 # Original file: tile_caustic.obj
-mtllib Materials/tile_caustic.mtl
+mtllib Materials/ind_tile_caustic.mtl
 v 0.500000 0.000000 -0.500000
 v -0.500000 0.000000 -0.500000
 v 0.500000 0.000000 0.500000
@@ -21,6 +21,6 @@ vn 0.000000 1.000000 0.000000
 vn 0.000000 1.000000 0.000000
 o tile_flat85
 o tile_flat85
-usemtl tile_caustic
+usemtl ind_tile_caustic
 f 1/1/1 2/2/2 3/3/3
 f 4/4/4 5/5/5 6/6/6

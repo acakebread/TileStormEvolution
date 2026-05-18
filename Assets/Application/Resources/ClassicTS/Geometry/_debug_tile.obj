@@ -1,5 +1,5 @@
 # Original file: tile_slide.obj
-mtllib Materials/debug_tile.mtl
+mtllib Materials/_debug_tile.mtl
 v 0.500000 0.000000 -0.500000
 v 0.500000 0.000000 0.500000
 v -0.500000 0.000000 0.500000
@@ -20,6 +20,6 @@ vn 0.000000 1.000000 0.000000
 vn 0.000000 1.000000 0.000000
 o debug_tile85
 o debug_tile85
-usemtl material
+usemtl _debug_tile
 f 2/2/2 1/1/1 3/3/3
 f 5/5/5 4/4/4 6/6/6

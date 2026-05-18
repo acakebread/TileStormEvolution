@@ -1,4 +1,4 @@
-mtllib Materials/tile_quiz.mtl
+mtllib Materials/_tile_quiz.mtl
 v -0.5 -0.002 -0.5
 v -0.5 -0.002 0.5
 v 0.5 -0.002 -0.5
@@ -19,6 +19,6 @@ vn 0.000000 1.000000 0.000000
 vn 0.000000 1.000000 0.000000
 o tile_quiz
 o tile_quiz
-usemtl tile_quiz
+usemtl _tile_quiz
 f 1/1/1 2/2/2 3/3/3
 f 4/4/4 5/5/5 6/6/6

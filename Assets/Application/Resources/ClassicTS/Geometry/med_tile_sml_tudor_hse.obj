@@ -1,6 +1,6 @@
 # Modified by OBJRotate180 (Mesh rotated 180 degrees around Y-axis)
 # Original file: med_tile_boundary_hse1.obj
-mtllib Materials/med_tile_boundary_hse1.mtl
+mtllib Materials/med_tile_sml_tudor_hse.mtl
 v -0.500000 -0.200000 -0.500000
 v -0.500000 -0.200000 0.500000
 v -0.500008 0.145000 -0.500000
@@ -543,7 +543,7 @@ vn 0.663221 -0.378234 -0.645815
 vn 0.663221 -0.378234 -0.645815
 o tile_boundary_hse1
 o tile_boundary_hse1
-usemtl PDX08_-_Default
+usemtl med_tile_sml_tudor_hse
 f 1/1/1 2/2/2 3/3/3
 f 4/4/4 5/5/5 6/6/6
 f 7/7/7 8/8/8 9/9/9
