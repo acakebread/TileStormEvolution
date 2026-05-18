@@ -133,6 +133,7 @@ namespace ClassicTilestorm
 		[JsonIgnore]
 		public Action<Map, bool, Vector3> OnMapEdited { get; set; }
 		[JsonIgnore] public Transform parent { get; set; }
+		[JsonIgnore] internal bool IncludeRuntimeSceneHelpers { get; set; } = true;
 
 		[JsonIgnore] public int Width => width;
 		[JsonIgnore] public int Height => height;
@@ -441,7 +442,9 @@ namespace ClassicTilestorm
 			PreviewRenderLayers.RemovePreviewLayersFromChildLights(parent);
 
 			SyncDoorWaypoints();
-			parent.gameObject.GetOrAddComponent<WindController>();
+
+			if (IncludeRuntimeSceneHelpers && parent != null)
+				parent.gameObject.GetOrAddComponent<WindController>();
 
 			return true;
 		}
@@ -559,7 +562,7 @@ namespace ClassicTilestorm
 
 		private void EnsureMapRootComponent()
 		{
-			if (parent == null) return;
+			if (parent == null || !IncludeRuntimeSceneHelpers) return;
 
 			_mapRootComponent = parent.GetComponent<MapRoot>();
 			if (_mapRootComponent == null)

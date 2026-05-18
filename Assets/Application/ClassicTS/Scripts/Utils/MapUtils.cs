@@ -88,6 +88,7 @@ namespace ClassicTilestorm
 			// CRITICAL: Work on a CLONE so we don't corrupt the original map's runtime state
 			var previewMap = map.Clone();
 			previewMap.parent = parent;
+			previewMap.IncludeRuntimeSceneHelpers = false;
 			if (!previewMap.InitialiseGraph())
 			{
 				Debug.LogWarning("Preview graph creation failed on clone");

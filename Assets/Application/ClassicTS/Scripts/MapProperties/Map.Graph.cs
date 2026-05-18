@@ -87,9 +87,10 @@ namespace ClassicTilestorm
 			Vector3 renderPosition = TileRenderPosition(visualIndex);
 
 			var tile = new Tile(variant, parent, renderPosition);
+			var mapRoot = parent != null ? parent.GetComponent<MapRoot>()?.Map : null;
 
-			if (tile.gameObject != null)
-				AttachPickColliders(tile.gameObject, mapRoot: parent != null ? parent.GetComponent<MapRoot>()?.Map : null, visualIndex);
+			if (tile.gameObject != null && IncludeRuntimeSceneHelpers && mapRoot != null)
+				AttachPickColliders(tile.gameObject, mapRoot, visualIndex);
 
 			return tile;
 		}
