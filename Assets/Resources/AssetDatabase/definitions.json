@@ -11,7 +11,7 @@
   {
     "id": "4JT6tJ",
     "name": "rainbow tile",
-    "model": "8TKmcV",
+    "model": "1Dv91x",
     "material": "2JpQfe",
     "flags": "Move"
   },
@@ -87,7 +87,7 @@
   {
     "id": "2w9vTQ",
     "name": "ind tile slide",
-    "model": "0w6waA",
+    "model": "AYUhJf",
     "flags": "Move, Roll"
   },
   {
@@ -132,7 +132,7 @@
   {
     "id": "2XfyDx",
     "name": "ind caustic",
-    "model": "8eV5ew"
+    "model": "1CvvYr"
   },
   {
     "id": "3tNMCV",
@@ -197,12 +197,12 @@
   {
     "id": "3GVJyw",
     "name": "ind legacy wall straight",
-    "model": "8HdC1M"
+    "model": "4PiACt"
   },
   {
     "id": "5Un9xE",
     "name": "ind legacy wall corner",
-    "model": "2y9VdA"
+    "model": "C0cxAM"
   },
   {
     "id": "DvCe9T",
@@ -286,7 +286,7 @@
   {
     "id": "Dhxx26",
     "name": "egypt tutankhamun",
-    "model": "EQvDAu"
+    "model": "2kAWji"
   },
   {
     "id": "2fi9Qe",
@@ -650,7 +650,7 @@
   {
     "id": "4nKU0M",
     "name": "debug tile",
-    "model": "CfMXCp"
+    "model": "6aw3ju"
   },
   {
     "id": "603Cit",
@@ -660,23 +660,23 @@
   {
     "id": "74Y092",
     "name": "ind tile boundary 2",
-    "model": "65EYYr"
+    "model": "47aajq"
   },
   {
     "id": "1u4HhK",
     "name": "ind tile boundary 3",
-    "model": "5qVjUx"
+    "model": "1TK6U0"
   },
   {
     "id": "AEDTuj",
     "name": "test no nav slide",
-    "model": "98F8YD",
+    "model": "0Qv0Ac",
     "flags": "Move"
   },
   {
     "id": "3ExQpJ",
     "name": "slide and roll",
-    "model": "753M2p",
+    "model": "91CyUP",
     "flags": "Move, Roll"
   }
 ]

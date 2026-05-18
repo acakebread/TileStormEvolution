@@ -131,8 +131,8 @@ namespace ClassicTilestorm
 		public static string JsonDataResourcePath => JsonDataPath;
 
 		[Header("content roots")]
-		[SerializeField] private string[] contentRoots = new[] { AssetPath.ImmutableRootFolder, AssetPath.GenericRootFolder, "ClassicTS", "Evolution" };
-		private static readonly string[] DefaultContentRoots = new[] { AssetPath.ImmutableRootFolder, AssetPath.GenericRootFolder, "ClassicTS", "Evolution" };
+		[SerializeField] private string[] contentRoots = new[] { AssetPath.ImmutableRootFolder, AssetPath.GlobalRootFolder, "ClassicTS", "Evolution" };
+		private static readonly string[] DefaultContentRoots = new[] { AssetPath.ImmutableRootFolder, AssetPath.GlobalRootFolder, "ClassicTS", "Evolution" };
 		public static IReadOnlyList<string> ContentRoots => NormalizeContentRoots(instance?.contentRoots);
 
 		public static IEnumerable<string> GetContentPaths(string subfolder)
