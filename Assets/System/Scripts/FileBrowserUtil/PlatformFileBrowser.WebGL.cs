@@ -3,9 +3,9 @@ using UnityEngine;
 namespace MassiveHadronLtd.FileBrowserUtil
 {
 #if UNITY_WEBGL && !UNITY_EDITOR
-	public static class PlatformFileBrowser
+	internal static class PlatformFileBrowser
 	{
-		public static bool ExportAtomicMap(ClassicTilestorm.ResourceSerializer.AtomicMapExportData export, string defaultFolder = null)
+		internal static bool ExportAtomicMap(ClassicTilestorm.ResourceSerializer.AtomicMapExportData export, string defaultFolder = null)
 		{
 			if (export == null || !export.IsValid)
 			{

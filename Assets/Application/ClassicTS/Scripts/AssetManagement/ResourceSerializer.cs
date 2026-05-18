@@ -11,16 +11,15 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using ClassicTilestorm.Assets;
 using MassiveHadronLtd;
-using MassiveHadronLtd.FileBrowserUtil;
 
 namespace ClassicTilestorm
 {
-	public static class JsonSetup
+	internal static class JsonSetup
 	{
 		private static bool _initialized = false;
 
 		[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-		public static void Init()
+		internal static void Init()
 		{
 			if (_initialized) return;
 
@@ -40,11 +39,9 @@ namespace ClassicTilestorm
 		}
 	}
 
-	public static class ResourceSerializer
+	internal static class ResourceSerializer
 	{
-		private delegate bool TryResolveResourceKeyDelegate(string identifier, out string resourcePath);
-
-		public sealed class AtomicMapExportData
+		internal sealed class AtomicMapExportData
 		{
 			public bool IsArchive { get; }
 			public string FileName { get; }
@@ -69,15 +66,31 @@ namespace ClassicTilestorm
 			}
 		}
 
-		private static void EnsureFolder(string path)
+		internal sealed class DatabaseSaveData
 		{
-			if (string.IsNullOrWhiteSpace(path))
-				return;
+			public string LevelsPath { get; }
+			public string DefinitionsPath { get; }
+			public string LevelsJson { get; }
+			public string DefinitionsJson { get; }
+			public int MapCount { get; }
+			public int DefinitionCount { get; }
+			public bool Verbose { get; }
+			public bool CropAllMaps { get; }
 
-			if (!Directory.Exists(path)) Directory.CreateDirectory(path);
+			internal DatabaseSaveData(string levelsPath, string definitionsPath, string levelsJson, string definitionsJson, int mapCount, int definitionCount, bool verbose, bool cropAllMaps)
+			{
+				LevelsPath = levelsPath;
+				DefinitionsPath = definitionsPath;
+				LevelsJson = levelsJson;
+				DefinitionsJson = definitionsJson;
+				MapCount = mapCount;
+				DefinitionCount = definitionCount;
+				Verbose = verbose;
+				CropAllMaps = cropAllMaps;
+			}
 		}
 
-		public static void Initialise()
+		internal static void Initialise()
 		{
 			JsonSetup.Init();
 			MapCatalog.ClearCache();
@@ -118,7 +131,7 @@ namespace ClassicTilestorm
 			ResourceManager.database = LoadDatabase(levelsAsset.text, definitionsAsset.text);
 		}
 
-		public static DatabaseData LoadDatabase(string json, string definitionsJson = null)
+		internal static DatabaseData LoadDatabase(string json, string definitionsJson = null)
 		{
 			if (string.IsNullOrEmpty(json)) return null;
 
@@ -262,9 +275,9 @@ namespace ClassicTilestorm
 			return Array.Empty<Definition>();
 		}
 
-		public static void SaveDatabase(DatabaseData data, string filepath = null, string definitionsPath = null, bool verbose = false, bool cropAllMaps = true)
+		internal static DatabaseSaveData SaveDatabase(DatabaseData data, string filepath = null, string definitionsPath = null, bool verbose = false, bool cropAllMaps = true)
 		{
-			if (data == null) return;
+			if (data == null) return null;
 			if (data.maps != null)
 			{
 				foreach (var map in data.maps)
@@ -380,9 +393,9 @@ namespace ClassicTilestorm
 				? Path.Combine(defsRoot, "definitions.json")
 				: definitionsPath;
 
-			EnsureFolder(Path.GetDirectoryName(path));
+			FileUtils.EnsureFolder(Path.GetDirectoryName(path));
 			WriteJsonIfChanged(path, json);
-			EnsureFolder(Path.GetDirectoryName(defsPath));
+			FileUtils.EnsureFolder(Path.GetDirectoryName(defsPath));
 			WriteJsonIfChanged(defsPath, definitionsJson);
 
 			try
@@ -431,6 +444,16 @@ namespace ClassicTilestorm
 			Debug.Log($"Database saved → {path} / {defsPath} " +
 					  $"(maps: {internalMapIds?.Length ?? 0}, " +
 					  $"definitions: {data.definitions?.Length ?? 0}");
+
+			return new DatabaseSaveData(
+				path,
+				defsPath,
+				json,
+				definitionsJson,
+				internalMapIds?.Length ?? 0,
+				data.definitions?.Length ?? 0,
+				verbose,
+				cropAllMaps);
 		}
 
 		private static TextAsset LoadJsonAsset(string fileName)
@@ -449,7 +472,7 @@ namespace ClassicTilestorm
 			return Resources.Load<TextAsset>($"{root}/{fileName}.json");
 		}
 
-		public static string BuildAtomicMapJson(Map originalMap, bool crop = true, bool padded = false, bool verbose = false)
+		private static string BuildAtomicMapJson(Map originalMap, bool crop = true, bool padded = false, bool verbose = false)
 		{
 			if (originalMap == null)
 				return null;
@@ -469,13 +492,13 @@ namespace ClassicTilestorm
 			return JsonConvert.SerializeObject(map, settings);
 		}
 
-		public static AtomicMapExportData BuildAtomicMapExportData(Map originalMap, bool crop = true, bool padded = false, bool verbose = false)
+		internal static AtomicMapExportData ExportAtomicMap(Map originalMap, bool crop = true, bool padded = false, bool verbose = false)
 		{
 			if (originalMap == null)
 				return null;
 
 			var map = crop ? CreateCroppedCopy(originalMap) : originalMap;
-			bool archiveRequired = MapRequiresArchive(originalMap);
+			bool archiveRequired = ResourceDependencyHelpers.RequiresAtomicArchive(originalMap);
 			string fileName = $"{BuildAtomicExportBaseFileName(map)}{(archiveRequired ? ".zip" : ".json")}";
 
 			if (archiveRequired)
@@ -488,43 +511,14 @@ namespace ClassicTilestorm
 			return new AtomicMapExportData(false, fileName, "application/json;charset=utf-8", json, null);
 		}
 
-		public static string GetDefaultMapExportFolder()
-		{
-			return ApplicationSettings.UserFolder;
-		}
-
-		public static bool MapRequiresArchive(Map originalMap)
-		{
-			if (originalMap == null)
-				return false;
-
-			if (TryResolveImportedFileResource(originalMap.music, MusicResourceTable.TryResolveResourceKey, out _))
-				return true;
-
-			if (TryResolveImportedFileResource(originalMap.skybox, SkycubeResourceTable.TryResolveResourceKey, out _))
-				return true;
-
-			foreach (var definition in GetUsedDefinitions(originalMap))
-			{
-				if (definition == null || DefinitionCatalog.IsInternalDefinition(definition.HashID))
-					continue;
-
-				if (!string.IsNullOrWhiteSpace(definition.model) && TryResolveExternalModelPath(definition.model, out _))
-					return true;
-			}
-
-			return false;
-		}
-
 		private static string BuildAtomicExportBaseFileName(Map map)
 		{
 			var name = string.IsNullOrWhiteSpace(map?.name) ? "Untitled" : map.name;
-			var invalid = Path.GetInvalidFileNameChars();
-			var safeName = new string(name.Select(ch => invalid.Contains(ch) ? '_' : ch).ToArray()).Trim();
+			var safeName = StringUtil.SanitizeFileName(name);
 			return $"{safeName}__{HTB50Settings.ToString(map?.HashID ?? 0)}";
 		}
 
-		public static Map ImportAtomicMap(string filepath)
+		internal static Map ImportAtomicMap(string filepath)
 		{
 			if (!File.Exists(filepath))
 			{
@@ -534,7 +528,7 @@ namespace ClassicTilestorm
 
 			try
 			{
-				if (IsAtomicMapArchive(filepath))
+				if (FileUtils.IsZipArchive(filepath))
 					return ImportAtomicMapArchive(filepath);
 
 				string json = File.ReadAllText(filepath);
@@ -573,7 +567,7 @@ namespace ClassicTilestorm
 			}
 			finally
 			{
-				TryDeleteDirectory(stagingRoot);
+				FileUtils.TryDeleteDirectory(stagingRoot, nameof(ResourceSerializer));
 			}
 		}
 
@@ -644,32 +638,6 @@ namespace ClassicTilestorm
 			return importedMap;
 		}
 
-		private static bool IsAtomicMapArchive(string filepath)
-		{
-			if (string.IsNullOrWhiteSpace(filepath) || !File.Exists(filepath))
-				return false;
-
-			if (string.Equals(Path.GetExtension(filepath), ".zip", StringComparison.OrdinalIgnoreCase))
-				return true;
-
-			try
-			{
-				using var stream = File.OpenRead(filepath);
-				if (stream.Length < 4)
-					return false;
-
-				int b0 = stream.ReadByte();
-				int b1 = stream.ReadByte();
-				int b2 = stream.ReadByte();
-				int b3 = stream.ReadByte();
-				return b0 == 'P' && b1 == 'K' && (b2 == 3 || b2 == 5 || b2 == 7) && (b3 == 4 || b3 == 6 || b3 == 8);
-			}
-			catch
-			{
-				return false;
-			}
-		}
-
 		private static Definition[] LoadImportedDefinitions(JObject root)
 		{
 			if (root == null)
@@ -695,16 +663,7 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public static void ExportAtomicMap(Map originalMap, string filepath = null, bool crop = true, bool padded = false, bool verbose = false)
-		{
-			var export = BuildAtomicMapExportData(originalMap, crop: crop, padded: padded, verbose: verbose);
-			if (export == null || !export.IsValid)
-				return;
-
-			PlatformFileBrowser.ExportAtomicMap(export, filepath);
-		}
-
-		public static byte[] BuildAtomicMapArchiveBytes(Map originalMap, bool crop = true, bool padded = false, bool verbose = false)
+		private static byte[] BuildAtomicMapArchiveBytes(Map originalMap, bool crop = true, bool padded = false, bool verbose = false)
 		{
 			if (originalMap == null)
 				return null;
@@ -731,8 +690,8 @@ namespace ClassicTilestorm
 			}
 			finally
 			{
-				TryDeleteDirectory(stagingRoot);
-				TryDeleteFile(archivePath);
+				FileUtils.TryDeleteDirectory(stagingRoot, nameof(ResourceSerializer));
+				FileUtils.TryDeleteFile(archivePath, nameof(ResourceSerializer));
 			}
 		}
 
@@ -742,16 +701,16 @@ namespace ClassicTilestorm
 			File.WriteAllText(Path.Combine(stagingRoot, BuildAtomicExportBaseFileName(originalMap) + ".json"), json);
 
 			string contentRoot = Path.Combine(stagingRoot, "Content");
-			EnsureFolder(contentRoot);
+			FileUtils.EnsureFolder(contentRoot);
 
-			foreach (var modelRoot in GetAtomicArchiveModelRoots(originalMap))
+			foreach (var modelRoot in ResourceDependencyHelpers.GetAtomicArchiveModelRoots(originalMap))
 			{
 				if (string.IsNullOrWhiteSpace(modelRoot) || !Directory.Exists(modelRoot))
 					continue;
 
 				string relativeModelRoot = GetArchiveContentRelativePath(modelRoot);
 				string destinationRoot = Path.Combine(contentRoot, relativeModelRoot);
-				CopyDirectoryTree(modelRoot, destinationRoot);
+				FileUtils.CopyDirectoryTree(modelRoot, destinationRoot);
 			}
 
 			CopyAtomicArchiveSourceRoot(ApplicationSettings.SystemMaterialsFolder, contentRoot, "Materials");
@@ -759,63 +718,6 @@ namespace ClassicTilestorm
 			CopyAtomicArchiveSourceRoot(ApplicationSettings.SystemMusicFolder, contentRoot, "Music");
 			CopyAtomicArchiveSourceRoot(ApplicationSettings.SystemSoundsFolder, contentRoot, "Sounds");
 			CopyAtomicArchiveSourceRoot(ApplicationSettings.SystemSkycubesFolder, contentRoot, "SkyCubes");
-		}
-
-		private static IEnumerable<string> GetAtomicArchiveModelRoots(Map originalMap)
-		{
-			if (originalMap == null)
-				return Enumerable.Empty<string>();
-
-			var roots = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-			foreach (var definition in GetUsedDefinitions(originalMap))
-			{
-				if (definition == null || DefinitionCatalog.IsInternalDefinition(definition.HashID))
-					continue;
-
-				if (string.IsNullOrWhiteSpace(definition.model) || !TryResolveExternalModelPath(definition.model, out var modelPath))
-					continue;
-
-				string modelRoot = Path.GetDirectoryName(modelPath);
-				if (!string.IsNullOrWhiteSpace(modelRoot))
-					roots.Add(Path.GetFullPath(modelRoot));
-			}
-
-			return roots.OrderBy(p => p, StringComparer.OrdinalIgnoreCase);
-		}
-
-		private static bool TryResolveExternalModelPath(string modelHash, out string filePath)
-		{
-			filePath = null;
-
-			if (string.IsNullOrWhiteSpace(modelHash))
-				return false;
-
-			if (!ModelResourceTable.TryGetEntry(modelHash, out var entry))
-				return false;
-
-			if (entry.Kind != ModelResourceTable.EntryKind.File)
-				return false;
-
-			filePath = entry.FilePath;
-			return !string.IsNullOrWhiteSpace(filePath) && File.Exists(filePath);
-		}
-
-		private static IEnumerable<Definition> GetUsedDefinitions(Map originalMap)
-		{
-			if (originalMap == null)
-				return Enumerable.Empty<Definition>();
-
-			var usedHashes = (((Map.IVariantAccess)originalMap).Variants ?? Array.Empty<Variant>())
-				.Where(v => v.hash != 0)
-				.Select(v => v.hash)
-				.Distinct()
-				.ToArray();
-
-			return usedHashes
-				.Select(ResourceManager.GetDefinition)
-				.Where(d => d != null)
-				.ToArray();
 		}
 
 		private static string GetArchiveContentRelativePath(string absolutePath)
@@ -864,7 +766,7 @@ namespace ClassicTilestorm
 				return;
 
 			string destinationRoot = Path.Combine(contentRoot, archiveFolderName);
-			CopyDirectoryTree(sourceRoot, destinationRoot);
+			FileUtils.CopyDirectoryTree(sourceRoot, destinationRoot);
 		}
 
 		private static void CopyAtomicArchiveRoot(string contentRoot, string destinationRoot, params string[] candidateFolderNames)
@@ -876,8 +778,8 @@ namespace ClassicTilestorm
 			if (string.IsNullOrWhiteSpace(sourceFolder) || !Directory.Exists(sourceFolder))
 				return;
 
-			EnsureFolder(destinationRoot);
-			CopyDirectoryTree(sourceFolder, destinationRoot);
+			FileUtils.EnsureFolder(destinationRoot);
+			FileUtils.CopyDirectoryTree(sourceFolder, destinationRoot);
 		}
 
 		private static string FindExistingChildDirectory(string parentFolder, params string[] candidateFolderNames)
@@ -898,23 +800,6 @@ namespace ClassicTilestorm
 			return null;
 		}
 
-		private static bool TryResolveImportedFileResource(string identifier, TryResolveResourceKeyDelegate tryResolveResourceKey, out string resourcePath)
-		{
-			resourcePath = null;
-
-			if (string.IsNullOrWhiteSpace(identifier) || tryResolveResourceKey == null)
-				return false;
-
-			if (!tryResolveResourceKey(identifier, out var resolved) || string.IsNullOrWhiteSpace(resolved))
-				return false;
-
-			if (!File.Exists(resolved))
-				return false;
-
-			resourcePath = resolved;
-			return true;
-		}
-
 		private static void RefreshImportedContentCaches()
 		{
 			ModelResourceTable.Refresh(forceRefresh: true);
@@ -925,46 +810,6 @@ namespace ClassicTilestorm
 			SoundResourceTable.ClearCache();
 			ImportedResourceLoader.ClearCache();
 			ProjectAssets.RefreshAllNameCaches();
-		}
-
-		private static void CopyDirectoryTree(string sourceDirectory, string destinationDirectory)
-		{
-			EnsureFolder(destinationDirectory);
-
-			foreach (string file in Directory.EnumerateFiles(sourceDirectory, "*", SearchOption.AllDirectories))
-			{
-				string relative = Path.GetRelativePath(sourceDirectory, file);
-				string destination = Path.Combine(destinationDirectory, relative);
-				string destinationParent = Path.GetDirectoryName(destination);
-				EnsureFolder(destinationParent);
-				File.Copy(file, destination, true);
-			}
-		}
-
-		private static void TryDeleteDirectory(string path)
-		{
-			try
-			{
-				if (!string.IsNullOrWhiteSpace(path) && Directory.Exists(path))
-					Directory.Delete(path, recursive: true);
-			}
-			catch (Exception ex)
-			{
-				Debug.LogWarning($"ResourceSerializer: failed to clean temporary directory '{path}': {ex.Message}");
-			}
-		}
-
-		private static void TryDeleteFile(string path)
-		{
-			try
-			{
-				if (!string.IsNullOrWhiteSpace(path) && File.Exists(path))
-					File.Delete(path);
-			}
-			catch (Exception ex)
-			{
-				Debug.LogWarning($"ResourceSerializer: failed to clean temporary file '{path}': {ex.Message}");
-			}
 		}
 
 		private static Map CreateCroppedCopy(Map map)
@@ -979,22 +824,12 @@ namespace ClassicTilestorm
 			return copy;
 		}
 
-		private static string SanitizeFileName(string value)
-		{
-			if (string.IsNullOrWhiteSpace(value))
-				return "Untitled";
-
-			var invalid = Path.GetInvalidFileNameChars();
-			var chars = value.Select(ch => invalid.Contains(ch) || char.IsWhiteSpace(ch) ? '_' : ch).ToArray();
-			return new string(chars).Trim('_');
-		}
-
 		private static void WriteJsonIfChanged(string path, string json)
 		{
 			if (string.IsNullOrWhiteSpace(path))
 				return;
 
-			var normalized = EnsureTrailingNewline(json ?? string.Empty);
+			var normalized = StringUtil.EnsureTrailingNewline(json ?? string.Empty);
 			if (File.Exists(path))
 			{
 				try
@@ -1012,14 +847,5 @@ namespace ClassicTilestorm
 			File.WriteAllText(path, normalized);
 		}
 
-		private static string EnsureTrailingNewline(string value)
-		{
-			if (string.IsNullOrEmpty(value))
-				return string.Empty;
-
-			return value.EndsWith(Environment.NewLine, StringComparison.Ordinal)
-				? value
-				: value + Environment.NewLine;
-		}
 	}
 }

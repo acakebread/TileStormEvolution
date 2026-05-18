@@ -5,9 +5,9 @@ using UnityEngine;
 namespace MassiveHadronLtd.FileBrowserUtil
 {
 #if !UNITY_WEBGL && !UNITY_EDITOR
-	public static class PlatformFileBrowser
+	internal static class PlatformFileBrowser
 	{
-		public static bool ExportAtomicMap(ClassicTilestorm.ResourceSerializer.AtomicMapExportData export, string defaultFolder = null)
+		internal static bool ExportAtomicMap(ClassicTilestorm.ResourceSerializer.AtomicMapExportData export, string defaultFolder = null)
 		{
 			if (export == null || !export.IsValid)
 			{
@@ -24,7 +24,7 @@ namespace MassiveHadronLtd.FileBrowserUtil
 		private static string ResolveTargetPath(string defaultFolder, ClassicTilestorm.ResourceSerializer.AtomicMapExportData export)
 		{
 			string target = string.IsNullOrWhiteSpace(defaultFolder)
-				? ClassicTilestorm.ResourceSerializer.GetDefaultMapExportFolder()
+				? ClassicTilestorm.ApplicationSettings.UserFolder
 				: defaultFolder;
 
 			if (Path.HasExtension(target))

@@ -557,7 +557,7 @@ using MassiveHadronLtd;
 			if (string.IsNullOrWhiteSpace(path))
 				return;
 
-			var normalized = EnsureTrailingNewline(json ?? string.Empty);
+			var normalized = StringUtil.EnsureTrailingNewline(json ?? string.Empty);
 			if (File.Exists(path))
 			{
 				try
@@ -573,16 +573,6 @@ using MassiveHadronLtd;
 			}
 
 			File.WriteAllText(path, normalized);
-		}
-
-		private static string EnsureTrailingNewline(string value)
-		{
-			if (string.IsNullOrEmpty(value))
-				return string.Empty;
-
-			return value.EndsWith(Environment.NewLine, StringComparison.Ordinal)
-				? value
-				: value + Environment.NewLine;
 		}
 
 		private static bool TryParseHash(string id, out HashId hash)

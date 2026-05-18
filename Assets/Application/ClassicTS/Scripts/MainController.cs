@@ -327,7 +327,7 @@ namespace ClassicTilestorm
 			const bool padded = false; // Release-style atomic exports are compact by default.
 			const bool verbose = false; // Release-style atomic exports stay filtered by default.
 
-			var export = ResourceSerializer.BuildAtomicMapExportData(map, crop: true, padded: padded, verbose: verbose);
+			var export = ResourceSerializer.ExportAtomicMap(map, crop: true, padded: padded, verbose: verbose);
 			if (export == null || !export.IsValid)
 			{
 				Debug.LogError("Failed to prepare atomic export.");

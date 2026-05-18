@@ -3,7 +3,9 @@
 // Extended with Color ↔ Hex conversion 2025/2026
 
 using System;
+using System.IO;
 using System.Security.Cryptography;
+using System.Linq;
 using UnityEngine;
 
 namespace MassiveHadronLtd
@@ -94,6 +96,26 @@ namespace MassiveHadronLtd
 		{
 			if (string.IsNullOrEmpty(str)) return "";
 			return System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(str.ToLower());
+		}
+
+		public static string SanitizeFileName(string value)
+		{
+			if (string.IsNullOrWhiteSpace(value))
+				return "Untitled";
+
+			var invalid = Path.GetInvalidFileNameChars();
+			var chars = value.Select(ch => invalid.Contains(ch) || char.IsWhiteSpace(ch) ? '_' : ch).ToArray();
+			return new string(chars).Trim('_');
+		}
+
+		public static string EnsureTrailingNewline(string value)
+		{
+			if (string.IsNullOrEmpty(value))
+				return string.Empty;
+
+			return value.EndsWith(Environment.NewLine, StringComparison.Ordinal)
+				? value
+				: value + Environment.NewLine;
 		}
 
 		// ── Color <-> Hex conversion ────────────────
