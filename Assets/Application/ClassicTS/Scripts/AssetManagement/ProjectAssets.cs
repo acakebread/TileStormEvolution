@@ -454,7 +454,7 @@ namespace ClassicTilestorm.Assets
 					.ToArray();
 
 				if (roots.Length == 0)
-					roots = new[] { AssetPath.GeometryPath?.Trim('/')?.Trim() ?? "" };
+					roots = ApplicationSettings.GetGeometryPaths().ToArray();
 
 				return GetAssetNamesFromRoots<GameObject>("Models", roots);
 			}, forceRefresh, "Model");
@@ -462,7 +462,7 @@ namespace ClassicTilestorm.Assets
 		public static IReadOnlyList<string> GetPrefabNames(bool forceRefresh = false)
 			=> GetNames<GameObject>(() => GetAssetNamesFromRoots<GameObject>("Prefabs", new[]
 			{
-				AssetPath.PrefabPath?.Trim('/') ?? ""
+				AssetPath.NormalizePath(ApplicationSettings.GetPrefabPaths().FirstOrDefault()) ?? ""
 			}), forceRefresh, "Prefab");
 
 		public static IReadOnlyList<string> GetTextureNames(bool forceRefresh = false)
@@ -471,7 +471,7 @@ namespace ClassicTilestorm.Assets
 		public static IReadOnlyList<string> GetMaterialNames(bool forceRefresh = false)
 			=> GetNames<Material>(() => GetAssetNamesFromRoots<Material>("Materials", new[]
 			{
-				AssetPath.MaterialPath?.Trim('/') ?? ""
+				AssetPath.NormalizePath(ApplicationSettings.GetMaterialPaths().FirstOrDefault()) ?? ""
 			}), forceRefresh, "Material");
 
 		public static IReadOnlyList<string> GetSkycubeNames(bool forceRefresh = false)

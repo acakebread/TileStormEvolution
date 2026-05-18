@@ -70,12 +70,8 @@ namespace ClassicTilestorm
 			json = null;
 			baseDirectory = null;
 
-			var root = ResourceResolvers.GeometryMaterialsPathResolver?.GetPath();
-			if (string.IsNullOrEmpty(root))
-			{
-				// Fall through to imported content.
-			}
-			else
+			var roots = ApplicationSettings.GetGeometryMaterialPaths().ToArray();
+			foreach (var root in roots)
 			{
 				var basePath = $"{root}/{id}";
 
@@ -164,11 +160,14 @@ namespace ClassicTilestorm
 					return imported;
 			}
 
-			var root = ResourceResolvers.GeometryMaterialsPathResolver?.GetPath();
-			if (string.IsNullOrEmpty(root))
-				return null;
+			foreach (var root in ApplicationSettings.GetGeometryMaterialPaths())
+			{
+				var texture = Resources.Load<Texture2D>($"{root}/{textureName}");
+				if (texture != null)
+					return texture;
+			}
 
-			return Resources.Load<Texture2D>($"{root}/{textureName}");
+			return null;
 		}
 
 		private static Texture2D LoadImportedTexture(string baseDirectory, string textureName)

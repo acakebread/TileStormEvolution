@@ -2,8 +2,11 @@
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
+using System;
 using MassiveHadronLtd;
 using System.IO;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace ClassicTilestorm
 {
@@ -127,26 +130,43 @@ namespace ClassicTilestorm
 		public static string JsonDataProjectPath => Path.Combine(Application.dataPath, "Application", "ClassicTS", "Resources", JsonDataPath.Replace('/', Path.DirectorySeparatorChar));
 		public static string JsonDataResourcePath => JsonDataPath;
 
-		[SerializeField, ResourcePath] private string geometryPath = "ClassicTS/Geometry/";
+		[Header("content roots")]
+		[SerializeField] private string[] contentRoots = new[] { "ClassicTS", "Evolution" };
+		private static readonly string[] DefaultContentRoots = new[] { "ClassicTS", "Evolution" };
+		public static IReadOnlyList<string> ContentRoots => NormalizeContentRoots(instance?.contentRoots);
+
+		[HideInInspector, SerializeField, ResourcePath] private string geometryPath = "ClassicTS/Geometry/";
 		public static string GeometryPath => instance?.geometryPath;
 
-		[SerializeField, ResourcePath] private string texturePath = "ClassicTS/Textures/";
+		[HideInInspector, SerializeField, ResourcePath] private string texturePath = "ClassicTS/Textures/";
 		public static string TexturePath => instance?.texturePath;
 
-		[SerializeField, ResourcePath] private string materialPath = "ClassicTS/Materials/";
+		[HideInInspector, SerializeField, ResourcePath] private string materialPath = "ClassicTS/Materials/";
 		public static string MaterialPath => instance?.materialPath;
 
-		[SerializeField, ResourcePath] private string skycubesPath = "ClassicTS/SkyCubes/";
+		[HideInInspector, SerializeField, ResourcePath] private string skycubesPath = "ClassicTS/SkyCubes/";
 		public static string SkyCubesPath => instance?.skycubesPath;
 
-		[SerializeField, ResourcePath] private string prefabPath = "ClassicTS/Prefabs/";
+		[HideInInspector, SerializeField, ResourcePath] private string prefabPath = "ClassicTS/Prefabs/";
 		public static string PrefabPath => instance?.prefabPath;
 
-		[SerializeField, ResourcePath] private string soundPath = "ClassicTS/Sounds/";
+		[HideInInspector, SerializeField, ResourcePath] private string soundPath = "ClassicTS/Sounds/";
 		public static string SoundPath => instance?.soundPath;
 
-		[SerializeField, ResourcePath] private string musicPath = "ClassicTS/Music/";
+		[HideInInspector, SerializeField, ResourcePath] private string musicPath = "ClassicTS/Music/";
 		public static string MusicPath => instance?.musicPath;
+
+		public static IEnumerable<string> GetContentPaths(string subfolder)
+			=> AssetPath.BuildPaths(ContentRoots, subfolder);
+
+		public static IEnumerable<string> GetGeometryPaths() => GetContentPaths(AssetPath.GeometryFolder);
+		public static IEnumerable<string> GetTexturePaths() => GetContentPaths(AssetPath.TextureFolder);
+		public static IEnumerable<string> GetMaterialPaths() => GetContentPaths(AssetPath.MaterialFolder);
+		public static IEnumerable<string> GetPrefabPaths() => GetContentPaths(AssetPath.PrefabFolder);
+		public static IEnumerable<string> GetSkyCubePaths() => GetContentPaths(AssetPath.SkyCubesFolder);
+		public static IEnumerable<string> GetSoundPaths() => GetContentPaths(AssetPath.SoundFolder);
+		public static IEnumerable<string> GetMusicPaths() => GetContentPaths(AssetPath.MusicFolder);
+		public static IEnumerable<string> GetGeometryMaterialPaths() => GetContentPaths($"{AssetPath.GeometryFolder}/{AssetPath.MaterialFolder}");
 
 		[Header("Game Mode")]
 		[SerializeField] private ApplicationMode previewMode = ApplicationMode.Player;
@@ -192,6 +212,17 @@ namespace ClassicTilestorm
 			remapGeometry = RemapGeometry;
 		}
 
+		private static IReadOnlyList<string> NormalizeContentRoots(IEnumerable<string> roots)
+		{
+			var cleaned = (roots ?? DefaultContentRoots)
+				.Select(AssetPath.NormalizePath)
+				.Where(root => !string.IsNullOrWhiteSpace(root))
+				.Distinct(StringComparer.OrdinalIgnoreCase)
+				.ToArray();
+
+			return cleaned.Length > 0 ? cleaned : DefaultContentRoots;
+		}
+
 		private void OnValidate()
 		{
 			if (!Application.isPlaying) return;
@@ -214,8 +245,8 @@ namespace ClassicTilestorm
 		// ====================== EDITOR HELPER (for manifest generation) ======================
 #if UNITY_EDITOR
 		/// <summary>
-		/// Forces loading of the ApplicationSettings instance so AssetPath.XXXPath
-		/// return correct values in MenuItems and PreprocessBuild, even without entering Play Mode.
+		/// Forces loading of the ApplicationSettings instance so content roots are available
+		/// in MenuItems and PreprocessBuild, even without entering Play Mode.
 		/// </summary>
 		public static void Editor_ForceLoadInstance()
 		{
@@ -223,7 +254,7 @@ namespace ClassicTilestorm
 				return;
 
 			// Use FindAnyObjectByType instead of the obsolete FindFirstObjectByType
-			instance = Object.FindAnyObjectByType<ApplicationSettings>(FindObjectsInactive.Include);
+			instance = UnityEngine.Object.FindAnyObjectByType<ApplicationSettings>(FindObjectsInactive.Include);
 
 			if (instance == null)
 			{
@@ -232,15 +263,6 @@ namespace ClassicTilestorm
 			}
 			else
 			{
-				// Force populate AssetPath statics with the values from the component
-				AssetPath.GeometryPath = instance.geometryPath;
-				AssetPath.TexturePath = instance.texturePath;
-				AssetPath.MaterialPath = instance.materialPath;
-				AssetPath.SkyCubesPath = instance.skycubesPath;
-				AssetPath.PrefabPath = instance.prefabPath;
-				AssetPath.SoundPath = instance.soundPath;
-				AssetPath.MusicPath = instance.musicPath;
-
 				Debug.Log("<color=cyan>ApplicationSettings instance loaded for editor manifest generation.</color>");
 			}
 		}
