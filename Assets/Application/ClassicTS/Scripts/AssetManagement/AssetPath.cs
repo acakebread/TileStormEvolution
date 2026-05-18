@@ -6,6 +6,12 @@ namespace ClassicTilestorm
 {
 	public static class AssetPath
 	{
+		public const string DataRootFolder = "Data";
+		public const string UserRootFolder = "User";
+		public const string SystemRootFolder = "System";
+		public const string MapsFolder = "Maps";
+		public const string DefinitionsFolder = "Definitions";
+		public const string ModelsFolder = "Models";
 		public const string GeometryFolder = "Geometry";
 		public const string TextureFolder = "Textures";
 		public const string MaterialFolder = "Materials";
