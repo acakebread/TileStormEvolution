@@ -195,7 +195,7 @@ namespace MassiveHadronLtd
 
 		public void ApplyTo(Material mat)
 		{
-				if (string.IsNullOrEmpty(name) || mat == null || !mat.HasProperty(name)) return;
+			if (string.IsNullOrEmpty(name) || mat == null || !mat.HasProperty(name)) return;
 
 			try
 			{
