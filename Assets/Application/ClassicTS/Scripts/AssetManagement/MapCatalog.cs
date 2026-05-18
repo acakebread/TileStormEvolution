@@ -61,6 +61,7 @@ using ClassicTilestorm.Assets;
 			private static string InternalResourcesRoot => $"{ApplicationSettings.JsonDataResourcePath}/Maps";
 			private const string InternalManifestPath = "AssetManifests/Maps";
 			private const string FileHashSeparator = "__";
+			private const bool IncludeLiveContentInExternalMove = false;
 			private static string PersistentMapsFolder => ApplicationSettings.SystemMapsFolder;
 			private static string LegacyPersistentMapsFolder => Path.Combine(Application.persistentDataPath, "Maps");
 
@@ -422,7 +423,7 @@ using ClassicTilestorm.Assets;
 				if (ResourceManager.ModelUsageCount(modelHash) != 1)
 					continue;
 
-				ResourceDependencyHelpers.TryExportModelToExternal(modelHash);
+				ResourceDependencyHelpers.TryExportModelToExternal(modelHash, IncludeLiveContentInExternalMove);
 			}
 		}
 

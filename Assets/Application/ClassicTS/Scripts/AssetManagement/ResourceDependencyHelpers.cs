@@ -105,7 +105,7 @@ namespace ClassicTilestorm
 			return !string.IsNullOrWhiteSpace(filePath) && File.Exists(filePath);
 		}
 
-		internal static bool TryExportModelToExternal(string modelHash)
+		internal static bool TryExportModelToExternal(string modelHash, bool includeLiveContent = false)
 		{
 			if (string.IsNullOrWhiteSpace(modelHash))
 				return false;
@@ -113,7 +113,7 @@ namespace ClassicTilestorm
 			if (!ModelResourceTable.TryGetEntry(modelHash, out var entry))
 				return false;
 
-			if (!TryResolveModelExportSourcePath(entry, out var sourcePath))
+			if (!TryResolveModelExportSourcePath(entry, includeLiveContent, out var sourcePath))
 				return false;
 
 			if (IsPathUnderRoot(sourcePath, ApplicationSettings.SystemModelsFolder))
@@ -172,13 +172,15 @@ namespace ClassicTilestorm
 			return !string.IsNullOrWhiteSpace(importedPath) && File.Exists(importedPath);
 		}
 
-		private static bool TryResolveModelExportSourcePath(ModelResourceTable.Entry entry, out string filePath)
+		private static bool TryResolveModelExportSourcePath(ModelResourceTable.Entry entry, bool includeLiveContent, out string filePath)
 		{
 			filePath = null;
 
+			if (TryResolveImmutableModelSourcePath(entry, out filePath))
+				return true;
+
 			if (entry.Kind == ModelResourceTable.EntryKind.Resource)
-				return TryResolveLiveModelSourcePath(entry, out filePath) ||
-					TryResolveImmutableModelSourcePath(entry, out filePath);
+				return includeLiveContent && TryResolveLiveModelSourcePath(entry, out filePath);
 
 			filePath = entry.FilePath;
 			return !string.IsNullOrWhiteSpace(filePath) && File.Exists(filePath);
@@ -286,7 +288,10 @@ namespace ClassicTilestorm
 			try
 			{
 				if (!string.IsNullOrWhiteSpace(path) && Directory.Exists(path))
+				{
 					Directory.Delete(path, recursive: true);
+					DeleteAssetAndMeta(path);
+				}
 			}
 			catch (Exception ex)
 			{
