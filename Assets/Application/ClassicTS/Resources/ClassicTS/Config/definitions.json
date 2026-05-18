@@ -9,6 +9,13 @@
     "name": "blocker"
   },
   {
+    "id": "4JT6tJ",
+    "name": "rainbow tile",
+    "model": "Cixj6h",
+    "material": "0chrTr",
+    "flags": "Move"
+  },
+  {
     "id": "A8krJn",
     "name": "new med trim tile",
     "model": "6hAyvU"
