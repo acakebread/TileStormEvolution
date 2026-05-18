@@ -110,11 +110,13 @@ namespace ClassicTilestorm
 			if (string.IsNullOrWhiteSpace(modelHash))
 				return false;
 
-			if (!ModelResourceTable.TryGetEntry(modelHash, out var entry))
-				return false;
+			var hasEntry = ModelResourceTable.TryGetEntry(modelHash, out var entry);
 
-			if (!TryResolveModelExportSourcePath(entry, includeLiveContent, out var sourcePath))
+			if (!TryResolveImmutableModelSourcePath(modelHash, out var sourcePath) &&
+				(!hasEntry || !TryResolveModelExportSourcePath(entry, includeLiveContent, out sourcePath)))
+			{
 				return false;
+			}
 
 			if (IsPathUnderRoot(sourcePath, ApplicationSettings.SystemModelsFolder))
 				return true;
@@ -135,11 +137,11 @@ namespace ClassicTilestorm
 			if (string.IsNullOrWhiteSpace(importedPath) || !File.Exists(importedPath))
 				return false;
 
-			DeleteExportedModelSource(entry, sourcePath);
+			DeleteExportedModelSource(modelHash, hasEntry, entry, sourcePath);
 			return true;
 		}
 
-		internal static bool TryImportExternalModelToImmutable(string modelHash)
+		internal static bool TryPromoteExternalModelToImmutable(string modelHash)
 		{
 			if (string.IsNullOrWhiteSpace(modelHash))
 				return false;
@@ -169,7 +171,11 @@ namespace ClassicTilestorm
 				forcedFolderName: modelHash,
 				forcedHashId: modelHash);
 
-			return !string.IsNullOrWhiteSpace(importedPath) && File.Exists(importedPath);
+			if (string.IsNullOrWhiteSpace(importedPath) || !File.Exists(importedPath))
+				return false;
+
+			DeletePromotedExternalModelSource(sourcePath);
+			return true;
 		}
 
 		private static bool TryResolveModelExportSourcePath(ModelResourceTable.Entry entry, bool includeLiveContent, out string filePath)
@@ -186,7 +192,7 @@ namespace ClassicTilestorm
 			return !string.IsNullOrWhiteSpace(filePath) && File.Exists(filePath);
 		}
 
-		private static void DeleteExportedModelSource(ModelResourceTable.Entry entry, string sourcePath)
+		private static void DeleteExportedModelSource(string modelHash, bool hasEntry, ModelResourceTable.Entry entry, string sourcePath)
 		{
 			if (string.IsNullOrWhiteSpace(sourcePath) || IsPathUnderRoot(sourcePath, ApplicationSettings.SystemModelsFolder))
 				return;
@@ -194,20 +200,28 @@ namespace ClassicTilestorm
 			var immutableRoot = Path.Combine(Application.dataPath, "Application", "Resources", AssetPath.ImmutableRootFolder, AssetPath.GeometryFolder);
 			if (IsPathUnderRoot(sourcePath, immutableRoot))
 			{
-				var sourceRoot = !string.IsNullOrWhiteSpace(entry.HashId)
-					? Path.Combine(immutableRoot, entry.HashId)
+				var sourceRoot = !string.IsNullOrWhiteSpace(modelHash)
+					? Path.Combine(immutableRoot, modelHash)
 					: Path.GetDirectoryName(sourcePath);
 				TryDeleteDirectoryTree(sourceRoot);
 				return;
 			}
 
-			if (entry.Kind == ModelResourceTable.EntryKind.File)
+			if (hasEntry && entry.Kind == ModelResourceTable.EntryKind.File)
 			{
 				TryDeleteDirectoryTree(Path.GetDirectoryName(sourcePath));
 				return;
 			}
 
 			TryDeleteWavefrontSourceArtifacts(sourcePath);
+		}
+
+		private static void DeletePromotedExternalModelSource(string sourcePath)
+		{
+			if (string.IsNullOrWhiteSpace(sourcePath) || !IsPathUnderRoot(sourcePath, ApplicationSettings.SystemModelsFolder))
+				return;
+
+			TryDeleteDirectoryTree(Path.GetDirectoryName(sourcePath));
 		}
 
 		private static bool TryResolveLiveModelSourcePath(ModelResourceTable.Entry entry, out string filePath)
@@ -230,17 +244,23 @@ namespace ClassicTilestorm
 			if (string.IsNullOrWhiteSpace(modelHash))
 				return false;
 
-			if (!ModelResourceTable.TryGetEntry(modelHash, out var entry))
-				return false;
+			string displayName = null;
+			if (ModelResourceTable.TryGetEntry(modelHash, out var entry))
+				displayName = entry.DisplayName;
 
-			return TryResolveImmutableModelSourcePath(entry, out filePath);
+			return TryResolveImmutableModelSourcePath(modelHash, displayName, out filePath);
 		}
 
 		private static bool TryResolveImmutableModelSourcePath(ModelResourceTable.Entry entry, out string filePath)
 		{
+			return TryResolveImmutableModelSourcePath(entry.HashId, entry.DisplayName, out filePath);
+		}
+
+		private static bool TryResolveImmutableModelSourcePath(string modelHash, string displayName, out string filePath)
+		{
 			filePath = null;
 
-			if (string.IsNullOrWhiteSpace(entry.HashId) || string.IsNullOrWhiteSpace(entry.DisplayName))
+			if (string.IsNullOrWhiteSpace(modelHash))
 				return false;
 
 			var immutableRoot = Path.Combine(
@@ -249,28 +269,37 @@ namespace ClassicTilestorm
 				"Resources",
 				AssetPath.ImmutableRootFolder,
 				AssetPath.GeometryFolder,
-				entry.HashId);
+				modelHash);
 
 			if (!Directory.Exists(immutableRoot))
 				return false;
 
-			var directCandidate = Path.Combine(immutableRoot, $"{entry.DisplayName}.obj");
-			if (File.Exists(directCandidate))
+			if (!string.IsNullOrWhiteSpace(displayName))
 			{
-				filePath = directCandidate;
-				return true;
+				var directCandidate = Path.Combine(immutableRoot, $"{displayName}.obj");
+				if (File.Exists(directCandidate))
+				{
+					filePath = directCandidate;
+					return true;
+				}
 			}
 
-			foreach (var candidate in Directory.EnumerateFiles(immutableRoot, "*.obj", SearchOption.AllDirectories))
+			var candidates = Directory.EnumerateFiles(immutableRoot, "*.obj", SearchOption.AllDirectories)
+				.OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+				.ToArray();
+
+			foreach (var candidate in candidates)
 			{
-				if (string.Equals(Path.GetFileNameWithoutExtension(candidate), entry.DisplayName, StringComparison.OrdinalIgnoreCase))
+				if (!string.IsNullOrWhiteSpace(displayName) &&
+					string.Equals(Path.GetFileNameWithoutExtension(candidate), displayName, StringComparison.OrdinalIgnoreCase))
 				{
 					filePath = candidate;
 					return true;
 				}
 			}
 
-			return false;
+			filePath = candidates.FirstOrDefault();
+			return !string.IsNullOrWhiteSpace(filePath);
 		}
 
 		private static bool IsPathUnderRoot(string filePath, string rootPath)
