@@ -672,5 +672,17 @@
     "name": "test no nav slide",
     "model": "7xHwTd",
     "flags": "Move"
+  },
+  {
+    "id": "3ExQpJ",
+    "name": "slide and roll",
+    "model": "5inhyd",
+    "flags": "Move, Roll"
+  },
+  {
+    "id": "0fKa65",
+    "name": "test import",
+    "model": "4cHTM2",
+    "flags": "Move, Sway"
   }
 ]
