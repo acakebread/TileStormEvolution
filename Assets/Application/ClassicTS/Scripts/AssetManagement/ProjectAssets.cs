@@ -183,7 +183,21 @@ namespace ClassicTilestorm.Assets
 		private static GameObject LoadEntry(ModelEntry entry)
 		{
 			if (!string.IsNullOrWhiteSpace(entry.ResourcePath))
-				return AssetRegistry<GameObject>.FindModel(entry.ResourcePath);
+			{
+				var resourceModel = AssetRegistry<GameObject>.FindModel(entry.ResourcePath);
+				if (resourceModel != null)
+					return resourceModel;
+
+				// Immutable/community models live under a hashed folder name, so the
+				// manifest display name is not enough to locate them at runtime.
+				var hashedPath = BuildImmutableModelPath(entry);
+				if (!string.IsNullOrWhiteSpace(hashedPath))
+				{
+					var hashedModel = Resources.Load<GameObject>(hashedPath);
+					if (hashedModel != null)
+						return hashedModel;
+				}
+			}
 
 			if (ImportedInstanceCache.TryGetValue(entry.HashId, out var cached) && cached != null)
 				return cached;
@@ -198,6 +212,14 @@ namespace ClassicTilestorm.Assets
 			if (go != null)
 				ImportedInstanceCache[entry.HashId] = go;
 			return go;
+		}
+
+		private static string BuildImmutableModelPath(ModelEntry entry)
+		{
+			if (string.IsNullOrWhiteSpace(entry.HashId) || string.IsNullOrWhiteSpace(entry.DisplayName))
+				return null;
+
+			return $"{AssetPath.ImmutableRootFolder}/{AssetPath.GeometryFolder}/{entry.HashId}/{entry.DisplayName}";
 		}
 
 		public static string GetDisplayNameForHash(string hash)
