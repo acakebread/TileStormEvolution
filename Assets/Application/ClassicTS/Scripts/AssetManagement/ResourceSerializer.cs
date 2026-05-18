@@ -113,8 +113,8 @@ namespace ClassicTilestorm
 			ProjectAssets.RefreshAllNameCaches();
 			ResourceManager.database = null;// important
 
-			var levelsAsset = LoadJsonAsset("levels");
-			var definitionsAsset = LoadJsonAsset("definitions");
+			var levelsAsset = LoadJsonAsset(ApplicationSettings.JsonDataResourcePath, "levels");
+			var definitionsAsset = LoadJsonAsset("AssetDatabase", "definitions");
 
 			if (levelsAsset == null)
 			{
@@ -124,7 +124,7 @@ namespace ClassicTilestorm
 
 			if (definitionsAsset == null)
 			{
-				Debug.LogError($"ResourceSerializer: missing definitions.json at '{ApplicationSettings.JsonDataResourcePath}'");
+				Debug.LogError("ResourceSerializer: missing definitions.json at 'AssetDatabase'");
 				return;
 			}
 
@@ -432,12 +432,13 @@ namespace ClassicTilestorm
 				cropAllMaps);
 		}
 
-		private static TextAsset LoadJsonAsset(string fileName)
+		private static TextAsset LoadJsonAsset(string root, string fileName)
 		{
 			if (string.IsNullOrWhiteSpace(fileName))
 				return null;
 
-			var root = ApplicationSettings.JsonDataResourcePath?.Trim('/');
+			root = string.IsNullOrWhiteSpace(root) ? ApplicationSettings.JsonDataResourcePath : root;
+			root = root?.Trim('/');
 			if (string.IsNullOrWhiteSpace(root))
 				root = "ClassicTS/Config";
 

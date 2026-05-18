@@ -59,7 +59,7 @@ namespace ClassicTilestorm
 		private const string FileHashSeparator = "__";
 		public static string PersistentDefinitionsFolder => ApplicationSettings.SystemDefinitionsFolder;
 		private static string LegacyPersistentDefinitionsFolder => Path.Combine(Application.persistentDataPath, "Definitions");
-		public static string InternalDefinitionsFile => Path.Combine(ApplicationSettings.JsonDataProjectPath, "definitions.json");
+		public static string InternalDefinitionsFile => Path.Combine(Application.dataPath, "Resources", "AssetDatabase", "definitions.json");
 
 		public static void ClearCache()
 		{
@@ -436,15 +436,11 @@ namespace ClassicTilestorm
 
 		private static TextAsset LoadDefinitionsAsset()
 		{
-			var root = ApplicationSettings.JsonDataResourcePath?.Trim('/');
-			if (string.IsNullOrWhiteSpace(root))
-				root = "ClassicTS/Config";
-
-			var asset = Resources.Load<TextAsset>($"{root}/definitions");
+			var asset = Resources.Load<TextAsset>("AssetDatabase/definitions");
 			if (asset != null)
 				return asset;
 
-			return Resources.Load<TextAsset>($"{root}/definitions.json");
+			return Resources.Load<TextAsset>("AssetDatabase/definitions.json");
 		}
 
 		private static string SanitizeFileNameComponent(string value)
