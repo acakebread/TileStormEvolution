@@ -3,20 +3,18 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEngine;
+using MassiveHadronLtd;
 
 namespace MassiveHadronLtd.FileBrowserUtil
 {
+#if UNITY_EDITOR
 	public static class RuntimeFileBrowser
 	{
 		private const string DefaultExternalFolderName = "External";
 
 		public static string GetDefaultRootFolder()
 		{
-#if UNITY_WEBGL && !UNITY_EDITOR
-			return EnsureFolder(Path.Combine(Application.persistentDataPath, "Downloads"));
-#else
-			return EnsureFolder(Path.Combine(Application.persistentDataPath, DefaultExternalFolderName));
-#endif
+			return FileUtils.EnsureFolder(Path.Combine(Application.persistentDataPath, DefaultExternalFolderName));
 		}
 
 		public static void OpenObjFile(string title, Action<string> onSelected, string rootFolder = null, string startFolder = null, Action onCancelled = null)
@@ -24,9 +22,6 @@ namespace MassiveHadronLtd.FileBrowserUtil
 			if (onSelected == null)
 				throw new ArgumentNullException(nameof(onSelected));
 
-#if UNITY_WEBGL && !UNITY_EDITOR
-			WebGLRuntimeFileBrowser.OpenObjFile(title, onSelected, rootFolder, onCancelled);
-#elif UNITY_EDITOR
 			var path = UnityEditor.EditorUtility.OpenFilePanel(
 				string.IsNullOrWhiteSpace(title) ? "Select OBJ File" : title,
 				ResolveEditorStartFolder(rootFolder, startFolder),
@@ -39,9 +34,6 @@ namespace MassiveHadronLtd.FileBrowserUtil
 			}
 
 			onSelected(path);
-#else
-			RuntimeFileBrowserGui.OpenObjFile(title, onSelected, rootFolder, startFolder, onCancelled);
-#endif
 		}
 
 		public static void OpenFile(string title, string extension, Action<string> onSelected, string rootFolder = null, string startFolder = null, Action onCancelled = null)
@@ -54,9 +46,6 @@ namespace MassiveHadronLtd.FileBrowserUtil
 			if (onSelected == null)
 				throw new ArgumentNullException(nameof(onSelected));
 
-#if UNITY_WEBGL && !UNITY_EDITOR
-			WebGLRuntimeFileBrowser.OpenFile(title, extensions, onSelected, rootFolder, onCancelled);
-#elif UNITY_EDITOR
 			var filters = BuildEditorFilters(extensions);
 			var path = UnityEditor.EditorUtility.OpenFilePanelWithFilters(
 				string.IsNullOrWhiteSpace(title) ? "Select File" : title,
@@ -70,9 +59,6 @@ namespace MassiveHadronLtd.FileBrowserUtil
 			}
 
 			onSelected(path);
-#else
-			RuntimeFileBrowserGui.OpenFile(title, extensions, onSelected, rootFolder, startFolder, onCancelled);
-#endif
 		}
 
 		private static string ResolveEditorStartFolder(string rootFolder, string startFolder)
@@ -116,14 +102,6 @@ namespace MassiveHadronLtd.FileBrowserUtil
 			filters.Add("*");
 			return filters.ToArray();
 		}
-
-		private static string EnsureFolder(string folder)
-		{
-			if (string.IsNullOrWhiteSpace(folder))
-				return folder;
-
-			Directory.CreateDirectory(folder);
-			return folder;
-		}
 	}
+#endif
 }

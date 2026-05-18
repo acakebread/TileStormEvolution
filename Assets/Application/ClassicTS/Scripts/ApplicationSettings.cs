@@ -137,7 +137,7 @@ namespace ClassicTilestorm
 		public static string MaterialPath => instance?.materialPath;
 
 		[SerializeField, ResourcePath] private string skycubesPath = "ClassicTS/SkyCubes/";
-		public static string SkycubesPath => instance?.skycubesPath;
+		public static string SkyCubesPath => instance?.skycubesPath;
 
 		[SerializeField, ResourcePath] private string prefabPath = "ClassicTS/Prefabs/";
 		public static string PrefabPath => instance?.prefabPath;
@@ -207,7 +207,7 @@ namespace ClassicTilestorm
 		public static string SystemModelsFolder => PreviewSettingsStatic.SystemModelsFolder;
 		public static string SystemMaterialsFolder => PreviewSettingsStatic.SystemMaterialsFolder;
 		public static string SystemTexturesFolder => PreviewSettingsStatic.SystemTexturesFolder;
-		public static string SystemSkycubesFolder => PreviewSettingsStatic.SystemSkycubesFolder;
+		public static string SystemSkyCubesFolder => PreviewSettingsStatic.SystemSkyCubesFolder;
 		public static string SystemMusicFolder => PreviewSettingsStatic.SystemMusicFolder;
 		public static string SystemSoundsFolder => PreviewSettingsStatic.SystemSoundsFolder;
 
@@ -236,7 +236,7 @@ namespace ClassicTilestorm
 				AssetPath.GeometryPath = instance.geometryPath;
 				AssetPath.TexturePath = instance.texturePath;
 				AssetPath.MaterialPath = instance.materialPath;
-				AssetPath.SkycubesPath = instance.skycubesPath;
+				AssetPath.SkyCubesPath = instance.skycubesPath;
 				AssetPath.PrefabPath = instance.prefabPath;
 				AssetPath.SoundPath = instance.soundPath;
 				AssetPath.MusicPath = instance.musicPath;
@@ -257,7 +257,7 @@ namespace ClassicTilestorm
 		public static readonly string SystemModelsFolder = System.IO.Path.Combine(SystemFolder, "Models");
 		public static readonly string SystemMaterialsFolder = System.IO.Path.Combine(SystemFolder, "Materials");
 		public static readonly string SystemTexturesFolder = System.IO.Path.Combine(SystemFolder, "Textures");
-		public static readonly string SystemSkycubesFolder = System.IO.Path.Combine(SystemFolder, "Skycubes");
+		public static readonly string SystemSkyCubesFolder = System.IO.Path.Combine(SystemFolder, "SkyCubes");
 		public static readonly string SystemMusicFolder = System.IO.Path.Combine(SystemFolder, "Music");
 		public static readonly string SystemSoundsFolder = System.IO.Path.Combine(SystemFolder, "Sounds");
 		public static readonly string ExportFolder = UserFolder;

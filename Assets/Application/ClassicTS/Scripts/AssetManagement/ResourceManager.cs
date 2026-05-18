@@ -57,6 +57,23 @@ namespace ClassicTilestorm
 
 		public static bool IsDefinitionInternal(HashId hashId) => DefinitionCatalog.IsInternalDefinition(hashId);
 
+		internal static IEnumerable<Definition> GetUsedDefinitions(Map originalMap)
+		{
+			if (originalMap == null)
+				return Array.Empty<Definition>();
+
+			var usedHashes = (((Map.IVariantAccess)originalMap).Variants ?? Array.Empty<Variant>())
+				.Where(v => v.hash != 0)
+				.Select(v => v.hash)
+				.Distinct()
+				.ToArray();
+
+			return usedHashes
+				.Select(GetDefinition)
+				.Where(definition => definition != null)
+				.ToArray();
+		}
+
 		//public static TextureInfo GetTextureInfo(string id)
 		//	=> string.IsNullOrEmpty(id) ? null : TextureInfos.FirstOrDefault(ts => ts.id == id);
 

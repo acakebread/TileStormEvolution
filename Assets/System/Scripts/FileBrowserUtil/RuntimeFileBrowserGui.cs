@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEngine;
+using MassiveHadronLtd;
 
 namespace MassiveHadronLtd.FileBrowserUtil
 {
@@ -13,7 +14,7 @@ namespace MassiveHadronLtd.FileBrowserUtil
 
 		public static string GetDefaultRootFolder()
 		{
-			return EnsureFolder(Path.Combine(Application.persistentDataPath, DefaultExternalFolderName));
+			return FileUtils.EnsureFolder(Path.Combine(Application.persistentDataPath, DefaultExternalFolderName));
 		}
 
 		public static void OpenObjFile(string title, Action<string> onSelected, string rootFolder = null, string startFolder = null, Action onCancelled = null)
@@ -58,7 +59,7 @@ namespace MassiveHadronLtd.FileBrowserUtil
 		{
 			string root = string.IsNullOrWhiteSpace(rootFolder) ? GetDefaultRootFolder() : rootFolder;
 			root = Path.GetFullPath(root);
-			return EnsureFolder(root);
+			return FileUtils.EnsureFolder(root);
 		}
 
 		private static string[] NormalizeExtensions(IEnumerable<string> extensions)
@@ -78,16 +79,6 @@ namespace MassiveHadronLtd.FileBrowserUtil
 				.Distinct(StringComparer.OrdinalIgnoreCase)
 				.ToArray();
 		}
-
-		private static string EnsureFolder(string folder)
-		{
-			if (string.IsNullOrWhiteSpace(folder))
-				return folder;
-
-			Directory.CreateDirectory(folder);
-			return folder;
-		}
-
 		private sealed class FileBrowserRequest
 		{
 			public string Title;

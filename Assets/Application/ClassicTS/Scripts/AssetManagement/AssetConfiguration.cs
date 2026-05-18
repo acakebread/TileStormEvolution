@@ -15,7 +15,7 @@ namespace ClassicTilestorm.Assets
 			PrefabAssets.RegisterRoot(AssetPath.PrefabPath?.Trim('/').Trim());
 			TextureAssets.RegisterRoot(AssetPath.TexturePath?.Trim('/').Trim());
 			MaterialAssets.RegisterRoot(AssetPath.MaterialPath?.Trim('/').Trim());
-			SkyboxAssets.RegisterRoot(AssetPath.SkycubesPath?.Trim('/').Trim());
+			SkyboxAssets.RegisterRoot(AssetPath.SkyCubesPath?.Trim('/').Trim());
 			SoundAssets.RegisterRoot(AssetPath.SoundPath?.Trim('/').Trim()); // e.g. "ClassicTS/Sounds/"
 			MusicAssets.RegisterRoot(AssetPath.MusicPath?.Trim('/').Trim()); // e.g. "ClassicTS/Music/"
 			ResourceResolvers.TextureResolver = new TextureResourceResolver();

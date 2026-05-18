@@ -29,7 +29,7 @@ namespace ClassicTilestorm
 		public static string PrefabPath { get => prefabPath ?? ApplicationSettings.PrefabPath; set => prefabPath = value; }
 
 		private static string skycubesPath = null;//"ClassicTS/SkyCubes/"
-		public static string SkycubesPath { get => skycubesPath ?? ApplicationSettings.SkycubesPath; set => skycubesPath = value; }
+		public static string SkyCubesPath { get => skycubesPath ?? ApplicationSettings.SkyCubesPath; set => skycubesPath = value; }
 
 		private static string soundPath = null;//"ClassicTS/Sounds/"
 		public static string SoundPath { get => soundPath ?? ApplicationSettings.SoundPath; set => soundPath = value; }

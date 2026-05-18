@@ -371,7 +371,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   loadMapName: Medieval test
-  remapGeometry: 1
+  remapGeometry: 0
   scrambled: 1
   difficulty: 0
   music: 1

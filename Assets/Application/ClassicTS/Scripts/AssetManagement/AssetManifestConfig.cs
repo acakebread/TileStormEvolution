@@ -27,8 +27,8 @@ namespace ClassicTilestorm.Assets
 
 			if (typeof(T) == typeof(Material))
 			{
-				if (roots != null && roots.Any(r => r != null && r.Contains("Skycubes", StringComparison.OrdinalIgnoreCase)))
-					return "Skycubes";
+				if (roots != null && roots.Any(r => r != null && r.Contains("SkyCubes", StringComparison.OrdinalIgnoreCase)))
+					return "SkyCubes";
 				return "Materials";
 			}
 
@@ -55,7 +55,7 @@ namespace ClassicTilestorm.Assets
 			yield return ("Prefabs", typeof(GameObject), () => AssetRegistry<GameObject>.GetRegisteredPrefabRoots());
 			yield return ("Textures", typeof(Texture), () => AssetRegistry<Texture>.GetRegisteredTextureRoots());
 			yield return ("Materials", typeof(Material), () => AssetRegistry<Material>.GetRegisteredMaterialRoots());
-			yield return ("Skycubes", typeof(Material), () => AssetRegistry<Material>.GetRegisteredSkyboxRoots());
+			yield return ("SkyCubes", typeof(Material), () => AssetRegistry<Material>.GetRegisteredSkyboxRoots());
 			yield return ("Sounds", typeof(AudioClip), () => AssetRegistry<AudioClip>.GetRegisteredSoundRoots());
 			yield return ("Music", typeof(AudioClip), () => AssetRegistry<AudioClip>.GetRegisteredMusicRoots());
 		}
