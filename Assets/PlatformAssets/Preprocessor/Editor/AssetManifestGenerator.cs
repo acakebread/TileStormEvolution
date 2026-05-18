@@ -47,9 +47,15 @@ public class AssetManifestGenerator : IPreprocessBuildWithReport
 		Debug.Log("<color=cyan>Asset Manifests generated successfully.</color>");
 	}
 
-	[MenuItem("Tools/Migrate Resource Hashes To Folder Seeds")]
+	[MenuItem("Tools/Admin/Migrate Resource Hashes To Folder Seeds")]
 	public static void MigrateResourceHashesToFolderSeeds()
 	{
+		if (!IsResourceHashMigrationUnlocked())
+		{
+			Debug.LogWarning($"Resource hash seed migration is admin locked. Create '{ResourceHashMigrationAuthorisationFile}' containing '{ResourceHashMigrationActivationWord}' if this migration is genuinely required.");
+			return;
+		}
+
 		ApplicationSettings.Editor_ForceLoadInstance();
 		AssetConfiguration.Initialize();
 
@@ -61,6 +67,42 @@ public class AssetManifestGenerator : IPreprocessBuildWithReport
 		MapCatalog.ClearCache();
 
 		Debug.Log($"<color=cyan>Resource hash seed migration complete.</color> Remaps: {CountRemaps(remaps)}, json files changed: {changedFiles}.");
+	}
+
+	[MenuItem("Tools/Admin/Migrate Resource Hashes To Folder Seeds", true)]
+	private static bool ValidateMigrateResourceHashesToFolderSeeds()
+	{
+		return IsResourceHashMigrationUnlocked();
+	}
+
+	public static bool IsResourceHashMigrationUnlocked()
+	{
+		string keyPath = GetResourceHashMigrationKeyPath();
+		if (string.IsNullOrWhiteSpace(keyPath) || !File.Exists(keyPath))
+			return false;
+
+		try
+		{
+			return string.Equals(
+				File.ReadAllText(keyPath).Trim(),
+				ResourceHashMigrationActivationWord,
+				StringComparison.Ordinal);
+		}
+		catch
+		{
+			return false;
+		}
+	}
+
+	private const string ResourceHashMigrationAuthorisationFile = "Assets/Private/ResourceMigrationAuthorisation.txt";
+	private const string ResourceHashMigrationActivationWord = "MigrationToolActivation";
+
+	private static string GetResourceHashMigrationKeyPath()
+	{
+		var projectRoot = Directory.GetParent(Application.dataPath)?.FullName;
+		return string.IsNullOrWhiteSpace(projectRoot)
+			? null
+			: Path.Combine(projectRoot, ResourceHashMigrationAuthorisationFile);
 	}
 
 	private static int WriteHashedManifest(string manifestName, IEnumerable<ResourceManifestEntry> entries)
