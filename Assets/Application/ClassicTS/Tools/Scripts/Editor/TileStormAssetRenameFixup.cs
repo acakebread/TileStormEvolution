@@ -30,8 +30,8 @@ namespace ClassicTilestorm.Editor
 				if (!IsTrackedResourceRename(oldPath, newPath))
 					continue;
 
-				var oldHash = GetFilenameHash(oldPath);
-				var newHash = GetFilenameHash(newPath);
+				var oldHash = GetTrackedResourceHash(oldPath, createSeedIfMissing: false);
+				var newHash = GetTrackedResourceHash(newPath, createSeedIfMissing: true);
 				if (string.IsNullOrWhiteSpace(oldHash) || string.IsNullOrWhiteSpace(newHash) || string.Equals(oldHash, newHash, StringComparison.OrdinalIgnoreCase))
 					continue;
 
@@ -149,7 +149,15 @@ namespace ClassicTilestorm.Editor
 			return ext is ".obj" or ".fbx" or ".prefab" or ".png" or ".jpg" or ".jpeg" or ".tga" or ".mat" or ".wav" or ".mp3" or ".ogg";
 		}
 
-		private static string GetFilenameHash(string assetPath)
+		private static string GetTrackedResourceHash(string assetPath, bool createSeedIfMissing)
+		{
+			if (ResourceFolderIdentity.TryComputeHashForAssetPath(assetPath, createSeedIfMissing, out var seededHash))
+				return seededHash;
+
+			return GetLegacyFilenameHash(assetPath);
+		}
+
+		private static string GetLegacyFilenameHash(string assetPath)
 		{
 			if (string.IsNullOrWhiteSpace(assetPath))
 				return null;

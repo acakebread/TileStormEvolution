@@ -315,7 +315,7 @@ using ClassicTilestorm.Assets;
 			if (targetLocation == MapStorageLocation.Internal)
 			{
 				PromoteDefinitionsToInternal(usedDefinitions);
-				EnsureMissingModelsInImmutable(usedModelHashes);
+				PromoteExternalModelsToImmutable(usedModelHashes);
 			}
 			else
 			{
@@ -427,14 +427,14 @@ using ClassicTilestorm.Assets;
 			}
 		}
 
-		private static void EnsureMissingModelsInImmutable(IEnumerable<string> modelHashes)
+		private static void PromoteExternalModelsToImmutable(IEnumerable<string> modelHashes)
 		{
 			foreach (var modelHash in modelHashes ?? Array.Empty<string>())
 			{
 				if (string.IsNullOrWhiteSpace(modelHash))
 					continue;
 
-				ResourceDependencyHelpers.TryImportExternalModelToImmutable(modelHash);
+				ResourceDependencyHelpers.TryPromoteExternalModelToImmutable(modelHash);
 			}
 		}
 

@@ -134,9 +134,16 @@ namespace MassiveHadronLtd
 
 		private static U TryLoad<U>(string name, HashSet<string> roots) where U : UnityEngine.Object
 		{
+			string normalizedName = name.Trim('/');
+			if (normalizedName.Contains("/"))
+			{
+				var direct = Resources.Load<U>(normalizedName);
+				if (direct != null) return direct;
+			}
+
 			foreach (var root in roots)
 			{
-				string path = string.IsNullOrEmpty(root) ? name : $"{root}/{name}";
+				string path = string.IsNullOrEmpty(root) ? normalizedName : $"{root}/{normalizedName}";
 				var loaded = Resources.Load<U>(path);
 				if (loaded != null) return loaded;
 			}

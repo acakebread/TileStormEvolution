@@ -1,0 +1,13 @@
+Resource hash migration admin unlock
+
+The migration menu is versioned at:
+Tools/Admin/Migrate Resource Hashes To Folder Seeds
+
+It is disabled unless this local, unversioned file exists:
+Assets/Private/ResourceMigrationAuthorisation.txt
+
+The file must contain exactly:
+MigrationToolActivation
+
+This protects the one-time destructive hash remap tool from accidental use while
+leaving normal manifest regeneration available to the team.
