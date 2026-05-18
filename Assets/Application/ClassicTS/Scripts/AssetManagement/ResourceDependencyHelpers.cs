@@ -361,7 +361,27 @@ namespace ClassicTilestorm
 				var exactCandidate = Path.Combine(resFolder, normalized);
 				if (File.Exists(exactCandidate) && (includeImmutable || !IsPathUnderRoot(exactCandidate, Path.Combine(Application.dataPath, "Application", "Resources", AssetPath.ImmutableRootFolder))))
 					return exactCandidate;
+
+				if (string.IsNullOrWhiteSpace(Path.GetExtension(exactCandidate)))
+				{
+					var exactDirectory = Path.GetDirectoryName(exactCandidate);
+					var exactStem = Path.GetFileName(exactCandidate);
+					if (!string.IsNullOrWhiteSpace(exactDirectory) && Directory.Exists(exactDirectory))
+					{
+						foreach (var candidate in Directory.EnumerateFiles(exactDirectory, exactStem + ".*", SearchOption.TopDirectoryOnly))
+						{
+							if (string.Equals(Path.GetExtension(candidate), ".meta", StringComparison.OrdinalIgnoreCase))
+								continue;
+
+							if (includeImmutable || !IsPathUnderRoot(candidate, Path.Combine(Application.dataPath, "Application", "Resources", AssetPath.ImmutableRootFolder)))
+								return candidate;
+						}
+					}
+				}
 			}
+
+			if (normalized.Contains("/"))
+				return null;
 
 			var normalizedStem = Path.GetFileNameWithoutExtension(normalized);
 			var suffix = "/" + normalized;

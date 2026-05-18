@@ -216,7 +216,8 @@ namespace MassiveHadronLtd
 						  .Select(n =>
 						  {
 							  var parts = n.Split('\t');
-							  return parts[parts.Length - 1].Trim();
+							  var value = parts[parts.Length - 1].Trim();
+							  return Path.GetFileNameWithoutExtension(value);
 						  })
 						  .Where(n => !string.IsNullOrEmpty(n));
 		}
