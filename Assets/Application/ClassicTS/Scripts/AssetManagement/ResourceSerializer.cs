@@ -11,6 +11,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using ClassicTilestorm.Assets;
 using MassiveHadronLtd;
+using MassiveHadronLtd.FileBrowserUtil;
 
 namespace ClassicTilestorm
 {
@@ -42,6 +43,31 @@ namespace ClassicTilestorm
 	public static class ResourceSerializer
 	{
 		private delegate bool TryResolveResourceKeyDelegate(string identifier, out string resourcePath);
+
+		public sealed class AtomicMapExportData
+		{
+			public bool IsArchive { get; }
+			public string FileName { get; }
+			public string JsonFileName { get; }
+			public string MimeType { get; }
+			public string Json { get; }
+			public byte[] Archive { get; }
+
+			public bool IsValid => IsArchive ? Archive != null && Archive.Length > 0 : !string.IsNullOrEmpty(Json);
+			public string DisplayLabel => IsArchive ? "Map package" : "Map export";
+			public string DefaultDialogTitle => IsArchive ? "Export Map Package" : "Export Map As Atomic JSON";
+			public string FileExtension => Path.GetExtension(FileName).TrimStart('.');
+
+			internal AtomicMapExportData(bool isArchive, string fileName, string mimeType, string json, byte[] archive)
+			{
+				IsArchive = isArchive;
+				FileName = fileName;
+				JsonFileName = Path.ChangeExtension(fileName, ".json");
+				MimeType = mimeType;
+				Json = json;
+				Archive = archive;
+			}
+		}
 
 		private static void EnsureFolder(string path)
 		{
@@ -423,7 +449,7 @@ namespace ClassicTilestorm
 			return Resources.Load<TextAsset>($"{root}/{fileName}.json");
 		}
 
-		public static string BuildAtomicMapJson(Map originalMap, bool verbose = false, bool crop = true, bool filteredDefs = false)
+		public static string BuildAtomicMapJson(Map originalMap, bool crop = true, bool padded = false, bool verbose = false)
 		{
 			if (originalMap == null)
 				return null;
@@ -431,16 +457,35 @@ namespace ClassicTilestorm
 			var map = crop ? CreateCroppedCopy(originalMap) : originalMap.Clone();
 			map.Optimise();
 
-			using var _ = AtomicSerializationContext.PushExportOptions(verbose, filteredDefs);
+			using var _ = AtomicSerializationContext.PushExportOptions(verbose, !verbose);
 
 			var settings = new JsonSerializerSettings
 			{
 				NullValueHandling = NullValueHandling.Ignore,
-				Formatting = verbose ? Formatting.Indented : Formatting.None,
+				Formatting = padded ? Formatting.Indented : Formatting.None,
 				Converters = { new AtomicMapConverter() },
 			};
 
 			return JsonConvert.SerializeObject(map, settings);
+		}
+
+		public static AtomicMapExportData BuildAtomicMapExportData(Map originalMap, bool crop = true, bool padded = false, bool verbose = false)
+		{
+			if (originalMap == null)
+				return null;
+
+			var map = crop ? CreateCroppedCopy(originalMap) : originalMap;
+			bool archiveRequired = MapRequiresArchive(originalMap);
+			string fileName = $"{BuildAtomicExportBaseFileName(map)}{(archiveRequired ? ".zip" : ".json")}";
+
+			if (archiveRequired)
+			{
+				byte[] archive = BuildAtomicMapArchiveBytes(originalMap, crop: crop, padded: padded, verbose: verbose);
+				return new AtomicMapExportData(true, fileName, "application/zip", null, archive);
+			}
+
+			string json = BuildAtomicMapJson(originalMap, crop: crop, padded: padded, verbose: verbose);
+			return new AtomicMapExportData(false, fileName, "application/json;charset=utf-8", json, null);
 		}
 
 		public static string GetDefaultMapExportFolder()
@@ -469,6 +514,14 @@ namespace ClassicTilestorm
 			}
 
 			return false;
+		}
+
+		private static string BuildAtomicExportBaseFileName(Map map)
+		{
+			var name = string.IsNullOrWhiteSpace(map?.name) ? "Untitled" : map.name;
+			var invalid = Path.GetInvalidFileNameChars();
+			var safeName = new string(name.Select(ch => invalid.Contains(ch) ? '_' : ch).ToArray()).Trim();
+			return $"{safeName}__{HTB50Settings.ToString(map?.HashID ?? 0)}";
 		}
 
 		public static Map ImportAtomicMap(string filepath)
@@ -503,13 +556,13 @@ namespace ClassicTilestorm
 				Directory.CreateDirectory(stagingRoot);
 				ZipFile.ExtractToDirectory(archivePath, stagingRoot, overwriteFiles: true);
 
-				string jsonPath = Path.Combine(stagingRoot, "map_save.json");
-				if (!File.Exists(jsonPath))
-					jsonPath = Path.Combine(stagingRoot, "map.json");
+				string jsonPath = Directory.GetFiles(stagingRoot, "*.json", SearchOption.TopDirectoryOnly)
+					.OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+					.FirstOrDefault();
 
-				if (!File.Exists(jsonPath))
+				if (string.IsNullOrWhiteSpace(jsonPath) || !File.Exists(jsonPath))
 				{
-					Debug.LogError($"Import failed: archive does not contain map_save.json or map.json → {archivePath}");
+					Debug.LogError($"Import failed: archive does not contain a root JSON file → {archivePath}");
 					return null;
 				}
 
@@ -642,62 +695,16 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public static void ExportAtomicMap(Map originalMap, string filepath = null, bool verbose = false, bool crop = true, bool filteredDefs = false)
+		public static void ExportAtomicMap(Map originalMap, string filepath = null, bool crop = true, bool padded = false, bool verbose = false)
 		{
-			if (originalMap == null) return;
+			var export = BuildAtomicMapExportData(originalMap, crop: crop, padded: padded, verbose: verbose);
+			if (export == null || !export.IsValid)
+				return;
 
-			var map = crop ? CreateCroppedCopy(originalMap) : originalMap;
-
-			try
-			{
-				bool archiveRequired = MapRequiresArchive(originalMap);
-				if (archiveRequired)
-				{
-					string archivePath = ResolveAtomicArchivePath(filepath, map);
-					WriteAtomicMapArchive(originalMap, archivePath, verbose, crop, filteredDefs);
-					Debug.Log($"ATOMIC MAP PACKAGE EXPORTED{(crop ? " (auto-cropped)" : "")} → {archivePath} ({map.width}×{map.height})");
-					return;
-				}
-
-				string json = BuildAtomicMapJson(originalMap, verbose, crop, filteredDefs);
-
-				string safeName = SanitizeFileName(string.IsNullOrWhiteSpace(map.name) ? "Untitled" : map.name);
-				string defaultFileName = $"{safeName}__{HTB50Settings.ToString(map.HashID)}.json";
-				string path;
-
-				if (string.IsNullOrWhiteSpace(filepath))
-				{
-					var folder = GetDefaultMapExportFolder();
-					EnsureFolder(folder);
-					path = Path.Combine(folder, defaultFileName);
-				}
-				else if (Path.HasExtension(filepath))
-				{
-					if (!string.Equals(Path.GetExtension(filepath), ".json", StringComparison.OrdinalIgnoreCase))
-						filepath = Path.ChangeExtension(filepath, ".json");
-
-					var directory = Path.GetDirectoryName(filepath);
-					if (!string.IsNullOrEmpty(directory))
-						EnsureFolder(directory);
-					path = filepath;
-				}
-				else
-				{
-					EnsureFolder(filepath);
-					path = Path.Combine(filepath, defaultFileName);
-				}
-
-				WriteJsonIfChanged(path, json);
-
-				Debug.Log($"ATOMIC MAP EXPORTED{(crop ? " (auto-cropped)" : "")} → {path} ({map.width}×{map.height})");
-			}
-			catch (Exception ex)
-			{
-				Debug.LogError($"Failed to export atomic map '{map?.name ?? "unknown"}': {ex.Message}");
-			}
+			PlatformFileBrowser.ExportAtomicMap(export, filepath);
 		}
 
-		public static byte[] BuildAtomicMapArchiveBytes(Map originalMap, bool verbose = false, bool crop = true, bool filteredDefs = false)
+		public static byte[] BuildAtomicMapArchiveBytes(Map originalMap, bool crop = true, bool padded = false, bool verbose = false)
 		{
 			if (originalMap == null)
 				return null;
@@ -708,7 +715,7 @@ namespace ClassicTilestorm
 			try
 			{
 				Directory.CreateDirectory(stagingRoot);
-				BuildAtomicMapArchiveStaging(originalMap, stagingRoot, verbose, crop, filteredDefs);
+				BuildAtomicMapArchiveStaging(originalMap, stagingRoot, crop: crop, padded: padded, verbose: verbose);
 
 				archivePath = Path.Combine(Path.GetTempPath(), $"TileStormAtomicExport_{Guid.NewGuid():N}.zip");
 				if (File.Exists(archivePath))
@@ -729,61 +736,10 @@ namespace ClassicTilestorm
 			}
 		}
 
-		private static string ResolveAtomicArchivePath(string filepath, Map map)
+		private static void BuildAtomicMapArchiveStaging(Map originalMap, string stagingRoot, bool crop, bool padded, bool verbose)
 		{
-			string safeName = SanitizeFileName(string.IsNullOrWhiteSpace(map?.name) ? "Untitled" : map.name);
-			string defaultFileName = $"{safeName}__{HTB50Settings.ToString(map?.HashID ?? 0)}.zip";
-
-			if (string.IsNullOrWhiteSpace(filepath))
-			{
-				var folder = GetDefaultMapExportFolder();
-				EnsureFolder(folder);
-				return Path.Combine(folder, defaultFileName);
-			}
-
-			if (Path.HasExtension(filepath))
-			{
-				if (!string.Equals(Path.GetExtension(filepath), ".zip", StringComparison.OrdinalIgnoreCase))
-					filepath = Path.ChangeExtension(filepath, ".zip");
-
-				var directory = Path.GetDirectoryName(filepath);
-				if (!string.IsNullOrWhiteSpace(directory))
-					EnsureFolder(directory);
-				return filepath;
-			}
-
-			EnsureFolder(filepath);
-			return Path.Combine(filepath, defaultFileName);
-		}
-
-		private static void WriteAtomicMapArchive(Map originalMap, string archivePath, bool verbose, bool crop, bool filteredDefs)
-		{
-			string stagingRoot = Path.Combine(Path.GetTempPath(), $"TileStormAtomicExport_{Guid.NewGuid():N}");
-
-			try
-			{
-				Directory.CreateDirectory(stagingRoot);
-				BuildAtomicMapArchiveStaging(originalMap, stagingRoot, verbose, crop, filteredDefs);
-
-				if (File.Exists(archivePath))
-					File.Delete(archivePath);
-
-				string archiveDirectory = Path.GetDirectoryName(archivePath);
-				if (!string.IsNullOrWhiteSpace(archiveDirectory))
-					EnsureFolder(archiveDirectory);
-
-				ZipFile.CreateFromDirectory(stagingRoot, archivePath, System.IO.Compression.CompressionLevel.Fastest, includeBaseDirectory: false);
-			}
-			finally
-			{
-				TryDeleteDirectory(stagingRoot);
-			}
-		}
-
-		private static void BuildAtomicMapArchiveStaging(Map originalMap, string stagingRoot, bool verbose, bool crop, bool filteredDefs)
-		{
-			string json = BuildAtomicMapJson(originalMap, verbose, crop, filteredDefs);
-			File.WriteAllText(Path.Combine(stagingRoot, "map_save.json"), json);
+			string json = BuildAtomicMapJson(originalMap, crop: crop, padded: padded, verbose: verbose);
+			File.WriteAllText(Path.Combine(stagingRoot, BuildAtomicExportBaseFileName(originalMap) + ".json"), json);
 
 			string contentRoot = Path.Combine(stagingRoot, "Content");
 			EnsureFolder(contentRoot);

@@ -34,14 +34,6 @@ namespace ClassicTilestorm
 			return $"{name} [{hash}]";
 		}
 
-		private static string BuildExportFileBase(Map map)
-		{
-			var name = string.IsNullOrWhiteSpace(map?.name) ? "Untitled" : map.name;
-			var invalid = System.IO.Path.GetInvalidFileNameChars();
-			var safeName = new string(name.Select(ch => invalid.Contains(ch) ? '_' : ch).ToArray()).Trim();
-			return $"{safeName}__{GetMapHash(map) ?? "000000"}";
-		}
-
 		private static HashId? TryParseMapHash(string identifier)
 		{
 			if (string.IsNullOrWhiteSpace(identifier))
@@ -332,54 +324,17 @@ namespace ClassicTilestorm
 			}
 
 			var map = CurrentMap;
-			bool archiveRequired = ResourceSerializer.MapRequiresArchive(map);
-			string fileName = $"{BuildExportFileBase(map)}{(archiveRequired ? ".zip" : ".json")}";
-			const bool filteredDefs = true; // Flip to true when we want stripped release-style exports.
+			const bool padded = false; // Release-style atomic exports are compact by default.
+			const bool verbose = false; // Release-style atomic exports stay filtered by default.
 
-#if UNITY_WEBGL && !UNITY_EDITOR
-			if (archiveRequired)
+			var export = ResourceSerializer.BuildAtomicMapExportData(map, crop: true, padded: padded, verbose: verbose);
+			if (export == null || !export.IsValid)
 			{
-				byte[] archive = ResourceSerializer.BuildAtomicMapArchiveBytes(map, verbose: true, crop: true, filteredDefs: filteredDefs);
-				if (archive == null || archive.Length == 0)
-				{
-					Debug.LogError("Failed to build export archive.");
-					return;
-				}
-
-				WebGLDownloadUtility.DownloadBytes(fileName, archive, "application/zip");
-				Debug.Log($"Map package prepared for browser download: {fileName}");
-			}
-			else
-			{
-				string json = ResourceSerializer.BuildAtomicMapJson(map, verbose: true, crop: true, filteredDefs: filteredDefs);
-				if (string.IsNullOrEmpty(json))
-				{
-					Debug.LogError("Failed to build export JSON.");
-					return;
-				}
-				WebGLDownloadUtility.DownloadText(fileName, json, "application/json;charset=utf-8");
-				Debug.Log($"Map export prepared for browser download: {fileName}");
-			}
-#elif UNITY_EDITOR
-			string defaultFolder = ApplicationSettings.UserFolder;
-			System.IO.Directory.CreateDirectory(defaultFolder);
-			string path = EditorUtility.SaveFilePanel(
-				archiveRequired ? "Export Map Package" : "Export Map As Atomic JSON",
-				defaultFolder,
-				fileName,
-				archiveRequired ? "zip" : "json");
-			if (string.IsNullOrEmpty(path))
-			{
-				Debug.Log("Export cancelled by user.");
+				Debug.LogError("Failed to prepare atomic export.");
 				return;
 			}
 
-			ResourceSerializer.ExportAtomicMap(map, path, verbose: true, crop: true, filteredDefs: filteredDefs);
-			EditorUtility.DisplayDialog("Export Successful", $"Map exported successfully!\n\nPath: {path}", "OK");
-#else
-			string defaultFolder = ResourceSerializer.GetDefaultMapExportFolder();
-			ResourceSerializer.ExportAtomicMap(map, defaultFolder, verbose: true, crop: true, filteredDefs: filteredDefs);
-#endif
+			PlatformFileBrowser.ExportAtomicMap(export);
 		}
 
 		//private void LogTextureLeak(string label)
