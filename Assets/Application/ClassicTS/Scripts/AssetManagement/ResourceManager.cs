@@ -74,6 +74,29 @@ namespace ClassicTilestorm
 				.ToArray();
 		}
 
+		public static IEnumerable<string> GetUsedModelHashes(Map originalMap)
+		{
+			if (originalMap == null)
+				return Array.Empty<string>();
+
+			return GetUsedDefinitions(originalMap)
+				.Where(definition => definition != null && !string.IsNullOrWhiteSpace(definition.model))
+				.Select(definition => definition.model)
+				.Distinct(StringComparer.OrdinalIgnoreCase)
+				.ToArray();
+		}
+
+		public static int ModelUsageCount(string modelHash)
+		{
+			if (string.IsNullOrWhiteSpace(modelHash) || _db?.maps == null)
+				return 0;
+
+			return _db.maps
+				.Where(map => map != null)
+				.SelectMany(GetUsedDefinitions)
+				.Count(definition => definition != null && string.Equals(definition.model, modelHash, StringComparison.OrdinalIgnoreCase));
+		}
+
 		//public static TextureInfo GetTextureInfo(string id)
 		//	=> string.IsNullOrEmpty(id) ? null : TextureInfos.FirstOrDefault(ts => ts.id == id);
 

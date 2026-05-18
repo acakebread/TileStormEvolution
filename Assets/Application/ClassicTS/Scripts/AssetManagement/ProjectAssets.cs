@@ -183,7 +183,21 @@ namespace ClassicTilestorm.Assets
 		private static GameObject LoadEntry(ModelEntry entry)
 		{
 			if (!string.IsNullOrWhiteSpace(entry.ResourcePath))
-				return AssetRegistry<GameObject>.FindModel(entry.ResourcePath);
+			{
+				var resourceModel = AssetRegistry<GameObject>.FindModel(entry.ResourcePath);
+				if (resourceModel != null)
+					return resourceModel;
+
+				// Immutable/community models live under a hashed folder name, so the
+				// manifest display name is not enough to locate them at runtime.
+				var hashedPath = BuildImmutableModelPath(entry);
+				if (!string.IsNullOrWhiteSpace(hashedPath))
+				{
+					var hashedModel = Resources.Load<GameObject>(hashedPath);
+					if (hashedModel != null)
+						return hashedModel;
+				}
+			}
 
 			if (ImportedInstanceCache.TryGetValue(entry.HashId, out var cached) && cached != null)
 				return cached;
@@ -198,6 +212,14 @@ namespace ClassicTilestorm.Assets
 			if (go != null)
 				ImportedInstanceCache[entry.HashId] = go;
 			return go;
+		}
+
+		private static string BuildImmutableModelPath(ModelEntry entry)
+		{
+			if (string.IsNullOrWhiteSpace(entry.HashId) || string.IsNullOrWhiteSpace(entry.DisplayName))
+				return null;
+
+			return $"{AssetPath.ImmutableRootFolder}/{AssetPath.GeometryFolder}/{entry.HashId}/{entry.DisplayName}";
 		}
 
 		public static string GetDisplayNameForHash(string hash)
@@ -454,7 +476,7 @@ namespace ClassicTilestorm.Assets
 					.ToArray();
 
 				if (roots.Length == 0)
-					roots = new[] { AssetPath.GeometryPath?.Trim('/')?.Trim() ?? "" };
+					roots = ApplicationSettings.GetGeometryPaths().ToArray();
 
 				return GetAssetNamesFromRoots<GameObject>("Models", roots);
 			}, forceRefresh, "Model");
@@ -462,7 +484,7 @@ namespace ClassicTilestorm.Assets
 		public static IReadOnlyList<string> GetPrefabNames(bool forceRefresh = false)
 			=> GetNames<GameObject>(() => GetAssetNamesFromRoots<GameObject>("Prefabs", new[]
 			{
-				AssetPath.PrefabPath?.Trim('/') ?? ""
+				AssetPath.NormalizePath(ApplicationSettings.GetPrefabPaths().FirstOrDefault()) ?? ""
 			}), forceRefresh, "Prefab");
 
 		public static IReadOnlyList<string> GetTextureNames(bool forceRefresh = false)
@@ -471,7 +493,7 @@ namespace ClassicTilestorm.Assets
 		public static IReadOnlyList<string> GetMaterialNames(bool forceRefresh = false)
 			=> GetNames<Material>(() => GetAssetNamesFromRoots<Material>("Materials", new[]
 			{
-				AssetPath.MaterialPath?.Trim('/') ?? ""
+				AssetPath.NormalizePath(ApplicationSettings.GetMaterialPaths().FirstOrDefault()) ?? ""
 			}), forceRefresh, "Material");
 
 		public static IReadOnlyList<string> GetSkycubeNames(bool forceRefresh = false)

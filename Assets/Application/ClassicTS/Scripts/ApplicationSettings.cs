@@ -2,8 +2,11 @@
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
+using System;
 using MassiveHadronLtd;
 using System.IO;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace ClassicTilestorm
 {
@@ -124,29 +127,25 @@ namespace ClassicTilestorm
 		[Header("json data root")]
 		[SerializeField, ResourcePath] private string jsonDataPath = "ClassicTS/Config";
 		public static string JsonDataPath => string.IsNullOrWhiteSpace(instance?.jsonDataPath) ? "ClassicTS/Config" : instance.jsonDataPath.Trim('/').Trim();
-		public static string JsonDataProjectPath => Path.Combine(Application.dataPath, "Application", "ClassicTS", "Resources", JsonDataPath.Replace('/', Path.DirectorySeparatorChar));
+		public static string JsonDataProjectPath => Path.Combine(Application.dataPath, "Application", "Resources", JsonDataPath.Replace('/', Path.DirectorySeparatorChar));
 		public static string JsonDataResourcePath => JsonDataPath;
 
-		[SerializeField, ResourcePath] private string geometryPath = "ClassicTS/Geometry/";
-		public static string GeometryPath => instance?.geometryPath;
+		[Header("content roots")]
+		[SerializeField] private string[] contentRoots = new[] { AssetPath.ImmutableRootFolder, AssetPath.GenericRootFolder, "ClassicTS", "Evolution" };
+		private static readonly string[] DefaultContentRoots = new[] { AssetPath.ImmutableRootFolder, AssetPath.GenericRootFolder, "ClassicTS", "Evolution" };
+		public static IReadOnlyList<string> ContentRoots => NormalizeContentRoots(instance?.contentRoots);
 
-		[SerializeField, ResourcePath] private string texturePath = "ClassicTS/Textures/";
-		public static string TexturePath => instance?.texturePath;
+		public static IEnumerable<string> GetContentPaths(string subfolder)
+			=> AssetPath.BuildPaths(ContentRoots, subfolder);
 
-		[SerializeField, ResourcePath] private string materialPath = "ClassicTS/Materials/";
-		public static string MaterialPath => instance?.materialPath;
-
-		[SerializeField, ResourcePath] private string skycubesPath = "ClassicTS/SkyCubes/";
-		public static string SkyCubesPath => instance?.skycubesPath;
-
-		[SerializeField, ResourcePath] private string prefabPath = "ClassicTS/Prefabs/";
-		public static string PrefabPath => instance?.prefabPath;
-
-		[SerializeField, ResourcePath] private string soundPath = "ClassicTS/Sounds/";
-		public static string SoundPath => instance?.soundPath;
-
-		[SerializeField, ResourcePath] private string musicPath = "ClassicTS/Music/";
-		public static string MusicPath => instance?.musicPath;
+		public static IEnumerable<string> GetGeometryPaths() => GetContentPaths(AssetPath.GeometryFolder);
+		public static IEnumerable<string> GetTexturePaths() => GetContentPaths(AssetPath.TextureFolder);
+		public static IEnumerable<string> GetMaterialPaths() => GetContentPaths(AssetPath.MaterialFolder);
+		public static IEnumerable<string> GetPrefabPaths() => GetContentPaths(AssetPath.PrefabFolder);
+		public static IEnumerable<string> GetSkyCubePaths() => GetContentPaths(AssetPath.SkyCubesFolder);
+		public static IEnumerable<string> GetSoundPaths() => GetContentPaths(AssetPath.SoundFolder);
+		public static IEnumerable<string> GetMusicPaths() => GetContentPaths(AssetPath.MusicFolder);
+		public static IEnumerable<string> GetGeometryMaterialPaths() => GetContentPaths($"{AssetPath.GeometryFolder}/{AssetPath.MaterialFolder}");
 
 		[Header("Game Mode")]
 		[SerializeField] private ApplicationMode previewMode = ApplicationMode.Player;
@@ -192,30 +191,42 @@ namespace ClassicTilestorm
 			remapGeometry = RemapGeometry;
 		}
 
+		private static IReadOnlyList<string> NormalizeContentRoots(IEnumerable<string> roots)
+		{
+			var cleaned = (DefaultContentRoots ?? Array.Empty<string>())
+				.Concat(roots ?? Array.Empty<string>())
+				.Select(AssetPath.NormalizePath)
+				.Where(root => !string.IsNullOrWhiteSpace(root))
+				.Distinct(StringComparer.OrdinalIgnoreCase)
+				.ToArray();
+
+			return cleaned.Length > 0 ? cleaned : DefaultContentRoots;
+		}
+
 		private void OnValidate()
 		{
 			if (!Application.isPlaying) return;
 			if (instance != this) return;
 		}
 
-		public static string DatabaseFolder => PreviewSettingsStatic.DatabaseFolder;
-		public static string ExportFolder => PreviewSettingsStatic.UserFolder;
-		public static string UserFolder => PreviewSettingsStatic.UserFolder;
-		public static string SystemFolder => PreviewSettingsStatic.SystemFolder;
-		public static string SystemMapsFolder => PreviewSettingsStatic.SystemMapsFolder;
-		public static string SystemDefinitionsFolder => PreviewSettingsStatic.SystemDefinitionsFolder;
-		public static string SystemModelsFolder => PreviewSettingsStatic.SystemModelsFolder;
-		public static string SystemMaterialsFolder => PreviewSettingsStatic.SystemMaterialsFolder;
-		public static string SystemTexturesFolder => PreviewSettingsStatic.SystemTexturesFolder;
-		public static string SystemSkyCubesFolder => PreviewSettingsStatic.SystemSkyCubesFolder;
-		public static string SystemMusicFolder => PreviewSettingsStatic.SystemMusicFolder;
-		public static string SystemSoundsFolder => PreviewSettingsStatic.SystemSoundsFolder;
+		public static string DatabaseFolder => Path.Combine(Application.persistentDataPath, AssetPath.DataRootFolder);
+		public static string ExportFolder => UserFolder;
+		public static string UserFolder => Path.Combine(Application.persistentDataPath, AssetPath.UserRootFolder);
+		public static string SystemFolder => Path.Combine(Application.persistentDataPath, AssetPath.SystemRootFolder);
+		public static string SystemMapsFolder => Path.Combine(SystemFolder, AssetPath.MapsFolder);
+		public static string SystemDefinitionsFolder => Path.Combine(SystemFolder, AssetPath.DefinitionsFolder);
+		public static string SystemModelsFolder => Path.Combine(SystemFolder, AssetPath.ModelsFolder);
+		public static string SystemMaterialsFolder => Path.Combine(SystemFolder, AssetPath.MaterialFolder);
+		public static string SystemTexturesFolder => Path.Combine(SystemFolder, AssetPath.TextureFolder);
+		public static string SystemSkyCubesFolder => Path.Combine(SystemFolder, AssetPath.SkyCubesFolder);
+		public static string SystemMusicFolder => Path.Combine(SystemFolder, AssetPath.MusicFolder);
+		public static string SystemSoundsFolder => Path.Combine(SystemFolder, AssetPath.SoundFolder);
 
 		// ====================== EDITOR HELPER (for manifest generation) ======================
 #if UNITY_EDITOR
 		/// <summary>
-		/// Forces loading of the ApplicationSettings instance so AssetPath.XXXPath
-		/// return correct values in MenuItems and PreprocessBuild, even without entering Play Mode.
+		/// Forces loading of the ApplicationSettings instance so content roots are available
+		/// in MenuItems and PreprocessBuild, even without entering Play Mode.
 		/// </summary>
 		public static void Editor_ForceLoadInstance()
 		{
@@ -223,7 +234,7 @@ namespace ClassicTilestorm
 				return;
 
 			// Use FindAnyObjectByType instead of the obsolete FindFirstObjectByType
-			instance = Object.FindAnyObjectByType<ApplicationSettings>(FindObjectsInactive.Include);
+			instance = UnityEngine.Object.FindAnyObjectByType<ApplicationSettings>(FindObjectsInactive.Include);
 
 			if (instance == null)
 			{
@@ -232,34 +243,10 @@ namespace ClassicTilestorm
 			}
 			else
 			{
-				// Force populate AssetPath statics with the values from the component
-				AssetPath.GeometryPath = instance.geometryPath;
-				AssetPath.TexturePath = instance.texturePath;
-				AssetPath.MaterialPath = instance.materialPath;
-				AssetPath.SkyCubesPath = instance.skycubesPath;
-				AssetPath.PrefabPath = instance.prefabPath;
-				AssetPath.SoundPath = instance.soundPath;
-				AssetPath.MusicPath = instance.musicPath;
-
 				Debug.Log("<color=cyan>ApplicationSettings instance loaded for editor manifest generation.</color>");
 			}
 		}
 #endif
 	}
 
-	public static class PreviewSettingsStatic
-	{
-		public static readonly string DatabaseFolder = System.IO.Path.Combine(Application.persistentDataPath, "Data");
-		public static readonly string UserFolder = System.IO.Path.Combine(Application.persistentDataPath, "User");
-		public static readonly string SystemFolder = System.IO.Path.Combine(Application.persistentDataPath, "System");
-		public static readonly string SystemMapsFolder = System.IO.Path.Combine(SystemFolder, "Maps");
-		public static readonly string SystemDefinitionsFolder = System.IO.Path.Combine(SystemFolder, "Definitions");
-		public static readonly string SystemModelsFolder = System.IO.Path.Combine(SystemFolder, "Models");
-		public static readonly string SystemMaterialsFolder = System.IO.Path.Combine(SystemFolder, "Materials");
-		public static readonly string SystemTexturesFolder = System.IO.Path.Combine(SystemFolder, "Textures");
-		public static readonly string SystemSkyCubesFolder = System.IO.Path.Combine(SystemFolder, "SkyCubes");
-		public static readonly string SystemMusicFolder = System.IO.Path.Combine(SystemFolder, "Music");
-		public static readonly string SystemSoundsFolder = System.IO.Path.Combine(SystemFolder, "Sounds");
-		public static readonly string ExportFolder = UserFolder;
-	}
 }

@@ -8,20 +8,25 @@ namespace ClassicTilestorm.Assets
 		{
 			ModelAssets.NameRemapper = ClassicTileStormAssetRemapHelper.RemapName;
 
-			// FIX: Trim and normalize the path - this is critical
-			ModelAssets.RegisterRoot(AssetPath.GeometryPath?.Trim('/').Trim());
+			foreach (var root in ApplicationSettings.GetGeometryPaths())
+				ModelAssets.RegisterRoot(root);
 			ModelAssets.RegisterRoot("Levels");
 			ModelAssets.RegisterRoot("Levels/Med");
-			PrefabAssets.RegisterRoot(AssetPath.PrefabPath?.Trim('/').Trim());
-			TextureAssets.RegisterRoot(AssetPath.TexturePath?.Trim('/').Trim());
-			MaterialAssets.RegisterRoot(AssetPath.MaterialPath?.Trim('/').Trim());
-			SkyboxAssets.RegisterRoot(AssetPath.SkyCubesPath?.Trim('/').Trim());
-			SoundAssets.RegisterRoot(AssetPath.SoundPath?.Trim('/').Trim()); // e.g. "ClassicTS/Sounds/"
-			MusicAssets.RegisterRoot(AssetPath.MusicPath?.Trim('/').Trim()); // e.g. "ClassicTS/Music/"
+			foreach (var root in ApplicationSettings.GetPrefabPaths())
+				PrefabAssets.RegisterRoot(root);
+			foreach (var root in ApplicationSettings.GetTexturePaths())
+				TextureAssets.RegisterRoot(root);
+			foreach (var root in ApplicationSettings.GetMaterialPaths())
+				MaterialAssets.RegisterRoot(root);
+			foreach (var root in ApplicationSettings.GetSkyCubePaths())
+				SkyboxAssets.RegisterRoot(root);
+			foreach (var root in ApplicationSettings.GetSoundPaths())
+				SoundAssets.RegisterRoot(root); // e.g. "ClassicTS/Sounds/"
+			foreach (var root in ApplicationSettings.GetMusicPaths())
+				MusicAssets.RegisterRoot(root); // e.g. "ClassicTS/Music/"
 			ResourceResolvers.TextureResolver = new TextureResourceResolver();
 			ResourceResolvers.SkyboxResolver = new SkyboxResourceResolver();
 			ResourceResolvers.MusicResolver = new MusicResourceResolver();
-			ResourceResolvers.GeometryMaterialsPathResolver = new GeometryMaterialsPathResolver();
 			ModelAssets.RefreshRegistry(forceRefresh: true);
 		}
 

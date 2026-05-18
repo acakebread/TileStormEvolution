@@ -1,40 +1,56 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
 namespace ClassicTilestorm
 {
 	public static class AssetPath
 	{
-		public const string MaterialsFolder = "Materials";
+		public const string DataRootFolder = "Data";
+		public const string UserRootFolder = "User";
+		public const string SystemRootFolder = "System";
+		public const string ImmutableRootFolder = "Immutable";
+		public const string GenericRootFolder = "Generic";
+		public const string MapsFolder = "Maps";
+		public const string DefinitionsFolder = "Definitions";
+		public const string ModelsFolder = "Models";
+		public const string GeometryFolder = "Geometry";
+		public const string TextureFolder = "Textures";
+		public const string MaterialFolder = "Materials";
+		public const string PrefabFolder = "Prefabs";
+		public const string SkyCubesFolder = "SkyCubes";
+		public const string SoundFolder = "Sounds";
+		public const string MusicFolder = "Music";
+		public const string ConfigFolder = "Config";
 
-		private static string geometryPath = null;//"ClassicTS/Geometry/"
-		public static string GeometryPath { get => geometryPath ?? ApplicationSettings.GeometryPath; set => geometryPath = value; }
-
-		public static string GeometryMaterialsPath
+		public static string NormalizePath(string path)
 		{
-			get
-			{
-				var root = GeometryPath?.Trim('/')?.Trim();
-				if (string.IsNullOrEmpty(root))
-					return MaterialsFolder;
+			if (string.IsNullOrWhiteSpace(path))
+				return null;
 
-				return $"{root}/{MaterialsFolder}";
-			}
+			return path.Trim().Trim('/');
 		}
 
-		private static string texturePath = null;//"ClassicTS/Textures/"
-		public static string TexturePath { get => texturePath ?? ApplicationSettings.TexturePath; set => texturePath = value; }
+		public static string Combine(string root, string subfolder)
+		{
+			root = NormalizePath(root);
+			subfolder = NormalizePath(subfolder);
 
-		private static string materialPath = null;//"ClassicTS/Materials/"
-		public static string MaterialPath { get => materialPath ?? ApplicationSettings.MaterialPath; set => materialPath = value; }
+			if (string.IsNullOrWhiteSpace(root))
+				return subfolder ?? string.Empty;
 
-		private static string prefabPath = null;//"ClassicTS/Prefabs/"
-		public static string PrefabPath { get => prefabPath ?? ApplicationSettings.PrefabPath; set => prefabPath = value; }
+			if (string.IsNullOrWhiteSpace(subfolder))
+				return root;
 
-		private static string skycubesPath = null;//"ClassicTS/SkyCubes/"
-		public static string SkyCubesPath { get => skycubesPath ?? ApplicationSettings.SkyCubesPath; set => skycubesPath = value; }
+			return $"{root}/{subfolder}";
+		}
 
-		private static string soundPath = null;//"ClassicTS/Sounds/"
-		public static string SoundPath { get => soundPath ?? ApplicationSettings.SoundPath; set => soundPath = value; }
-
-		private static string musicPath = null;//"ClassicTS/Music/"
-		public static string MusicPath { get => musicPath ?? ApplicationSettings.MusicPath; set => musicPath = value; }
+		public static IEnumerable<string> BuildPaths(IEnumerable<string> roots, string subfolder)
+		{
+			return (roots ?? Enumerable.Empty<string>())
+				.Select(root => Combine(root, subfolder))
+				.Where(path => !string.IsNullOrWhiteSpace(path))
+				.Distinct(StringComparer.OrdinalIgnoreCase);
+		}
 	}
 }
