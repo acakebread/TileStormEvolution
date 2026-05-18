@@ -166,14 +166,6 @@ namespace ClassicTilestorm
 						.ToArray();
 					data.maps = MapCatalog.LoadMaps(data.mapIds).ToArray();
 				}
-				else if (root["mapIds"] is JArray mapIdsToken)
-				{
-					data.mapIds = mapIdsToken
-						.Select(t => t?.Value<string>()?.Trim())
-						.Where(s => !string.IsNullOrWhiteSpace(s))
-						.ToArray();
-					data.maps = MapCatalog.LoadMaps(data.mapIds).ToArray();
-				}
 				else
 				{
 					data.mapIds = Array.Empty<string>();
@@ -435,11 +427,6 @@ namespace ClassicTilestorm
 #endif
 			MapCatalog.ClearCache();
 			DefinitionCatalog.ClearCache();
-
-			//Debug.Log($"Database saved → {path} " +
-			//		  $"(maps: {mapsToSave?.Length ?? 0}, " +
-			//		  $"definitions: {data.definitions?.Length ?? 0}, " +
-			//		  $"textures: {data.textures?.Length ?? 0}");
 
 			Debug.Log($"Database saved → {path} / {defsPath} " +
 					  $"(maps: {internalMapIds?.Length ?? 0}, " +
@@ -833,6 +820,5 @@ namespace ClassicTilestorm
 
 			File.WriteAllText(path, normalized);
 		}
-
 	}
 }
