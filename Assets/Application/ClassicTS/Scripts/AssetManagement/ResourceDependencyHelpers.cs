@@ -80,6 +80,9 @@ namespace ClassicTilestorm
 			if (string.IsNullOrWhiteSpace(modelHash))
 				return false;
 
+			if (TryResolveImmutableModelSourcePath(modelHash, out filePath))
+				return true;
+
 			var path = ModelResourceTable.GetPathForHash(modelHash);
 			if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
 				return false;
@@ -97,6 +100,9 @@ namespace ClassicTilestorm
 
 			if (!ModelResourceTable.TryGetEntry(modelHash, out var entry) || entry.Kind != ModelResourceTable.EntryKind.Resource)
 				return false;
+
+			if (TryResolveImmutableModelSourcePath(entry, out filePath))
+				return true;
 
 			filePath = ResolveResourceAssetPath(entry.ResourcePath);
 			return !string.IsNullOrWhiteSpace(filePath) && File.Exists(filePath);
@@ -155,10 +161,65 @@ namespace ClassicTilestorm
 			filePath = null;
 
 			if (entry.Kind == ModelResourceTable.EntryKind.Resource)
+			{
+				if (TryResolveImmutableModelSourcePath(entry, out filePath))
+					return true;
+
 				return TryResolveInternalModelSourcePath(entry.HashId, out filePath);
+			}
 
 			filePath = entry.FilePath;
 			return !string.IsNullOrWhiteSpace(filePath) && File.Exists(filePath);
+		}
+
+		private static bool TryResolveImmutableModelSourcePath(string modelHash, out string filePath)
+		{
+			filePath = null;
+
+			if (string.IsNullOrWhiteSpace(modelHash))
+				return false;
+
+			if (!ModelResourceTable.TryGetEntry(modelHash, out var entry))
+				return false;
+
+			return TryResolveImmutableModelSourcePath(entry, out filePath);
+		}
+
+		private static bool TryResolveImmutableModelSourcePath(ModelResourceTable.Entry entry, out string filePath)
+		{
+			filePath = null;
+
+			if (string.IsNullOrWhiteSpace(entry.HashId) || string.IsNullOrWhiteSpace(entry.DisplayName))
+				return false;
+
+			var immutableRoot = Path.Combine(
+				Application.dataPath,
+				"Application",
+				"Resources",
+				AssetPath.ImmutableRootFolder,
+				AssetPath.GeometryFolder,
+				entry.HashId);
+
+			if (!Directory.Exists(immutableRoot))
+				return false;
+
+			var directCandidate = Path.Combine(immutableRoot, $"{entry.DisplayName}.obj");
+			if (File.Exists(directCandidate))
+			{
+				filePath = directCandidate;
+				return true;
+			}
+
+			foreach (var candidate in Directory.EnumerateFiles(immutableRoot, "*.obj", SearchOption.AllDirectories))
+			{
+				if (string.Equals(Path.GetFileNameWithoutExtension(candidate), entry.DisplayName, StringComparison.OrdinalIgnoreCase))
+				{
+					filePath = candidate;
+					return true;
+				}
+			}
+
+			return false;
 		}
 
 		private static bool IsPathUnderRoot(string filePath, string rootPath)
