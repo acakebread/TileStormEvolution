@@ -1096,18 +1096,14 @@ namespace ClassicTilestorm
 			var map = CurrentMap;
 			var hash = map.HashID;
 			var currentLocation = MapCatalog.GetStorageLocation(hash);
+			var targetLocation = currentLocation == MapCatalog.MapStorageLocation.Internal
+				? MapCatalog.MapStorageLocation.External
+				: MapCatalog.MapStorageLocation.Internal;
 
-			var saved = currentLocation == MapCatalog.MapStorageLocation.Internal
-				? MapCatalog.SaveCommunityMap(map)
-				: MapCatalog.SaveInternalMap(map);
+			var saved = MapCatalog.MoveMapStorage(map, targetLocation);
 
 			if (!saved)
 				return;
-
-			if (currentLocation == MapCatalog.MapStorageLocation.Internal)
-				MapCatalog.DeleteInternalMap(hash);
-			else
-				MapCatalog.DeleteCommunityMap(hash);
 
 			#if UNITY_EDITOR
 			UnityEditor.AssetDatabase.Refresh();

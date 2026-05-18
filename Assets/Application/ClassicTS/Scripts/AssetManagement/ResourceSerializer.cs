@@ -367,11 +367,8 @@ namespace ClassicTilestorm
 			string path = string.IsNullOrEmpty(filepath)
 				? Path.Combine(ApplicationSettings.JsonDataProjectPath, "levels.json")
 				: filepath;
-			string defsRoot = string.IsNullOrEmpty(filepath)
-				? ApplicationSettings.JsonDataProjectPath
-				: (Path.GetDirectoryName(filepath) ?? ApplicationSettings.JsonDataProjectPath);
 			string defsPath = string.IsNullOrEmpty(definitionsPath)
-				? Path.Combine(defsRoot, "definitions.json")
+				? DefinitionCatalog.InternalDefinitionsFile
 				: definitionsPath;
 
 			FileUtils.EnsureFolder(Path.GetDirectoryName(path));

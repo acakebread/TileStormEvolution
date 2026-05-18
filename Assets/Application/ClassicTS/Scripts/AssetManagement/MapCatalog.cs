@@ -5,6 +5,7 @@ using System.Linq;
 using Newtonsoft.Json;
 using UnityEngine;
 using MassiveHadronLtd;
+using ClassicTilestorm.Assets;
 
 	namespace ClassicTilestorm
 	{
@@ -288,6 +289,152 @@ using MassiveHadronLtd;
 			return GetStorageLocation(map?.HashID ?? 0) == MapStorageLocation.Internal
 				? SaveInternalMap(map)
 				: SaveCommunityMap(map);
+		}
+
+		public static bool MoveMapStorage(Map map, MapStorageLocation targetLocation)
+		{
+			if (map == null)
+				return false;
+
+			map.EnsureHashID();
+			if (map.HashID == 0)
+				return false;
+
+			var currentLocation = GetStorageLocation(map.HashID);
+			if (currentLocation == targetLocation)
+				return true;
+
+			var usedDefinitions = ResourceManager.GetUsedDefinitions(map)
+				.Where(def => def != null)
+				.ToArray();
+
+			if (targetLocation == MapStorageLocation.Internal)
+			{
+				PromoteDefinitionsToInternal(usedDefinitions);
+				PromoteModelsToUncategorised(map);
+			}
+			else
+			{
+				ExportUniqueDefinitionsToExternal(map, usedDefinitions);
+				ExportUniqueModelsToExternal(map);
+			}
+
+			var saved = targetLocation == MapStorageLocation.Internal
+				? SaveInternalMap(map)
+				: SaveCommunityMap(map);
+
+			if (!saved)
+				return false;
+
+			if (currentLocation == MapStorageLocation.Internal)
+				DeleteInternalMap(map.HashID);
+			else
+				DeleteCommunityMap(map.HashID);
+
+			ClearCache();
+			DefinitionCatalog.ClearCache();
+			ModelAssets.ClearCache();
+
+			return true;
+		}
+
+		private static void PromoteDefinitionsToInternal(IEnumerable<Definition> usedDefinitions)
+		{
+			var internalDefinitions = DefinitionCatalog.GetInternalDefinitions(forceRefresh: true)
+				.Where(entry => entry.Definition != null)
+				.Select(entry => entry.Definition)
+				.ToDictionary(def => def.HashID, def => def);
+
+			var definitionsToDeleteExternally = new List<Definition>();
+			var importedAny = false;
+			foreach (var def in usedDefinitions ?? Array.Empty<Definition>())
+			{
+				if (def == null || def.HashID == 0)
+					continue;
+
+				if (internalDefinitions.ContainsKey(def.HashID))
+					continue;
+
+				internalDefinitions[def.HashID] = def;
+				definitionsToDeleteExternally.Add(def);
+				importedAny = true;
+			}
+
+			if (!importedAny)
+				return;
+
+			if (!DefinitionCatalog.SaveInternalDefinitions(internalDefinitions.Values.OrderBy(def => def?.name ?? string.Empty, StringComparer.OrdinalIgnoreCase)))
+				return;
+
+			foreach (var def in definitionsToDeleteExternally)
+				DefinitionCatalog.DeleteExternalDefinition(def.HashID);
+		}
+
+		private static void ExportUniqueDefinitionsToExternal(Map map, IEnumerable<Definition> usedDefinitions)
+		{
+			var internalDefinitions = DefinitionCatalog.GetInternalDefinitions(forceRefresh: true)
+				.Where(entry => entry.Definition != null)
+				.Select(entry => entry.Definition)
+				.ToDictionary(def => def.HashID, def => def);
+
+			var remainingInternalDefinitions = internalDefinitions.Values.ToList();
+			var definitionsToExport = new List<Definition>();
+
+			foreach (var def in usedDefinitions ?? Array.Empty<Definition>())
+			{
+				if (def == null || def.HashID == 0)
+					continue;
+
+				if (!DefinitionCatalog.IsInternalDefinition(def.HashID))
+					continue;
+
+				if (ResourceManager.DefinitionUsageCount(def.HashID) != 1)
+					continue;
+
+				definitionsToExport.Add(def);
+			}
+
+			if (definitionsToExport.Count == 0)
+				return;
+
+			foreach (var def in definitionsToExport)
+			{
+				if (!DefinitionCatalog.SaveExternalDefinition(def))
+					return;
+			}
+
+			foreach (var def in definitionsToExport)
+				remainingInternalDefinitions.RemoveAll(existing => existing != null && existing.HashID == def.HashID);
+
+			DefinitionCatalog.SaveInternalDefinitions(remainingInternalDefinitions);
+		}
+
+		private static void ExportUniqueModelsToExternal(Map map)
+		{
+			foreach (var modelHash in ResourceManager.GetUsedModelHashes(map))
+			{
+				if (string.IsNullOrWhiteSpace(modelHash))
+					continue;
+
+				if (ResourceManager.ModelUsageCount(modelHash) != 1)
+					continue;
+
+				ResourceDependencyHelpers.TryRelocateModelToUncategorised(modelHash);
+			}
+		}
+
+		private static void PromoteModelsToUncategorised(Map map)
+		{
+			foreach (var modelHash in ResourceManager.GetUsedModelHashes(map))
+			{
+				if (string.IsNullOrWhiteSpace(modelHash))
+					continue;
+
+				if (ResourceManager.ModelUsageCount(modelHash) != 1)
+					continue;
+
+				ResourceDependencyHelpers.TryRelocateModelToUncategorised(modelHash);
+			}
 		}
 
 		public static bool DeleteCommunityMap(HashId hash)

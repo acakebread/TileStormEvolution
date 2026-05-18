@@ -369,8 +369,8 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbf6ebd314ddae74da38abc2292cb56c, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: 
-  loadMapName: Medieval test
+  m_EditorClassIdentifier: Assembly-CSharp::ClassicTilestorm.ApplicationSettings
+  loadMapName: Industrial 01
   remapGeometry: 0
   scrambled: 1
   difficulty: 0
@@ -380,13 +380,10 @@ MonoBehaviour:
   showHiddenTiles: 0
   showTileSelection: 0
   jsonDataPath: ClassicTS/Config
-  geometryPath: ClassicTS/Geometry/
-  texturePath: ClassicTS/Textures/
-  materialPath: ClassicTS/Materials/
-  skycubesPath: ClassicTS/SkyCubes/
-  prefabPath: ClassicTS/Prefabs/
-  soundPath: ClassicTS/Sounds/
-  musicPath: ClassicTS/Music/
+  contentRoots:
+  - Uncategorised
+  - ClassicTS
+  - Evolution
   previewMode: 1
 --- !u!4 &862124737
 Transform:
