@@ -163,7 +163,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fdc50db8fa656fa43abde23d2d779e20, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  InputPath: Application\ClassicTS\Resources\ClassicTS\Geometry
+  InputPath: Application\Resources\ClassicTS\Geometry
   OutputPath: Resources/OutputOBJ
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
