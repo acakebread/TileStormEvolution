@@ -105,7 +105,7 @@ namespace ClassicTilestorm
 			return !string.IsNullOrWhiteSpace(filePath) && File.Exists(filePath);
 		}
 
-		internal static bool TryRelocateModelToImmutable(string modelHash)
+		internal static bool TryExportModelToExternal(string modelHash)
 		{
 			if (string.IsNullOrWhiteSpace(modelHash))
 				return false;
@@ -113,50 +113,99 @@ namespace ClassicTilestorm
 			if (!ModelResourceTable.TryGetEntry(modelHash, out var entry))
 				return false;
 
-			var immutableRoot = Path.Combine(Application.dataPath, "Application", "Resources", AssetPath.ImmutableRootFolder, AssetPath.GeometryFolder);
-			var hasImmutableCopy = entry.Kind == ModelResourceTable.EntryKind.Resource && TryResolveImmutableModelSourcePath(entry, out var immutablePath);
-			var hasLiveSource = TryResolveLiveModelSourcePath(entry, out var sourcePath);
+			if (!TryResolveModelExportSourcePath(entry, out var sourcePath))
+				return false;
 
-			if (!hasLiveSource && hasImmutableCopy)
+			if (IsPathUnderRoot(sourcePath, ApplicationSettings.SystemModelsFolder))
 				return true;
 
-			if (!hasLiveSource)
+			if (!string.Equals(Path.GetExtension(sourcePath), ".obj", StringComparison.OrdinalIgnoreCase))
+			{
+				Debug.LogWarning($"ResourceDependencyHelpers: skipping non-Wavefront model export for '{modelHash}' ({sourcePath})");
+				return false;
+			}
+
+			var importedPath = WavefrontAssetImporter.ImportWavefrontModel(
+				sourcePath,
+				WavefrontAssetImporter.ImportOption.HashIdFolder,
+				ApplicationSettings.SystemModelsFolder,
+				registerImported: true,
+				forcedFolderName: modelHash,
+				forcedHashId: modelHash);
+			if (string.IsNullOrWhiteSpace(importedPath) || !File.Exists(importedPath))
+				return false;
+
+			DeleteExportedModelSource(entry, sourcePath);
+			return true;
+		}
+
+		internal static bool TryImportExternalModelToImmutable(string modelHash)
+		{
+			if (string.IsNullOrWhiteSpace(modelHash))
+				return false;
+
+			if (!ModelResourceTable.TryGetEntry(modelHash, out var entry))
+				return false;
+
+			if (entry.Kind == ModelResourceTable.EntryKind.Resource)
+				return true;
+
+			var sourcePath = entry.FilePath;
+			if (string.IsNullOrWhiteSpace(sourcePath) || !File.Exists(sourcePath))
 				return false;
 
 			if (!string.Equals(Path.GetExtension(sourcePath), ".obj", StringComparison.OrdinalIgnoreCase))
 			{
-				Debug.LogWarning($"ResourceDependencyHelpers: skipping non-Wavefront model relocation for '{modelHash}' ({sourcePath})");
+				Debug.LogWarning($"ResourceDependencyHelpers: skipping non-Wavefront model import for '{modelHash}' ({sourcePath})");
 				return false;
 			}
 
 			var destinationRoot = Path.Combine(Application.dataPath, "Application", "Resources", AssetPath.ImmutableRootFolder, AssetPath.GeometryFolder);
-			if (!hasImmutableCopy)
+			var importedPath = WavefrontAssetImporter.ImportWavefrontModel(
+				sourcePath,
+				WavefrontAssetImporter.ImportOption.HashIdFolder,
+				destinationRoot,
+				registerImported: false,
+				forcedFolderName: modelHash,
+				forcedHashId: modelHash);
+
+			return !string.IsNullOrWhiteSpace(importedPath) && File.Exists(importedPath);
+		}
+
+		private static bool TryResolveModelExportSourcePath(ModelResourceTable.Entry entry, out string filePath)
+		{
+			filePath = null;
+
+			if (entry.Kind == ModelResourceTable.EntryKind.Resource)
+				return TryResolveLiveModelSourcePath(entry, out filePath) ||
+					TryResolveImmutableModelSourcePath(entry, out filePath);
+
+			filePath = entry.FilePath;
+			return !string.IsNullOrWhiteSpace(filePath) && File.Exists(filePath);
+		}
+
+		private static void DeleteExportedModelSource(ModelResourceTable.Entry entry, string sourcePath)
+		{
+			if (string.IsNullOrWhiteSpace(sourcePath) || IsPathUnderRoot(sourcePath, ApplicationSettings.SystemModelsFolder))
+				return;
+
+			var immutableRoot = Path.Combine(Application.dataPath, "Application", "Resources", AssetPath.ImmutableRootFolder, AssetPath.GeometryFolder);
+			if (IsPathUnderRoot(sourcePath, immutableRoot))
 			{
-				var importedPath = WavefrontAssetImporter.ImportWavefrontModel(
-					sourcePath,
-					WavefrontAssetImporter.ImportOption.HashIdFolder,
-					destinationRoot,
-					registerImported: false,
-					forcedFolderName: modelHash,
-					forcedHashId: modelHash);
-				if (string.IsNullOrWhiteSpace(importedPath) || !File.Exists(importedPath))
-					return false;
+				var sourceRoot = !string.IsNullOrWhiteSpace(entry.HashId)
+					? Path.Combine(immutableRoot, entry.HashId)
+					: Path.GetDirectoryName(sourcePath);
+				TryDeleteDirectoryTree(sourceRoot);
+				return;
 			}
 
-			if (!IsPathUnderRoot(sourcePath, immutableRoot))
+			if (entry.Kind == ModelResourceTable.EntryKind.File)
 			{
-				if (entry.Kind == ModelResourceTable.EntryKind.File)
-				{
-					var sourceRoot = Path.GetDirectoryName(sourcePath);
-					TryDeleteDirectoryTree(sourceRoot);
-				}
-				else
-				{
-					TryDeleteWavefrontSourceArtifacts(sourcePath);
-				}
+				TryDeleteDirectoryTree(Path.GetDirectoryName(sourcePath));
+				return;
 			}
 
-			return true;
+			TryDeleteWavefrontSourceArtifacts(sourcePath);
 		}
 
 		private static bool TryResolveLiveModelSourcePath(ModelResourceTable.Entry entry, out string filePath)
@@ -309,10 +358,16 @@ namespace ClassicTilestorm
 					return exactCandidate;
 			}
 
+			var normalizedStem = Path.GetFileNameWithoutExtension(normalized);
 			var suffix = "/" + normalized;
-			foreach (var file in Directory.EnumerateFiles(searchRoot, Path.GetFileName(normalized), SearchOption.AllDirectories))
+			foreach (var file in Directory.EnumerateFiles(searchRoot, normalizedStem + ".*", SearchOption.AllDirectories))
 			{
 				var candidate = file.Replace('\\', '/');
+				var candidateStem = Path.GetFileNameWithoutExtension(candidate);
+				if (string.Equals(candidateStem, normalizedStem, StringComparison.OrdinalIgnoreCase) &&
+					(includeImmutable || !IsPathUnderRoot(file, Path.Combine(Application.dataPath, "Application", "Resources", AssetPath.ImmutableRootFolder))))
+					return file;
+
 				if (candidate.EndsWith(suffix, StringComparison.OrdinalIgnoreCase) &&
 					(includeImmutable || !IsPathUnderRoot(file, Path.Combine(Application.dataPath, "Application", "Resources", AssetPath.ImmutableRootFolder))))
 					return file;
