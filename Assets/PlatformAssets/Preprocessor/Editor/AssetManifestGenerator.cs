@@ -65,7 +65,7 @@ public class AssetManifestGenerator : IPreprocessBuildWithReport
 			string.Equals(manifestName, "Prefabs", StringComparison.OrdinalIgnoreCase) ||
 			string.Equals(manifestName, "Textures", StringComparison.OrdinalIgnoreCase) ||
 			string.Equals(manifestName, "Music", StringComparison.OrdinalIgnoreCase) ||
-			string.Equals(manifestName, "Skycubes", StringComparison.OrdinalIgnoreCase) ||
+			string.Equals(manifestName, "SkyCubes", StringComparison.OrdinalIgnoreCase) ||
 			string.Equals(manifestName, "Materials", StringComparison.OrdinalIgnoreCase) ||
 			string.Equals(manifestName, "Sounds", StringComparison.OrdinalIgnoreCase))
 		{

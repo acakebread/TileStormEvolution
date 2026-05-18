@@ -713,11 +713,11 @@ namespace ClassicTilestorm
 				FileUtils.CopyDirectoryTree(modelRoot, destinationRoot);
 			}
 
-			CopyAtomicArchiveSourceRoot(ApplicationSettings.SystemMaterialsFolder, contentRoot, "Materials");
-			CopyAtomicArchiveSourceRoot(ApplicationSettings.SystemTexturesFolder, contentRoot, "Textures");
-			CopyAtomicArchiveSourceRoot(ApplicationSettings.SystemMusicFolder, contentRoot, "Music");
-			CopyAtomicArchiveSourceRoot(ApplicationSettings.SystemSoundsFolder, contentRoot, "Sounds");
-			CopyAtomicArchiveSourceRoot(ApplicationSettings.SystemSkycubesFolder, contentRoot, "SkyCubes");
+			CopyAtomicArchiveSourceRoot(ApplicationSettings.SystemMaterialsFolder, contentRoot);
+			CopyAtomicArchiveSourceRoot(ApplicationSettings.SystemTexturesFolder, contentRoot);
+			CopyAtomicArchiveSourceRoot(ApplicationSettings.SystemMusicFolder, contentRoot);
+			CopyAtomicArchiveSourceRoot(ApplicationSettings.SystemSoundsFolder, contentRoot);
+			CopyAtomicArchiveSourceRoot(ApplicationSettings.SystemSkyCubesFolder, contentRoot);
 		}
 
 		private static string GetArchiveContentRelativePath(string absolutePath)
@@ -747,57 +747,44 @@ namespace ClassicTilestorm
 			if (!Directory.Exists(contentRoot))
 				return;
 
-			CopyAtomicArchiveRoot(contentRoot, ApplicationSettings.SystemModelsFolder, "Models");
-			CopyAtomicArchiveRoot(contentRoot, ApplicationSettings.SystemMaterialsFolder, "Materials");
-			CopyAtomicArchiveRoot(contentRoot, ApplicationSettings.SystemTexturesFolder, "Textures");
-			CopyAtomicArchiveRoot(contentRoot, ApplicationSettings.SystemMusicFolder, "Music");
-			CopyAtomicArchiveRoot(contentRoot, ApplicationSettings.SystemSoundsFolder, "Sounds");
-			CopyAtomicArchiveRoot(contentRoot, ApplicationSettings.SystemSkycubesFolder, "SkyCubes", "Skycubes");
+			CopyAtomicArchiveRoot(contentRoot, ApplicationSettings.SystemModelsFolder);
+			CopyAtomicArchiveRoot(contentRoot, ApplicationSettings.SystemMaterialsFolder);
+			CopyAtomicArchiveRoot(contentRoot, ApplicationSettings.SystemTexturesFolder);
+			CopyAtomicArchiveRoot(contentRoot, ApplicationSettings.SystemMusicFolder);
+			CopyAtomicArchiveRoot(contentRoot, ApplicationSettings.SystemSoundsFolder);
+			CopyAtomicArchiveRoot(contentRoot, ApplicationSettings.SystemSkyCubesFolder);
 
 			RefreshImportedContentCaches();
 		}
 
-		private static void CopyAtomicArchiveSourceRoot(string sourceRoot, string contentRoot, string archiveFolderName)
+		private static void CopyAtomicArchiveSourceRoot(string sourceRoot, string contentRoot)
 		{
-			if (string.IsNullOrWhiteSpace(sourceRoot) || string.IsNullOrWhiteSpace(contentRoot) || string.IsNullOrWhiteSpace(archiveFolderName))
+			if (string.IsNullOrWhiteSpace(sourceRoot) || string.IsNullOrWhiteSpace(contentRoot))
 				return;
 
 			if (!Directory.Exists(sourceRoot))
+				return;
+
+			string archiveFolderName = ResourceDependencyHelpers.GetArchiveFolderName(sourceRoot);
+			if (string.IsNullOrWhiteSpace(archiveFolderName))
 				return;
 
 			string destinationRoot = Path.Combine(contentRoot, archiveFolderName);
 			FileUtils.CopyDirectoryTree(sourceRoot, destinationRoot);
 		}
 
-		private static void CopyAtomicArchiveRoot(string contentRoot, string destinationRoot, params string[] candidateFolderNames)
+		private static void CopyAtomicArchiveRoot(string contentRoot, string destinationRoot)
 		{
 			if (string.IsNullOrWhiteSpace(contentRoot) || string.IsNullOrWhiteSpace(destinationRoot))
 				return;
 
-			string sourceFolder = FindExistingChildDirectory(contentRoot, candidateFolderNames);
+			string canonicalFolderName = Path.GetFileName(destinationRoot);
+			string sourceFolder = ResourceDependencyHelpers.FindArchiveContentFolder(contentRoot, canonicalFolderName);
 			if (string.IsNullOrWhiteSpace(sourceFolder) || !Directory.Exists(sourceFolder))
 				return;
 
 			FileUtils.EnsureFolder(destinationRoot);
 			FileUtils.CopyDirectoryTree(sourceFolder, destinationRoot);
-		}
-
-		private static string FindExistingChildDirectory(string parentFolder, params string[] candidateFolderNames)
-		{
-			if (string.IsNullOrWhiteSpace(parentFolder) || candidateFolderNames == null || candidateFolderNames.Length == 0)
-				return null;
-
-			foreach (var candidate in candidateFolderNames)
-			{
-				if (string.IsNullOrWhiteSpace(candidate))
-					continue;
-
-				string fullPath = Path.Combine(parentFolder, candidate);
-				if (Directory.Exists(fullPath))
-					return fullPath;
-			}
-
-			return null;
 		}
 
 		private static void RefreshImportedContentCaches()

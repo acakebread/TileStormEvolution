@@ -748,7 +748,7 @@ namespace ClassicTilestorm.Assets
 
 	public static class SkycubeResourceTable
 	{
-		private static readonly PortableManifestHashTable Table = new("AssetManifests/Skycubes", "System/Skycubes");
+		private static readonly PortableManifestHashTable Table = new("AssetManifests/SkyCubes", "System/SkyCubes");
 
 		public static void ClearCache() => Table.ClearCache();
 		public static string GetDisplayName(string identifier) => Table.GetDisplayName(identifier);

@@ -86,5 +86,22 @@ namespace ClassicTilestorm
 			filePath = path;
 			return true;
 		}
+
+		internal static string FindArchiveContentFolder(string parentFolder, string canonicalFolderName)
+		{
+			if (string.IsNullOrWhiteSpace(parentFolder) || string.IsNullOrWhiteSpace(canonicalFolderName))
+				return null;
+
+			string fullPath = Path.Combine(parentFolder, canonicalFolderName);
+			return Directory.Exists(fullPath) ? fullPath : null;
+		}
+
+		internal static string GetArchiveFolderName(string sourceRoot)
+		{
+			if (string.IsNullOrWhiteSpace(sourceRoot))
+				return null;
+
+			return Path.GetFileName(Path.GetFullPath(sourceRoot));
+		}
 	}
 }
