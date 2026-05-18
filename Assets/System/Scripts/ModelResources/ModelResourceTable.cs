@@ -39,7 +39,6 @@ namespace MassiveHadronLtd
 
 		private const string InternalTableResourcePath = "AssetManifests/Models";
 		private const string ImportedRootFolder = "System/Models";
-		private const string LegacyImportedRootFolder = "Imported";
 
 		private static readonly Dictionary<string, Entry> HashToEntry = new(StringComparer.OrdinalIgnoreCase);
 		private static readonly Dictionary<string, string> DisplayToHash = new(StringComparer.OrdinalIgnoreCase);
@@ -266,8 +265,6 @@ namespace MassiveHadronLtd
 		private static IEnumerable<string> GetImportedRoots()
 		{
 			yield return Path.Combine(Application.persistentDataPath, ImportedRootFolder);
-			if (!string.Equals(ImportedRootFolder, LegacyImportedRootFolder, StringComparison.OrdinalIgnoreCase))
-				yield return Path.Combine(Application.persistentDataPath, LegacyImportedRootFolder);
 		}
 
 		private static string ResolveImportedPathFromAny(string value)

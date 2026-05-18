@@ -149,16 +149,11 @@ namespace ClassicTilestorm
 
 				var data = new DatabaseData
 				{
-					definitions = LoadDefinitions(definitionsJson, root, serializer),
+				definitions = LoadDefinitions(definitionsJson, serializer),
 				};
 
 				var mapsToken = root["maps"] as JArray;
-				if (mapsToken != null && mapsToken.Count > 0 && mapsToken[0]?.Type == JTokenType.Object)
-				{
-					data.maps = serializer.Deserialize<Map[]>(mapsToken.CreateReader()) ?? Array.Empty<Map>();
-					data.mapIds = data.maps.Select(m => HTB50Settings.ToString(m.HashID)).ToArray();
-				}
-				else if (mapsToken != null)
+				if (mapsToken != null)
 				{
 					data.mapIds = mapsToken
 						.Select(t => t?.Value<string>()?.Trim())
@@ -249,20 +244,14 @@ namespace ClassicTilestorm
 			}
 		}
 
-		private static Definition[] LoadDefinitions(string definitionsJson, JObject legacyRoot, JsonSerializer serializer)
+		private static Definition[] LoadDefinitions(string definitionsJson, JsonSerializer serializer)
 		{
 			if (!string.IsNullOrWhiteSpace(definitionsJson))
 			{
 				var parsed = JToken.Parse(definitionsJson);
 				if (parsed is JArray definitionsArray)
 					return serializer.Deserialize<Definition[]>(definitionsArray.CreateReader()) ?? Array.Empty<Definition>();
-
-				if (parsed is JObject definitionsRoot && definitionsRoot["definitions"] is JArray nestedDefinitions)
-					return serializer.Deserialize<Definition[]>(nestedDefinitions.CreateReader()) ?? Array.Empty<Definition>();
 			}
-
-			if (legacyRoot["definitions"] is JArray legacyDefinitions)
-				return serializer.Deserialize<Definition[]>(legacyDefinitions.CreateReader()) ?? Array.Empty<Definition>();
 
 			return Array.Empty<Definition>();
 		}

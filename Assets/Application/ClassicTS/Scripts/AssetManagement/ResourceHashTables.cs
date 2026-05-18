@@ -484,12 +484,6 @@ namespace ClassicTilestorm.Assets
 		private IEnumerable<string> GetImportedRoots()
 		{
 			yield return Path.Combine(Application.persistentDataPath, importedRootFolder);
-
-			if (importedRootFolder.StartsWith("System/", StringComparison.OrdinalIgnoreCase))
-			{
-				var legacyFolder = "Imported/" + importedRootFolder.Substring("System/".Length);
-				yield return Path.Combine(Application.persistentDataPath, legacyFolder);
-			}
 		}
 
 		private IEnumerable<Entry> ParseTableLines(string content, EntryKind kind)
