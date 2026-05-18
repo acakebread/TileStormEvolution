@@ -193,7 +193,8 @@ namespace ClassicTilestorm
 
 		private static IReadOnlyList<string> NormalizeContentRoots(IEnumerable<string> roots)
 		{
-			var cleaned = (roots ?? DefaultContentRoots)
+			var cleaned = (DefaultContentRoots ?? Array.Empty<string>())
+				.Concat(roots ?? Array.Empty<string>())
 				.Select(AssetPath.NormalizePath)
 				.Where(root => !string.IsNullOrWhiteSpace(root))
 				.Distinct(StringComparer.OrdinalIgnoreCase)
