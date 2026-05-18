@@ -1,6 +1,6 @@
 # Modified by OBJRotate180 (Mesh rotated 180 degrees around Y-axis)
 # Original file: mike_tile.obj
-mtllib Materials/mike_tile.mtl
+mtllib Materials/primitive_box.mtl
 v -0.499774 -0.000301 -0.500040
 v 0.500226 -0.000301 -0.500040
 v 0.500226 -0.200301 -0.500040
@@ -111,7 +111,7 @@ vn 1.000000 0.000000 0.000000
 vn 1.000000 0.000000 0.000000
 o Box01
 o Box01
-usemtl PDX01_-_Default
+usemtl primitive_box
 f 1/1/1 2/2/2 3/3/3
 f 4/4/4 5/5/5 6/6/6
 f 7/7/7 8/8/8 9/9/9

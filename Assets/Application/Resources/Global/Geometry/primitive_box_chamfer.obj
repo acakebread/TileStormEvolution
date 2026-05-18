@@ -1,6 +1,6 @@
 # Modified by OBJRotate180 (Mesh rotated 180 degrees around Y-axis)
 # Original file: tile.obj
-mtllib Materials/tile.mtl
+mtllib Materials/primitive_box_chamfer.mtl
 v 0.480002 -0.125000 0.480002
 v -0.480002 -0.125000 0.480002
 v -0.480002 -0.125000 -0.480002
@@ -399,7 +399,7 @@ vn -0.577350 -0.577350 0.577351
 vn -0.577350 -0.577350 0.577351
 o tile
 o tile
-usemtl material
+usemtl primitive_box_chamfer
 f 1/1/1 2/2/2 3/3/3
 f 4/4/4 5/5/5 6/6/6
 f 7/7/7 8/8/8 9/9/9

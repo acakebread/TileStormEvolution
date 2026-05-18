@@ -1,5 +1,5 @@
 # Modified by OBJRotate180 (Mesh rotated 180 degrees around Y-axis)
-mtllib Materials/cube.mtl
+mtllib Materials/primitive_cube_chamfer.mtl
 v 0.475002 -0.500000 0.475002
 v -0.475002 -0.500000 0.475002
 v 0.475002 -0.500000 -0.475002
@@ -398,7 +398,7 @@ vn 0.000000 -1.000000 0.000000
 vn 0.000000 0.000000 1.000000
 o tile_default
 o tile_default
-usemtl material
+usemtl primitive_cube_chamfer
 f 1/1/1 2/2/2 3/3/3
 f 4/4/4 5/5/5 6/6/6
 f 7/7/7 8/8/8 9/9/9
