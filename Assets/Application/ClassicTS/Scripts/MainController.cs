@@ -304,8 +304,11 @@ namespace ClassicTilestorm
 				{
 					var importedMap = ResourceSerializer.ImportAtomicMap(path);
 
-					if (CurrentMap != null && importedMap != null && CurrentMap.HashID == importedMap.HashID)
-						OnChangeMapRequested?.Invoke(0);
+					if (importedMap == null)
+						return;
+
+					ApplicationSettings.LoadMapName = GetMapHash(importedMap);
+					LoadMap(ApplicationSettings.LoadMapName);
 				},
 				importRoot,
 				importRoot);
