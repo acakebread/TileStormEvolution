@@ -7,6 +7,11 @@ ModelImporter:
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
+      name: ind_tile_caustic
+    second: {fileID: 2100000, guid: cc7bb8cf67e207945a0d1bb8cdc3fea5, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
       name: tile_caustic
     second: {fileID: 2100000, guid: 37d669498183a12438fed9d871eb5b8c, type: 2}
   materials:
