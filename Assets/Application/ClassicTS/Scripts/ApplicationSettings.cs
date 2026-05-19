@@ -248,9 +248,29 @@ namespace ClassicTilestorm
 		[CustomEditor(typeof(ApplicationSettings))]
 		private class PreviewSettingsEditor : Editor
 		{
+			private const string TokenPrompt = "<paste your access token here>";
+
 			public override void OnInspectorGUI()
 			{
-				DrawDefaultInspector();
+				serializedObject.Update();
+
+				DrawProperty(nameof(loadMapName));
+				DrawProperty(nameof(remapGeometry));
+				DrawProperty(nameof(scrambled));
+				DrawProperty(nameof(difficulty));
+				DrawProperty(nameof(music));
+				DrawProperty(nameof(showEditorGrid));
+				DrawProperty(nameof(detailLevel));
+				DrawProperty(nameof(showHiddenTiles));
+				DrawProperty(nameof(showTileSelection));
+				DrawProperty(nameof(jsonDataPath));
+				EditorGUILayout.Space(8);
+				DrawMapRepositoryInspector();
+				EditorGUILayout.Space(8);
+				DrawProperty(nameof(contentRoots));
+				DrawProperty(nameof(previewMode));
+
+				serializedObject.ApplyModifiedProperties();
 				EditorGUILayout.Space(10);
 
 				if (GUILayout.Button("Locate Export Folder", GUILayout.Height(30)))
@@ -260,6 +280,37 @@ namespace ClassicTilestorm
 					EditorUtility.RevealInFinder(folder);
 					Debug.Log($"Opened export folder: {folder}");
 				}
+			}
+
+			private void DrawProperty(string propertyName)
+			{
+				var property = serializedObject.FindProperty(propertyName);
+				if (property != null)
+					EditorGUILayout.PropertyField(property, true);
+			}
+
+			private void DrawMapRepositoryInspector()
+			{
+				EditorGUILayout.LabelField("online map repository", EditorStyles.boldLabel);
+				DrawProperty(nameof(mapRepositoryBaseUrl));
+				DrawProperty(nameof(mapRepositoryGitHubRepository));
+				DrawProperty(nameof(mapRepositoryGitHubBranch));
+
+				string currentToken = ReadPrivateMapRepositoryUploadKey();
+				string displayedToken = string.IsNullOrWhiteSpace(currentToken) ? TokenPrompt : currentToken;
+				EditorGUI.BeginChangeCheck();
+				string editedToken = EditorGUILayout.TextField("Map Repository Upload Key", displayedToken);
+				if (EditorGUI.EndChangeCheck())
+				{
+					string trimmed = string.IsNullOrWhiteSpace(editedToken) || string.Equals(editedToken, TokenPrompt, StringComparison.Ordinal)
+						? string.Empty
+						: editedToken.Trim();
+					WritePrivateMapRepositoryUploadKey(trimmed);
+				}
+
+				EditorGUILayout.HelpBox(
+					"Stored in Assets/Private/TileStormMapRepositoryToken.txt and ignored by git. Leave blank to disable publishing on this machine.",
+					MessageType.Info);
 			}
 		}
 #endif
@@ -301,6 +352,28 @@ namespace ClassicTilestorm
 			catch
 			{
 				return string.Empty;
+			}
+		}
+
+		private static void WritePrivateMapRepositoryUploadKey(string value)
+		{
+			try
+			{
+				var projectRoot = Directory.GetParent(Application.dataPath)?.FullName;
+				if (string.IsNullOrWhiteSpace(projectRoot))
+					return;
+
+				string path = Path.Combine(projectRoot, MapRepositoryPrivateTokenFile);
+				Directory.CreateDirectory(Path.GetDirectoryName(path));
+				File.WriteAllText(path, value ?? string.Empty);
+				AssetDatabase.Refresh();
+				Debug.Log(string.IsNullOrWhiteSpace(value)
+					? $"Cleared private map repository token file: {path}"
+					: $"Updated private map repository token file: {path}");
+			}
+			catch (Exception ex)
+			{
+				Debug.LogWarning($"Failed to write private map repository token file: {ex.Message}");
 			}
 		}
 
