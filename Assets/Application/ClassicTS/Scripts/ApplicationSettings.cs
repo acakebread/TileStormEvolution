@@ -130,33 +130,6 @@ namespace ClassicTilestorm
 		public static string JsonDataProjectPath => Path.Combine(Application.dataPath, "Application", "Resources", JsonDataPath.Replace('/', Path.DirectorySeparatorChar));
 		public static string JsonDataResourcePath => JsonDataPath;
 
-		[Header("shared map exchange")]
-		[SerializeField] private string sharedMapsFolder = "";
-		private const string SharedMapsFolderPrefKey = "SharedMapsFolder";
-		private const string DefaultSharedMapsFolderName = "SharedMaps";
-
-		public static string SharedMapsFolder
-		{
-			get
-			{
-				string fallback = DefaultSharedMapsFolder;
-				string stored = PlayerPrefsX.GetString(SharedMapsFolderPrefKey, instance != null ? instance.sharedMapsFolder : fallback);
-				if (string.IsNullOrWhiteSpace(stored))
-					stored = fallback;
-				return EnsureSharedMapsFolder(stored);
-			}
-			set
-			{
-				string normalized = EnsureSharedMapsFolder(value);
-				if (instance != null)
-					instance.sharedMapsFolder = normalized;
-
-				PlayerPrefsX.SetString(SharedMapsFolderPrefKey, normalized, true);
-			}
-		}
-
-		public static string DefaultSharedMapsFolder => Path.Combine(UserFolder, DefaultSharedMapsFolderName);
-
 		[Header("online map repository")]
 		[SerializeField] private string mapRepositoryBaseUrl = "";
 		[SerializeField] private string mapRepositoryUploadKey = "";
@@ -244,14 +217,6 @@ namespace ClassicTilestorm
 					EditorUtility.RevealInFinder(folder);
 					Debug.Log($"Opened export folder: {folder}");
 				}
-
-				if (GUILayout.Button("Locate Shared Maps Folder", GUILayout.Height(30)))
-				{
-					string folder = SharedMapsFolder;
-					System.IO.Directory.CreateDirectory(folder);
-					EditorUtility.RevealInFinder(folder);
-					Debug.Log($"Opened shared maps folder: {folder}");
-				}
 			}
 		}
 #endif
@@ -294,27 +259,6 @@ namespace ClassicTilestorm
 		public static string SystemSkyCubesFolder => Path.Combine(SystemFolder, AssetPath.SkyCubesFolder);
 		public static string SystemMusicFolder => Path.Combine(SystemFolder, AssetPath.MusicFolder);
 		public static string SystemSoundsFolder => Path.Combine(SystemFolder, AssetPath.SoundFolder);
-
-		private static string EnsureSharedMapsFolder(string path)
-		{
-			string normalized = NormalizeFolderPath(string.IsNullOrWhiteSpace(path) ? DefaultSharedMapsFolder : path);
-			return FileUtils.EnsureFolder(normalized);
-		}
-
-		private static string NormalizeFolderPath(string path)
-		{
-			if (string.IsNullOrWhiteSpace(path))
-				return DefaultSharedMapsFolder;
-
-			try
-			{
-				return Path.GetFullPath(path.Trim());
-			}
-			catch
-			{
-				return DefaultSharedMapsFolder;
-			}
-		}
 
 		// ====================== EDITOR HELPER (for manifest generation) ======================
 #if UNITY_EDITOR
