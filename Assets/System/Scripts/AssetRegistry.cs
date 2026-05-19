@@ -79,6 +79,18 @@ namespace MassiveHadronLtd
 				MusicRoots.Add(root.Trim('/'));
 		}
 
+		public static void ClearRegisteredRoots()
+		{
+			ModelRoots.Clear();
+			PrefabRoots.Clear();
+			TextureRoots.Clear();
+			MaterialRoots.Clear();
+			Texture2DRoots.Clear();
+			SkyboxRoots.Clear();
+			SoundRoots.Clear();
+			MusicRoots.Clear();
+		}
+
 		// Clear caches
 		public static void ClearModelCache() => ModelCache.Clear();
 		public static void ClearPrefabCache() => PrefabCache.Clear();

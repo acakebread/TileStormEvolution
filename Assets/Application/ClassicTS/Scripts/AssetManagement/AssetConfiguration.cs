@@ -1,4 +1,5 @@
 using MassiveHadronLtd;
+using UnityEngine;
 
 namespace ClassicTilestorm.Assets
 {
@@ -6,6 +7,11 @@ namespace ClassicTilestorm.Assets
 	{
 		public static void Initialize()
 		{
+			AssetRegistry<GameObject>.ClearRegisteredRoots();
+			AssetRegistry<Texture>.ClearRegisteredRoots();
+			AssetRegistry<Material>.ClearRegisteredRoots();
+			AssetRegistry<AudioClip>.ClearRegisteredRoots();
+
 			ModelAssets.NameRemapper = ClassicTileStormAssetRemapHelper.RemapName;
 
 			foreach (var root in ApplicationSettings.GetGeometryPaths())
