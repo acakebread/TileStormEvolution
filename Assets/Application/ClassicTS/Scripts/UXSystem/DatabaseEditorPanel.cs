@@ -1105,11 +1105,6 @@ namespace ClassicTilestorm
 			if (!saved)
 				return;
 
-			#if UNITY_EDITOR
-			UnityEditor.AssetDatabase.Refresh();
-			#endif
-			MapCatalog.ClearCache();
-
 			if (ResourceManager.database != null)
 				ResourceSerializer.SaveDatabase(ResourceManager.database, verbose: true);
 
@@ -1126,6 +1121,12 @@ namespace ClassicTilestorm
 				}
 			}
 			RefreshMapList();
+
+			if (MainController.CurrentMap != null && MainController.CurrentMap.HashID == hash)
+			{
+				var controller = FindAnyObjectByType<MainController>();
+				controller?.LoadMap(HTB50Settings.ToString(hash));
+			}
 		}
 
 		private void LoadSelectedMap()

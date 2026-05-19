@@ -6,6 +6,9 @@ using Newtonsoft.Json;
 using UnityEngine;
 using MassiveHadronLtd;
 using ClassicTilestorm.Assets;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 	namespace ClassicTilestorm
 	{
@@ -335,11 +338,21 @@ using ClassicTilestorm.Assets;
 			else
 				DeleteCommunityMap(map.HashID);
 
-			ClearCache();
-			DefinitionCatalog.ClearCache();
-			ModelAssets.ClearCache();
+			RefreshStateAfterStorageMove();
 
 			return true;
+		}
+
+		private static void RefreshStateAfterStorageMove()
+		{
+#if UNITY_EDITOR
+			EditorApplication.ExecuteMenuItem("Tools/Generate Asset Manifests");
+			AssetDatabase.Refresh();
+#endif
+			ClearCache();
+			DefinitionCatalog.ClearCache();
+			AssetConfiguration.ClearAllCaches();
+			AssetConfiguration.Initialize();
 		}
 
 		private static void PromoteDefinitionsToInternal(IEnumerable<Definition> usedDefinitions)
