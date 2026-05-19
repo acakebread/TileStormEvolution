@@ -491,10 +491,7 @@ namespace ClassicTilestorm.Assets
 			=> GetNames<Texture>(() => TextureResourceTable.GetDisplayNames(forceRefresh), forceRefresh);
 
 		public static IReadOnlyList<string> GetMaterialNames(bool forceRefresh = false)
-			=> GetNames<Material>(() => GetAssetNamesFromRoots<Material>("Materials", new[]
-			{
-				AssetPath.NormalizePath(ApplicationSettings.GetMaterialPaths().FirstOrDefault()) ?? ""
-			}), forceRefresh, "Material");
+			=> GetNames<Material>(() => MaterialResourceTable.GetDisplayNames(forceRefresh), forceRefresh, "Material");
 
 		public static IReadOnlyList<string> GetSkycubeNames(bool forceRefresh = false)
 			=> GetNames<Material>(() => SkycubeResourceTable.GetDisplayNames(forceRefresh), forceRefresh, "Skycube");

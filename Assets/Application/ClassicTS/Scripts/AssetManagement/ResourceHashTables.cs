@@ -129,6 +129,14 @@ namespace ClassicTilestorm.Assets
 				: identifier;
 		}
 
+		public IReadOnlyList<string> GetDisplayNames(bool forceRefresh = false)
+		{
+			Refresh(forceRefresh);
+			return displayToHash.Keys
+				.OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+				.ToArray();
+		}
+
 		public bool TryResolveResourceKey(string identifier, out string resourceKey)
 		{
 			resourceKey = null;
@@ -764,6 +772,7 @@ namespace ClassicTilestorm.Assets
 		public static string GetHashForDisplayName(string displayName) => Table.GetHashForDisplayName(displayName);
 		public static string ToHashOrOriginal(string identifier) => Table.ToHashOrOriginal(identifier);
 		public static bool TryResolveResourceKey(string identifier, out string resourceKey) => Table.TryResolveResourceKey(identifier, out resourceKey);
+		public static IReadOnlyList<string> GetDisplayNames(bool forceRefresh = false) => Table.GetDisplayNames(forceRefresh);
 	}
 
 	public static class SoundResourceTable
