@@ -606,7 +606,7 @@ namespace ClassicTilestorm
 			writer.WriteValue("Player");
 
 			writer.WritePropertyName("exportedFrom");
-			writer.WriteValue("ClassicTilestorm");
+			writer.WriteValue(string.IsNullOrWhiteSpace(Application.productName) ? "UnknownProduct" : Application.productName);
 		}
 
 		//private static string FormatAngle(float angle)
