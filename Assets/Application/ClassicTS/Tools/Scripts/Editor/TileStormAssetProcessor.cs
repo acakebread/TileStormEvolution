@@ -1,5 +1,6 @@
 using System.IO;
 using System.Linq;
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 using MassiveHadronLtd;
@@ -33,10 +34,7 @@ namespace ClassicTilestorm.Editor
 			if (!IsGeometryModelPath(assetPath) || gameObject == null)
 				return;
 
-			if (!IsTestAnimatingModel(assetPath))
-				return;
-
-			if (!TryGetWavefrontMaterialImport(assetPath, out var sourceMaterialName, out var baseColor, out var emissiveColor, out var emissionMap))
+			if (!TryGetWavefrontMaterialImports(assetPath, out var imports) || imports.Count == 0)
 				return;
 
 			var renderers = gameObject.GetComponentsInChildren<Renderer>(true);
@@ -54,29 +52,20 @@ namespace ClassicTilestorm.Editor
 					if (material == null)
 						continue;
 
-					if (!MaterialNameMatches(material.name, sourceMaterialName))
+					var import = imports.FirstOrDefault(candidate => MaterialNameMatches(material.name, candidate.SourceMaterialName));
+					if (import == null)
 						continue;
 
-					if (ApplyWavefrontMaterial(material, baseColor, emissiveColor, emissionMap))
+					if (ApplyWavefrontMaterial(material, import.BaseColor, import.EmissiveColor, import.EmissionMap))
 					{
 						patched++;
-						Debug.Log($"TileStormAssetProcessor: patched emissive material '{material.name}' from '{assetPath}' (source '{sourceMaterialName}')");
+						Debug.Log($"TileStormAssetProcessor: patched emissive material '{material.name}' from '{assetPath}' (source '{import.SourceMaterialName}')");
 					}
 				}
 			}
 
 			if (patched > 0)
 				Debug.Log($"TileStormAssetProcessor: patched {patched} emissive material(s) on '{assetPath}'.");
-		}
-
-		private static bool IsTestAnimatingModel(string path)
-		{
-			if (string.IsNullOrWhiteSpace(path))
-				return false;
-
-			var normalized = path.Replace('\\', '/');
-			return normalized.EndsWith("/TestAnimatingModel.obj", System.StringComparison.OrdinalIgnoreCase) ||
-				   string.Equals(Path.GetFileNameWithoutExtension(normalized), "TestAnimatingModel", System.StringComparison.OrdinalIgnoreCase);
 		}
 
 		[MenuItem("Tools/Classic Tilestorm/Asset Processing/Enable ReadWrite On Geometry Models")]
@@ -102,12 +91,17 @@ namespace ClassicTilestorm.Editor
 			Debug.Log($"TileStormAssetProcessor: enabled Read/Write on {changed} model(s).");
 		}
 
-		private static bool TryGetWavefrontMaterialImport(string modelAssetPath, out string sourceMaterialName, out Color baseColor, out Color emissiveColor, out Texture2D emissionMap)
+		private sealed class WavefrontMaterialImport
 		{
-			sourceMaterialName = null;
-			baseColor = Color.white;
-			emissiveColor = default;
-			emissionMap = null;
+			public string SourceMaterialName;
+			public Color BaseColor = Color.white;
+			public Color EmissiveColor = default;
+			public Texture2D EmissionMap;
+		}
+
+		private static bool TryGetWavefrontMaterialImports(string modelAssetPath, out List<WavefrontMaterialImport> imports)
+		{
+			imports = null;
 
 			string fullPath = ToFullPath(modelAssetPath);
 			if (string.IsNullOrWhiteSpace(fullPath) || !File.Exists(fullPath))
@@ -115,7 +109,7 @@ namespace ClassicTilestorm.Editor
 
 			string[] lines = File.ReadAllLines(fullPath);
 			string materialLibrary = null;
-			string useMaterial = null;
+			var useMaterials = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
 
 			foreach (var rawLine in lines)
 			{
@@ -135,62 +129,131 @@ namespace ClassicTilestorm.Editor
 						break;
 					case "usemtl":
 						if (parts.Length > 1)
-							useMaterial = string.Join(" ", parts, 1, parts.Length - 1);
+							useMaterials.Add(string.Join(" ", parts, 1, parts.Length - 1));
 						break;
 				}
 			}
 
-			sourceMaterialName = useMaterial ?? Path.GetFileNameWithoutExtension(modelAssetPath);
 			string baseDirectory = Path.GetDirectoryName(fullPath);
-			string mtlPath = ResolveMaterialPath(baseDirectory, materialLibrary, sourceMaterialName);
+			string fallbackMaterialName = Path.GetFileNameWithoutExtension(modelAssetPath);
+			string mtlPath = ResolveMaterialPath(baseDirectory, materialLibrary, useMaterials.FirstOrDefault() ?? fallbackMaterialName);
 			if (string.IsNullOrWhiteSpace(mtlPath) || !File.Exists(mtlPath))
 				return false;
 
-			var wavefrontMaterial = new WavefrontMaterial(mtlPath);
-			if (!TryGetWavefrontMaterialState(wavefrontMaterial, mtlPath, out baseColor, out emissiveColor, out emissionMap))
+			if (useMaterials.Count == 0)
+				useMaterials.Add(fallbackMaterialName);
+
+			imports = new List<WavefrontMaterialImport>();
+			foreach (var useMaterial in useMaterials)
+			{
+				if (!TryGetWavefrontMaterialState(mtlPath, useMaterial, out var baseColor, out var emissiveColor, out var emissionMap))
+					continue;
+
+				imports.Add(new WavefrontMaterialImport
+				{
+					SourceMaterialName = useMaterial,
+					BaseColor = baseColor,
+					EmissiveColor = emissiveColor,
+					EmissionMap = emissionMap
+				});
+			}
+
+			if (imports.Count == 0)
 				return false;
 
 			return true;
 		}
 
-		private static bool TryGetWavefrontMaterialState(WavefrontMaterial wavefrontMaterial, string mtlPath, out Color baseColor, out Color emissiveColor, out Texture2D emissiveMap)
+		private static bool TryGetWavefrontMaterialState(string mtlPath, string sourceMaterialName, out Color baseColor, out Color emissiveColor, out Texture2D emissiveMap)
 		{
 			baseColor = Color.white;
 			emissiveColor = default;
 			emissiveMap = null;
 
-			if (wavefrontMaterial == null)
+			if (string.IsNullOrWhiteSpace(mtlPath) || !File.Exists(mtlPath) || string.IsNullOrWhiteSpace(sourceMaterialName))
 				return false;
 
-			var baseColorProp = wavefrontMaterial.properties.FirstOrDefault(p => string.Equals(p?.name, "_BaseColor", System.StringComparison.OrdinalIgnoreCase));
-			bool hasKeyword = wavefrontMaterial.enabledKeywords != null &&
-							  wavefrontMaterial.enabledKeywords.Any(k => string.Equals(k, "_EMISSION", System.StringComparison.OrdinalIgnoreCase));
-			bool hasBaseColor = baseColorProp != null;
-			var emissionColorProp = wavefrontMaterial.properties.FirstOrDefault(p => string.Equals(p?.name, "_EmissionColor", System.StringComparison.OrdinalIgnoreCase));
-			var emissionMapProp = wavefrontMaterial.properties.FirstOrDefault(p => string.Equals(p?.name, "_EmissionMap", System.StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(p.texture));
+			bool inRequestedMaterial = false;
+			bool foundMaterialSection = false;
+			bool hasBaseColor = false;
+			bool hasColor = false;
+			bool hasMap = false;
+			string emissionMapName = null;
 
-			if (hasBaseColor)
-				baseColor = new Color(baseColorProp.colorR, baseColorProp.colorG, baseColorProp.colorB, baseColorProp.colorA);
-
-			bool hasColor = emissionColorProp != null &&
-							(new Color(emissionColorProp.colorR, emissionColorProp.colorG, emissionColorProp.colorB, emissionColorProp.colorA).maxColorComponent > 0.01f);
-			bool hasMap = emissionMapProp != null;
-
-			if (!hasBaseColor && !hasKeyword && !hasColor && !hasMap)
-				return false;
-
-			if (hasColor)
+			foreach (var rawLine in File.ReadAllLines(mtlPath))
 			{
-				emissiveColor = new Color(emissionColorProp.colorR, emissionColorProp.colorG, emissionColorProp.colorB, emissionColorProp.colorA);
+				var line = rawLine.Trim();
+				if (string.IsNullOrWhiteSpace(line) || line.StartsWith("#", System.StringComparison.Ordinal))
+					continue;
+
+				var parts = line.Split(new[] { ' ', '\t' }, System.StringSplitOptions.RemoveEmptyEntries);
+				if (parts.Length == 0)
+					continue;
+
+				var command = parts[0].ToLowerInvariant();
+				if (command == "newmtl")
+				{
+					var materialName = parts.Length > 1 ? string.Join(" ", parts, 1, parts.Length - 1) : string.Empty;
+					if (foundMaterialSection && inRequestedMaterial)
+						break;
+
+					inRequestedMaterial = string.Equals(materialName, sourceMaterialName, System.StringComparison.OrdinalIgnoreCase);
+					foundMaterialSection |= inRequestedMaterial;
+					continue;
+				}
+
+				if (!inRequestedMaterial)
+					continue;
+
+				switch (command)
+				{
+					case "kd":
+						if (TryParseColor(parts, out var parsedBaseColor))
+						{
+							baseColor = parsedBaseColor;
+							hasBaseColor = true;
+						}
+						break;
+
+					case "ke":
+						if (TryParseColor(parts, out var parsedEmissionColor) && parsedEmissionColor.maxColorComponent > 0.01f)
+						{
+							emissiveColor = parsedEmissionColor;
+							hasColor = true;
+						}
+						break;
+
+					case "map_ke":
+						emissionMapName = WavefrontMaterial.ExtractTextureName(line);
+						hasMap = !string.IsNullOrWhiteSpace(emissionMapName);
+						break;
+				}
 			}
-			else
-			{
+
+			if (!foundMaterialSection || (!hasBaseColor && !hasColor && !hasMap))
+				return false;
+
+			if (!hasColor && hasMap)
 				emissiveColor = Color.white;
-			}
 
 			if (hasMap)
-				emissiveMap = ResolveTextureAsset(Path.GetDirectoryName(mtlPath), emissionMapProp.texture);
+				emissiveMap = ResolveTextureAsset(Path.GetDirectoryName(mtlPath), emissionMapName);
 
+			return hasColor || emissiveMap != null;
+		}
+
+		private static bool TryParseColor(string[] parts, out Color color)
+		{
+			color = default;
+			if (parts == null || parts.Length < 4)
+				return false;
+
+			if (!float.TryParse(parts[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var r) ||
+				!float.TryParse(parts[2], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var g) ||
+				!float.TryParse(parts[3], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var b))
+				return false;
+
+			color = new Color(r, g, b, 1f);
 			return true;
 		}
 
@@ -238,6 +301,7 @@ namespace ClassicTilestorm.Editor
 
 			material.EnableKeyword("_EMISSION");
 			material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
+			MaterialUtils.ForceMaterialRefresh(material);
 			EditorUtility.SetDirty(material);
 			return changed;
 		}
