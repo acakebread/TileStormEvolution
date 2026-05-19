@@ -20,6 +20,8 @@ namespace ClassicTilestorm
 		private const string FileNameHeader = "X-TileStorm-FileName";
 		private const string MapNameHeader = "X-TileStorm-MapName";
 		private const string MapHashHeader = "X-TileStorm-MapHash";
+		private const string GitHubApiBaseUrl = "https://api.github.com";
+		private const string GitHubApiVersion = "2022-11-28";
 
 		[Serializable]
 		internal sealed class Manifest
@@ -66,6 +68,36 @@ namespace ClassicTilestorm
 			public bool ok;
 			public string message;
 			public Entry entry;
+		}
+
+		[Serializable]
+		private sealed class GitHubRepositoryInfo
+		{
+			public string owner;
+			public string repository;
+			public string branch;
+
+			public string ContentsApiBaseUrl => $"{GitHubApiBaseUrl}/repos/{owner}/{repository}";
+		}
+
+		[Serializable]
+		private sealed class GitHubContentResponse
+		{
+			public string sha;
+			public string content;
+			public string encoding;
+			public string path;
+			public string name;
+			public string download_url;
+		}
+
+		[Serializable]
+		private sealed class GitHubWriteRequest
+		{
+			public string message;
+			public string content;
+			public string branch;
+			public string sha;
 		}
 
 		internal static bool HasConfiguredBaseUrl => !string.IsNullOrWhiteSpace(ApplicationSettings.MapRepositoryBaseUrl);
@@ -199,6 +231,12 @@ namespace ClassicTilestorm
 				yield break;
 			}
 
+			if (TryGetGitHubRepositoryInfo(baseUrl, out var gitHubRepository))
+			{
+				yield return UploadCurrentMapToGitHub(map, crop, padded, verbose, gitHubRepository, onSuccess, onError);
+				yield break;
+			}
+
 			var export = ResourceSerializer.ExportAtomicMap(map, crop: crop, padded: padded, verbose: verbose);
 			if (export == null || !export.IsValid)
 			{
@@ -230,7 +268,7 @@ namespace ClassicTilestorm
 				if (!string.IsNullOrWhiteSpace(responseText))
 					onError?.Invoke($"Upload failed: {request.error} ({responseText})");
 				else
-					onError?.Invoke($"Upload failed: {request.error}");
+				onError?.Invoke($"Upload failed: {request.error}");
 				yield break;
 			}
 
@@ -247,6 +285,301 @@ namespace ClassicTilestorm
 			}
 
 			onSuccess?.Invoke(response);
+		}
+
+		private static IEnumerator UploadCurrentMapToGitHub(Map map, bool crop, bool padded, bool verbose, GitHubRepositoryInfo repository, Action<UploadResponse> onSuccess, Action<string> onError)
+		{
+			string uploadToken = ApplicationSettings.MapRepositoryUploadKey;
+			if (string.IsNullOrWhiteSpace(uploadToken))
+			{
+				onError?.Invoke("GitHub upload token is not configured.");
+				yield break;
+			}
+
+			var export = ResourceSerializer.ExportAtomicMap(map, crop: crop, padded: padded, verbose: verbose);
+			if (export == null || !export.IsValid)
+			{
+				onError?.Invoke("Failed to prepare export payload.");
+				yield break;
+			}
+
+			string mapPath = $"maps/{export.FileName}";
+			var mapPayload = export.IsArchive
+				? export.Archive
+				: Encoding.UTF8.GetBytes(export.Json);
+			string mapBase64 = Convert.ToBase64String(mapPayload);
+			string mapSha = null;
+			string mapFetchError = null;
+
+			yield return FetchGitHubContent(repository, mapPath, uploadToken,
+				content => mapSha = content?.sha,
+				(statusCode, errorText) =>
+				{
+					if (statusCode != 404)
+						mapFetchError = BuildGitHubError("Failed to inspect existing map file", statusCode, errorText);
+				});
+
+			if (!string.IsNullOrWhiteSpace(mapFetchError))
+			{
+				onError?.Invoke(mapFetchError);
+				yield break;
+			}
+
+			string mapCommitMessage = $"Publish map {(string.IsNullOrWhiteSpace(map.name) ? "Untitled" : map.name)}";
+			string mapWriteError = null;
+			yield return PutGitHubContent(repository, mapPath, uploadToken, mapCommitMessage, mapBase64, export.MimeType, mapSha,
+				(success, statusCode, responseText) =>
+				{
+					if (!success)
+						mapWriteError = BuildGitHubError("Failed to publish map file", statusCode, responseText);
+				});
+
+			if (!string.IsNullOrWhiteSpace(mapWriteError))
+			{
+				onError?.Invoke(mapWriteError);
+				yield break;
+			}
+
+			string manifestFetchError = null;
+			GitHubContentResponse manifestContent = null;
+			yield return FetchGitHubContent(repository, ManifestFileName, uploadToken,
+				content => manifestContent = content,
+				(statusCode, errorText) =>
+				{
+					if (statusCode != 404)
+						manifestFetchError = BuildGitHubError("Failed to inspect manifest", statusCode, errorText);
+				});
+
+			if (!string.IsNullOrWhiteSpace(manifestFetchError))
+			{
+				onError?.Invoke(manifestFetchError);
+				yield break;
+			}
+
+			Manifest manifest = null;
+			try
+			{
+				if (!string.IsNullOrWhiteSpace(manifestContent?.content))
+				{
+					string manifestJson = DecodeGitHubBase64(manifestContent.content, manifestContent.encoding);
+					if (!string.IsNullOrWhiteSpace(manifestJson))
+						manifest = JsonConvert.DeserializeObject<Manifest>(manifestJson);
+				}
+			}
+			catch (Exception ex)
+			{
+				onError?.Invoke($"Failed to parse repository manifest: {ex.Message}");
+				yield break;
+			}
+
+			manifest ??= new Manifest();
+			manifest.repositoryName = string.IsNullOrWhiteSpace(manifest.repositoryName) ? "TileStorm Shared Maps" : manifest.repositoryName;
+			manifest.generatedUtc = DateTime.UtcNow.ToString("o");
+			manifest.entries ??= Array.Empty<Entry>();
+
+			var newEntry = new Entry
+			{
+				id = export.FileName,
+				name = string.IsNullOrWhiteSpace(map.name) ? "Untitled" : map.name,
+				fileName = export.FileName,
+				downloadUrl = $"maps/{export.FileName}",
+				contentType = export.MimeType,
+				mapHash = HTB50Settings.ToString(map.HashID),
+				description = string.Empty,
+				updatedUtc = DateTime.UtcNow.ToString("o"),
+				sizeBytes = mapPayload?.LongLength ?? 0L
+			};
+
+			var mergedEntries = manifest.entries
+				.Where(entry => entry != null && !string.Equals(entry.fileName, newEntry.fileName, StringComparison.OrdinalIgnoreCase))
+				.ToList();
+			mergedEntries.Add(newEntry);
+			mergedEntries = mergedEntries
+				.OrderByDescending(entry => entry.UpdatedUtcDateTime)
+				.ThenBy(entry => entry.DisplayName, StringComparer.OrdinalIgnoreCase)
+				.ToList();
+
+			manifest.entries = mergedEntries.ToArray();
+			string manifestJsonPayload = JsonConvert.SerializeObject(manifest, Formatting.Indented);
+			string manifestWriteError = null;
+			yield return PutGitHubContent(repository, ManifestFileName, uploadToken, "Update TileStorm map manifest", manifestJsonPayload, "application/json; charset=utf-8", manifestContent?.sha,
+				(success, statusCode, responseText) =>
+				{
+					if (!success)
+						manifestWriteError = BuildGitHubError("Failed to update manifest", statusCode, responseText);
+				});
+
+			if (!string.IsNullOrWhiteSpace(manifestWriteError))
+			{
+				onError?.Invoke(manifestWriteError);
+				yield break;
+			}
+
+			onSuccess?.Invoke(new UploadResponse
+			{
+				ok = true,
+				message = $"Published {newEntry.name} to GitHub Pages.",
+				entry = newEntry
+			});
+		}
+
+		private static IEnumerator FetchGitHubContent(GitHubRepositoryInfo repository, string path, string token, Action<GitHubContentResponse> onSuccess, Action<int, string> onNotFoundOrError)
+		{
+			using var request = UnityWebRequest.Get(BuildGitHubContentsUrl(repository, path));
+			ApplyGitHubHeaders(request, token);
+			yield return request.SendWebRequest();
+
+			if (request.result != UnityWebRequest.Result.Success)
+			{
+				onNotFoundOrError?.Invoke((int)request.responseCode, request.error);
+				yield break;
+			}
+
+			GitHubContentResponse content = null;
+			try
+			{
+				if (!string.IsNullOrWhiteSpace(request.downloadHandler?.text))
+					content = JsonConvert.DeserializeObject<GitHubContentResponse>(request.downloadHandler.text);
+			}
+			catch (Exception ex)
+			{
+				onNotFoundOrError?.Invoke((int)request.responseCode, ex.Message);
+				yield break;
+			}
+
+			onSuccess?.Invoke(content);
+		}
+
+		private static IEnumerator PutGitHubContent(GitHubRepositoryInfo repository, string path, string token, string message, string base64Content, string contentType, string sha, Action<bool, int, string> onComplete)
+		{
+			var payload = new GitHubWriteRequest
+			{
+				message = message,
+				content = base64Content,
+				branch = string.IsNullOrWhiteSpace(repository.branch) ? "main" : repository.branch,
+				sha = string.IsNullOrWhiteSpace(sha) ? null : sha
+			};
+
+			string json = JsonConvert.SerializeObject(payload, Formatting.None);
+			using var request = new UnityWebRequest(BuildGitHubContentsUrl(repository, path), UnityWebRequest.kHttpVerbPUT);
+			request.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(json));
+			request.downloadHandler = new DownloadHandlerBuffer();
+			request.SetRequestHeader("Content-Type", "application/json; charset=utf-8");
+			ApplyGitHubHeaders(request, token);
+			yield return request.SendWebRequest();
+
+			bool success = request.result == UnityWebRequest.Result.Success && (request.responseCode == 200 || request.responseCode == 201);
+			onComplete?.Invoke(success, (int)request.responseCode, request.downloadHandler?.text);
+		}
+
+		private static void ApplyGitHubHeaders(UnityWebRequest request, string token)
+		{
+			if (request == null)
+				return;
+
+			request.SetRequestHeader("Accept", "application/vnd.github+json");
+			request.SetRequestHeader("X-GitHub-Api-Version", GitHubApiVersion);
+
+			if (!string.IsNullOrWhiteSpace(token))
+				request.SetRequestHeader("Authorization", $"Bearer {token.Trim()}");
+		}
+
+		private static string BuildGitHubContentsUrl(GitHubRepositoryInfo repository, string path)
+		{
+			if (repository == null)
+				return null;
+
+			path = string.IsNullOrWhiteSpace(path)
+				? string.Empty
+				: string.Join("/", path.Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries).Select(Uri.EscapeDataString));
+
+			string baseUrl = $"{GitHubApiBaseUrl}/repos/{repository.owner}/{repository.repository}/contents";
+			string url = string.IsNullOrWhiteSpace(path) ? baseUrl : $"{baseUrl}/{path}";
+			string branch = string.IsNullOrWhiteSpace(repository.branch) ? "main" : repository.branch.Trim();
+			return $"{url}?ref={Uri.EscapeDataString(branch)}";
+		}
+
+		private static string BuildGitHubError(string prefix, int statusCode, string responseText)
+		{
+			if (!string.IsNullOrWhiteSpace(responseText))
+				return $"{prefix}: HTTP {statusCode} ({responseText})";
+
+			return $"{prefix}: HTTP {statusCode}";
+		}
+
+		private static string DecodeGitHubBase64(string content, string encoding)
+		{
+			if (string.IsNullOrWhiteSpace(content))
+				return string.Empty;
+
+			if (!string.IsNullOrWhiteSpace(encoding) && !string.Equals(encoding, "base64", StringComparison.OrdinalIgnoreCase))
+				return content;
+
+			byte[] data = Convert.FromBase64String(content);
+			return Encoding.UTF8.GetString(data);
+		}
+
+		private static bool TryGetGitHubRepositoryInfo(string baseUrl, out GitHubRepositoryInfo info)
+		{
+			info = null;
+
+			string overrideRepository = ApplicationSettings.MapRepositoryGitHubRepository;
+			string branch = string.IsNullOrWhiteSpace(ApplicationSettings.MapRepositoryGitHubBranch) ? "main" : ApplicationSettings.MapRepositoryGitHubBranch.Trim();
+
+			if (!string.IsNullOrWhiteSpace(overrideRepository))
+			{
+				if (!TryParseRepositorySlug(overrideRepository, out var owner, out var repository))
+					return false;
+
+				info = new GitHubRepositoryInfo
+				{
+					owner = owner,
+					repository = repository,
+					branch = branch
+				};
+				return true;
+			}
+
+			if (!Uri.TryCreate(baseUrl, UriKind.Absolute, out var uri))
+				return false;
+
+			string host = uri.Host ?? string.Empty;
+			if (!host.EndsWith(".github.io", StringComparison.OrdinalIgnoreCase))
+				return false;
+
+			string ownerName = host.Substring(0, host.Length - ".github.io".Length);
+			if (string.IsNullOrWhiteSpace(ownerName))
+				return false;
+
+			string[] segments = uri.AbsolutePath.Trim('/').Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
+			string repositoryName = segments.Length > 0
+				? segments[0]
+				: $"{ownerName}.github.io";
+
+			info = new GitHubRepositoryInfo
+			{
+				owner = ownerName,
+				repository = repositoryName,
+				branch = branch
+			};
+			return true;
+		}
+
+		private static bool TryParseRepositorySlug(string value, out string owner, out string repository)
+		{
+			owner = null;
+			repository = null;
+
+			if (string.IsNullOrWhiteSpace(value))
+				return false;
+
+			var parts = value.Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
+			if (parts.Length < 2)
+				return false;
+
+			owner = parts[0].Trim();
+			repository = parts[1].Trim();
+			return !string.IsNullOrWhiteSpace(owner) && !string.IsNullOrWhiteSpace(repository);
 		}
 
 		private static bool TryGetBaseUrl(out string baseUrl)

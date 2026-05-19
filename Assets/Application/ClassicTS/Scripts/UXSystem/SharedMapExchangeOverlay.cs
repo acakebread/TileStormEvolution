@@ -99,13 +99,13 @@ namespace ClassicTilestorm
 			if (!isOpen)
 				return;
 
-			windowRect = GUILayout.Window(0x5A11D, windowRect, DrawWindow, "Shared Map Repository", GetWindowStyle());
+			windowRect = GUILayout.Window(0x5A11D, windowRect, DrawWindow, "Online Map Repository", GetWindowStyle());
 		}
 
 		private void DrawWindow(int windowId)
 		{
-			GUILayout.Label("This panel reads a remote map repository over HTTPS. Players only need to open it, pick a map, and import.", GetHelpStyle());
-			GUILayout.Label("Publishers can upload the current map to the same repository if the upload key is configured in the build.", GetHelpStyle());
+			GUILayout.Label("This panel reads a GitHub Pages map repository over HTTPS. Players only need to open it, pick a map, and import.", GetHelpStyle());
+			GUILayout.Label("Publishers can commit the current map back to the repository if the upload token is configured in the build.", GetHelpStyle());
 
 			GUILayout.Space(10f);
 			GUILayout.BeginHorizontal();
@@ -155,7 +155,7 @@ namespace ClassicTilestorm
 			if (!string.IsNullOrWhiteSpace(selectedFilePath))
 			{
 				GUILayout.Space(8f);
-				GUILayout.Label($"Selected package: {selectedFilePath}");
+				GUILayout.Label($"Selected file: {selectedFilePath}");
 			}
 
 			GUI.DragWindow(new Rect(0, 0, 10000, 24));
@@ -306,7 +306,7 @@ namespace ClassicTilestorm
 
 			if (string.IsNullOrWhiteSpace(ApplicationSettings.MapRepositoryUploadKey))
 			{
-				statusLine = "Upload key is not configured.";
+				statusLine = "Upload token is not configured.";
 				return;
 			}
 

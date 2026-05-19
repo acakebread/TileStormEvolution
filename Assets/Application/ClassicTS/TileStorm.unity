@@ -380,6 +380,10 @@ MonoBehaviour:
   showHiddenTiles: 0
   showTileSelection: 0
   jsonDataPath: ClassicTS/Config
+  mapRepositoryBaseUrl: https://acakebread.github.io/TileStormDataHosting
+  mapRepositoryUploadKey: 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
+  mapRepositoryGitHubRepository: https://acakebread.github.io/TileStormDataHosting/maps
+  mapRepositoryGitHubBranch: main
   contentRoots:
   - Uncategorised
   - ClassicTS

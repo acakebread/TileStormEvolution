@@ -133,8 +133,12 @@ namespace ClassicTilestorm
 		[Header("online map repository")]
 		[SerializeField] private string mapRepositoryBaseUrl = "";
 		[SerializeField] private string mapRepositoryUploadKey = "";
+		[SerializeField] private string mapRepositoryGitHubRepository = "";
+		[SerializeField] private string mapRepositoryGitHubBranch = "main";
 		private const string MapRepositoryBaseUrlPrefKey = "MapRepositoryBaseUrl";
 		private const string MapRepositoryUploadKeyPrefKey = "MapRepositoryUploadKey";
+		private const string MapRepositoryGitHubRepositoryPrefKey = "MapRepositoryGitHubRepository";
+		private const string MapRepositoryGitHubBranchPrefKey = "MapRepositoryGitHubBranch";
 
 		public static string MapRepositoryBaseUrl
 		{
@@ -165,6 +169,38 @@ namespace ClassicTilestorm
 					instance.mapRepositoryUploadKey = value;
 
 				PlayerPrefsX.SetString(MapRepositoryUploadKeyPrefKey, value ?? string.Empty, true);
+			}
+		}
+
+		public static string MapRepositoryGitHubRepository
+		{
+			get
+			{
+				string fallback = instance != null ? instance.mapRepositoryGitHubRepository : "";
+				return PlayerPrefsX.GetString(MapRepositoryGitHubRepositoryPrefKey, fallback ?? string.Empty);
+			}
+			set
+			{
+				if (instance != null)
+					instance.mapRepositoryGitHubRepository = value;
+
+				PlayerPrefsX.SetString(MapRepositoryGitHubRepositoryPrefKey, value ?? string.Empty, true);
+			}
+		}
+
+		public static string MapRepositoryGitHubBranch
+		{
+			get
+			{
+				string fallback = instance != null ? instance.mapRepositoryGitHubBranch : "main";
+				return PlayerPrefsX.GetString(MapRepositoryGitHubBranchPrefKey, fallback ?? "main");
+			}
+			set
+			{
+				if (instance != null)
+					instance.mapRepositoryGitHubBranch = value;
+
+				PlayerPrefsX.SetString(MapRepositoryGitHubBranchPrefKey, value ?? string.Empty, true);
 			}
 		}
 
