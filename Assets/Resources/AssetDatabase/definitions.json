@@ -634,5 +634,12 @@
     "id": "603Cit",
     "name": "legacy pyramid",
     "model": "2d8rDa"
+  },
+  {
+    "id": "4JT6tJ",
+    "name": "rainbow tile",
+    "model": "4YU5Pf",
+    "material": "1n5i4n",
+    "flags": "Move"
   }
 ]
