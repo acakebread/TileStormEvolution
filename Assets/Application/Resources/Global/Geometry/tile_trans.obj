@@ -1,6 +1,6 @@
 # Modified by OBJRotate180 (Mesh rotated 180 degrees around Y-axis)
 # Original file: tile_trans.obj
-mtllib Materials/_tile_trans.mtl
+mtllib Materials/tile_trans.mtl
 v 0.475002 -0.125000 -0.475002
 v 0.475002 -0.125000 0.475002
 v -0.475002 -0.125000 -0.475002
@@ -795,7 +795,7 @@ vn 0.000000 0.000000 1.000000
 vn 0.000000 -1.000000 0.000000
 o tile_trans
 o tile_trans
-usemtl _tile_trans
+usemtl tile_trans
 f 1/1/1 2/2/2 3/3/3
 f 4/4/4 5/5/5 6/6/6
 f 7/7/7 8/8/8 9/9/9

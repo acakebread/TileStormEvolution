@@ -1,6 +1,6 @@
 # MTL file - created by a modified js OBJExporter
 
-newmtl _tile_flat
+newmtl tile_flat
 Tr 0.0000
 Tf 1.0000 1.0000 1.0000
 illum 1

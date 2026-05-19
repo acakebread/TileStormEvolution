@@ -11,7 +11,7 @@
   {
     "id": "4JT6tJ",
     "name": "rainbow tile",
-    "model": "1Dv91x",
+    "model": "4YU5Pf",
     "material": "2JpQfe",
     "flags": "Move"
   },
@@ -641,17 +641,5 @@
     "id": "603Cit",
     "name": "legacy pyramid",
     "model": "2d8rDa"
-  },
-  {
-    "id": "AEDTuj",
-    "name": "test no nav slide",
-    "model": "0Qv0Ac",
-    "flags": "Move"
-  },
-  {
-    "id": "3ExQpJ",
-    "name": "slide and roll",
-    "model": "91CyUP",
-    "flags": "Move, Roll"
   }
 ]
