@@ -106,7 +106,7 @@ namespace ClassicTilestorm
 		private void DrawWindow(int windowId)
 		{
 			GUILayout.Label("This panel reads a GitHub Pages map repository over HTTPS. Players only need to open it, pick a map, and import.", GetHelpStyle());
-			GUILayout.Label("Publishers can commit the current map back to the repository if the upload token is configured in the build.", GetHelpStyle());
+			GUILayout.Label("Publishers can commit the current map back to the repository if an upload token is configured locally or in the build.", GetHelpStyle());
 
 			GUILayout.Space(10f);
 			GUILayout.BeginHorizontal();

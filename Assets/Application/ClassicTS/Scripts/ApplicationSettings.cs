@@ -135,6 +135,7 @@ namespace ClassicTilestorm
 		[SerializeField] private string mapRepositoryUploadKey = "";
 		[SerializeField] private string mapRepositoryGitHubRepository = "";
 		[SerializeField] private string mapRepositoryGitHubBranch = "main";
+		private const string MapRepositoryPrivateTokenFile = "Assets/Private/TileStormMapRepositoryToken.txt";
 		private const string MapRepositoryBaseUrlPrefKey = "MapRepositoryBaseUrl";
 		private const string MapRepositoryUploadKeyPrefKey = "MapRepositoryUploadKey";
 		private const string MapRepositoryGitHubRepositoryPrefKey = "MapRepositoryGitHubRepository";
@@ -161,7 +162,11 @@ namespace ClassicTilestorm
 			get
 			{
 				string fallback = instance != null ? instance.mapRepositoryUploadKey : "";
-				return PlayerPrefsX.GetString(MapRepositoryUploadKeyPrefKey, fallback ?? string.Empty);
+				string value = PlayerPrefsX.GetString(MapRepositoryUploadKeyPrefKey, fallback ?? string.Empty);
+				if (!string.IsNullOrWhiteSpace(value))
+					return value;
+
+				return ReadPrivateMapRepositoryUploadKey();
 			}
 			set
 			{
@@ -171,6 +176,8 @@ namespace ClassicTilestorm
 				PlayerPrefsX.SetString(MapRepositoryUploadKeyPrefKey, value ?? string.Empty, true);
 			}
 		}
+
+		public static bool HasPrivateMapRepositoryUploadKey => !string.IsNullOrWhiteSpace(ReadPrivateMapRepositoryUploadKey());
 
 		public static string MapRepositoryGitHubRepository
 		{
@@ -275,6 +282,26 @@ namespace ClassicTilestorm
 				.ToArray();
 
 			return cleaned.Length > 0 ? cleaned : DefaultContentRoots;
+		}
+
+		private static string ReadPrivateMapRepositoryUploadKey()
+		{
+			try
+			{
+				var projectRoot = Directory.GetParent(Application.dataPath)?.FullName;
+				if (string.IsNullOrWhiteSpace(projectRoot))
+					return string.Empty;
+
+				string path = Path.Combine(projectRoot, MapRepositoryPrivateTokenFile);
+				if (!File.Exists(path))
+					return string.Empty;
+
+				return File.ReadAllText(path).Trim();
+			}
+			catch
+			{
+				return string.Empty;
+			}
 		}
 
 		private void OnValidate()

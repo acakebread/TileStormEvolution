@@ -381,7 +381,7 @@ MonoBehaviour:
   showTileSelection: 0
   jsonDataPath: ClassicTS/Config
   mapRepositoryBaseUrl: https://acakebread.github.io/TileStormDataHosting
-  mapRepositoryUploadKey: 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
+  mapRepositoryUploadKey: 
   mapRepositoryGitHubRepository: acakebread/TileStormDataHosting
   mapRepositoryGitHubBranch: main
   contentRoots:
