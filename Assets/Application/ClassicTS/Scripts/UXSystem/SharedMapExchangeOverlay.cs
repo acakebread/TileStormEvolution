@@ -25,6 +25,7 @@ namespace ClassicTilestorm
 		private Rect windowRect = DefaultWindowRect;
 		private Vector2 scroll;
 		private string statusLine;
+		private string detailLine;
 		private string repositoryUrl;
 		private IReadOnlyList<SharedMapRepository.Entry> entries = Array.Empty<SharedMapRepository.Entry>();
 		private SharedMapRepository.Entry selectedEntry;
@@ -132,6 +133,10 @@ namespace ClassicTilestorm
 				GUILayout.Space(6f);
 				GUILayout.Label(statusLine, GetHelpStyle());
 			}
+			if (!string.IsNullOrWhiteSpace(detailLine))
+			{
+				GUILayout.Label(detailLine, GetHelpStyle());
+			}
 
 			GUILayout.Space(8f);
 			if (isRefreshing)
@@ -224,8 +229,13 @@ namespace ClassicTilestorm
 					statusLine = string.IsNullOrWhiteSpace(manifest?.repositoryName)
 						? $"Loaded {entries.Count} map(s) from the repository."
 						: $"Loaded {entries.Count} map(s) from {manifest.repositoryName}.";
+					detailLine = null;
 				},
-				error => statusLine = error);
+				error =>
+				{
+					statusLine = error;
+					detailLine = null;
+				});
 
 			isRefreshing = false;
 		}
@@ -271,6 +281,7 @@ namespace ClassicTilestorm
 		{
 			isRefreshing = true;
 			statusLine = $"Downloading {entry.DisplayName}...";
+			detailLine = null;
 
 			yield return SharedMapRepository.DownloadAndImport(
 				entry,
@@ -293,8 +304,13 @@ namespace ClassicTilestorm
 					controller.LoadMap(ApplicationSettings.LoadMapName);
 					selectedFilePath = entry.fileName;
 					statusLine = $"Imported {imported.name}.";
+					detailLine = null;
 				},
-				error => statusLine = error);
+				error =>
+				{
+					statusLine = error;
+					detailLine = null;
+				});
 
 			isRefreshing = false;
 		}
@@ -324,6 +340,7 @@ namespace ClassicTilestorm
 		{
 			isRefreshing = true;
 			statusLine = "Uploading current map...";
+			detailLine = null;
 
 			yield return SharedMapRepository.UploadCurrentMap(
 				map,
@@ -335,8 +352,15 @@ namespace ClassicTilestorm
 					statusLine = response != null && !string.IsNullOrWhiteSpace(response.message)
 						? response.message
 						: "Upload completed.";
+					detailLine = response != null && !string.IsNullOrWhiteSpace(response.debugResponse)
+						? response.debugResponse
+						: null;
 				},
-				onError: error => statusLine = error);
+				onError: error =>
+				{
+					statusLine = error;
+					detailLine = null;
+				});
 
 			isRefreshing = false;
 			RefreshRepository();

@@ -68,6 +68,7 @@ namespace ClassicTilestorm
 			public bool ok;
 			public string message;
 			public Entry entry;
+			public string debugResponse;
 		}
 
 		[Serializable]
@@ -114,7 +115,12 @@ namespace ClassicTilestorm
 				return null;
 
 			if (!string.IsNullOrWhiteSpace(entry.downloadUrl))
-				return entry.downloadUrl;
+			{
+				if (Uri.TryCreate(entry.downloadUrl, UriKind.Absolute, out var absolute))
+					return absolute.ToString();
+
+				return BuildUrl(entry.downloadUrl);
+			}
 
 			if (string.IsNullOrWhiteSpace(entry.fileName))
 				return null;
@@ -268,7 +274,7 @@ namespace ClassicTilestorm
 				if (!string.IsNullOrWhiteSpace(responseText))
 					onError?.Invoke($"Upload failed: {request.error} ({responseText})");
 				else
-				onError?.Invoke($"Upload failed: {request.error}");
+					onError?.Invoke($"Upload failed: {request.error}");
 				yield break;
 			}
 
@@ -283,6 +289,9 @@ namespace ClassicTilestorm
 				onError?.Invoke($"Upload response parse failed: {ex.Message}");
 				yield break;
 			}
+
+			if (response != null)
+				response.debugResponse = request.downloadHandler?.text;
 
 			onSuccess?.Invoke(response);
 		}
@@ -401,8 +410,9 @@ namespace ClassicTilestorm
 
 			manifest.entries = mergedEntries.ToArray();
 			string manifestJsonPayload = JsonConvert.SerializeObject(manifest, Formatting.Indented);
+			string manifestBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(manifestJsonPayload));
 			string manifestWriteError = null;
-			yield return PutGitHubContent(repository, ManifestFileName, uploadToken, "Update TileStorm map manifest", manifestJsonPayload, "application/json; charset=utf-8", manifestContent?.sha,
+			yield return PutGitHubContent(repository, ManifestFileName, uploadToken, "Update TileStorm map manifest", manifestBase64, "application/json; charset=utf-8", manifestContent?.sha,
 				(success, statusCode, responseText) =>
 				{
 					if (!success)
@@ -425,12 +435,13 @@ namespace ClassicTilestorm
 
 		private static IEnumerator FetchGitHubContent(GitHubRepositoryInfo repository, string path, string token, Action<GitHubContentResponse> onSuccess, Action<int, string> onNotFoundOrError)
 		{
-			using var request = UnityWebRequest.Get(BuildGitHubContentsUrl(repository, path));
+			using var request = UnityWebRequest.Get(BuildGitHubContentsReadUrl(repository, path));
 			ApplyGitHubHeaders(request, token);
 			yield return request.SendWebRequest();
 
 			if (request.result != UnityWebRequest.Result.Success)
 			{
+				Debug.LogWarning($"SharedMapRepository GitHub GET failed for '{path}': HTTP {(int)request.responseCode} {request.error}\n{request.downloadHandler?.text}");
 				onNotFoundOrError?.Invoke((int)request.responseCode, request.error);
 				yield break;
 			}
@@ -461,7 +472,7 @@ namespace ClassicTilestorm
 			};
 
 			string json = JsonConvert.SerializeObject(payload, Formatting.None);
-			using var request = new UnityWebRequest(BuildGitHubContentsUrl(repository, path), UnityWebRequest.kHttpVerbPUT);
+			using var request = new UnityWebRequest(BuildGitHubContentsWriteUrl(repository, path), UnityWebRequest.kHttpVerbPUT);
 			request.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(json));
 			request.downloadHandler = new DownloadHandlerBuffer();
 			request.SetRequestHeader("Content-Type", "application/json; charset=utf-8");
@@ -469,6 +480,8 @@ namespace ClassicTilestorm
 			yield return request.SendWebRequest();
 
 			bool success = request.result == UnityWebRequest.Result.Success && (request.responseCode == 200 || request.responseCode == 201);
+			if (!success)
+				Debug.LogWarning($"SharedMapRepository GitHub PUT failed for '{path}': HTTP {(int)request.responseCode} {request.error}\n{request.downloadHandler?.text}");
 			onComplete?.Invoke(success, (int)request.responseCode, request.downloadHandler?.text);
 		}
 
@@ -484,7 +497,7 @@ namespace ClassicTilestorm
 				request.SetRequestHeader("Authorization", $"Bearer {token.Trim()}");
 		}
 
-		private static string BuildGitHubContentsUrl(GitHubRepositoryInfo repository, string path)
+		private static string BuildGitHubContentsReadUrl(GitHubRepositoryInfo repository, string path)
 		{
 			if (repository == null)
 				return null;
@@ -497,6 +510,19 @@ namespace ClassicTilestorm
 			string url = string.IsNullOrWhiteSpace(path) ? baseUrl : $"{baseUrl}/{path}";
 			string branch = string.IsNullOrWhiteSpace(repository.branch) ? "main" : repository.branch.Trim();
 			return $"{url}?ref={Uri.EscapeDataString(branch)}";
+		}
+
+		private static string BuildGitHubContentsWriteUrl(GitHubRepositoryInfo repository, string path)
+		{
+			if (repository == null)
+				return null;
+
+			path = string.IsNullOrWhiteSpace(path)
+				? string.Empty
+				: string.Join("/", path.Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries).Select(Uri.EscapeDataString));
+
+			string baseUrl = $"{GitHubApiBaseUrl}/repos/{repository.owner}/{repository.repository}/contents";
+			return string.IsNullOrWhiteSpace(path) ? baseUrl : $"{baseUrl}/{path}";
 		}
 
 		private static string BuildGitHubError(string prefix, int statusCode, string responseText)
