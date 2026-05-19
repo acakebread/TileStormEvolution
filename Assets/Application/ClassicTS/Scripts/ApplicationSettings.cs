@@ -130,6 +130,71 @@ namespace ClassicTilestorm
 		public static string JsonDataProjectPath => Path.Combine(Application.dataPath, "Application", "Resources", JsonDataPath.Replace('/', Path.DirectorySeparatorChar));
 		public static string JsonDataResourcePath => JsonDataPath;
 
+		[Header("shared map exchange")]
+		[SerializeField] private string sharedMapsFolder = "";
+		private const string SharedMapsFolderPrefKey = "SharedMapsFolder";
+		private const string DefaultSharedMapsFolderName = "SharedMaps";
+
+		public static string SharedMapsFolder
+		{
+			get
+			{
+				string fallback = DefaultSharedMapsFolder;
+				string stored = PlayerPrefsX.GetString(SharedMapsFolderPrefKey, instance != null ? instance.sharedMapsFolder : fallback);
+				if (string.IsNullOrWhiteSpace(stored))
+					stored = fallback;
+				return EnsureSharedMapsFolder(stored);
+			}
+			set
+			{
+				string normalized = EnsureSharedMapsFolder(value);
+				if (instance != null)
+					instance.sharedMapsFolder = normalized;
+
+				PlayerPrefsX.SetString(SharedMapsFolderPrefKey, normalized, true);
+			}
+		}
+
+		public static string DefaultSharedMapsFolder => Path.Combine(UserFolder, DefaultSharedMapsFolderName);
+
+		[Header("online map repository")]
+		[SerializeField] private string mapRepositoryBaseUrl = "";
+		[SerializeField] private string mapRepositoryUploadKey = "";
+		private const string MapRepositoryBaseUrlPrefKey = "MapRepositoryBaseUrl";
+		private const string MapRepositoryUploadKeyPrefKey = "MapRepositoryUploadKey";
+
+		public static string MapRepositoryBaseUrl
+		{
+			get
+			{
+				string fallback = instance != null ? instance.mapRepositoryBaseUrl : "";
+				return PlayerPrefsX.GetString(MapRepositoryBaseUrlPrefKey, fallback ?? string.Empty);
+			}
+			set
+			{
+				if (instance != null)
+					instance.mapRepositoryBaseUrl = value;
+
+				PlayerPrefsX.SetString(MapRepositoryBaseUrlPrefKey, value ?? string.Empty, true);
+			}
+		}
+
+		public static string MapRepositoryUploadKey
+		{
+			get
+			{
+				string fallback = instance != null ? instance.mapRepositoryUploadKey : "";
+				return PlayerPrefsX.GetString(MapRepositoryUploadKeyPrefKey, fallback ?? string.Empty);
+			}
+			set
+			{
+				if (instance != null)
+					instance.mapRepositoryUploadKey = value;
+
+				PlayerPrefsX.SetString(MapRepositoryUploadKeyPrefKey, value ?? string.Empty, true);
+			}
+		}
+
 		[Header("content roots")]
 		[SerializeField] private string[] contentRoots = new[] { AssetPath.ImmutableRootFolder, AssetPath.GlobalRootFolder, "ClassicTS", "Evolution" };
 		private static readonly string[] DefaultContentRoots = new[] { AssetPath.ImmutableRootFolder, AssetPath.GlobalRootFolder, "ClassicTS", "Evolution" };
@@ -179,6 +244,14 @@ namespace ClassicTilestorm
 					EditorUtility.RevealInFinder(folder);
 					Debug.Log($"Opened export folder: {folder}");
 				}
+
+				if (GUILayout.Button("Locate Shared Maps Folder", GUILayout.Height(30)))
+				{
+					string folder = SharedMapsFolder;
+					System.IO.Directory.CreateDirectory(folder);
+					EditorUtility.RevealInFinder(folder);
+					Debug.Log($"Opened shared maps folder: {folder}");
+				}
 			}
 		}
 #endif
@@ -221,6 +294,27 @@ namespace ClassicTilestorm
 		public static string SystemSkyCubesFolder => Path.Combine(SystemFolder, AssetPath.SkyCubesFolder);
 		public static string SystemMusicFolder => Path.Combine(SystemFolder, AssetPath.MusicFolder);
 		public static string SystemSoundsFolder => Path.Combine(SystemFolder, AssetPath.SoundFolder);
+
+		private static string EnsureSharedMapsFolder(string path)
+		{
+			string normalized = NormalizeFolderPath(string.IsNullOrWhiteSpace(path) ? DefaultSharedMapsFolder : path);
+			return FileUtils.EnsureFolder(normalized);
+		}
+
+		private static string NormalizeFolderPath(string path)
+		{
+			if (string.IsNullOrWhiteSpace(path))
+				return DefaultSharedMapsFolder;
+
+			try
+			{
+				return Path.GetFullPath(path.Trim());
+			}
+			catch
+			{
+				return DefaultSharedMapsFolder;
+			}
+		}
 
 		// ====================== EDITOR HELPER (for manifest generation) ======================
 #if UNITY_EDITOR

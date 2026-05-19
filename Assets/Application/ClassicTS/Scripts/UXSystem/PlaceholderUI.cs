@@ -163,6 +163,10 @@ namespace ClassicTilestorm
 				new Color(0.6f, 0.6f, 0.2f), () => onChangeMapRequested(0));
 			currentX += buttonWidth + spacing;
 
+			GuiUtils.ColoredButton(new Rect(currentX, y, buttonWidth, buttonHeight), "Share",
+				new Color(0.35f, 0.55f, 0.95f), () => SharedMapExchangeOverlay.Toggle());
+			currentX += buttonWidth + spacing;
+
 			GuiUtils.ColoredButton(new Rect(currentX, y, buttonWidth, buttonHeight), "Preset",
 				new Color(0.2f, 0.8f, 0.2f), () => OnPresetRequested?.Invoke());
 			currentX += buttonWidth + spacing;
