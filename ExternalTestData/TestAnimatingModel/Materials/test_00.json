@@ -1,0 +1,6 @@
+{
+  "frames": [
+    { "texture": "test_00", "duration": 0.5 },
+    { "texture": "test_01", "duration": 0.5 }
+  ]
+}
