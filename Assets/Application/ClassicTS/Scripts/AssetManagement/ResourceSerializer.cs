@@ -256,7 +256,7 @@ namespace ClassicTilestorm
 			return Array.Empty<Definition>();
 		}
 
-		internal static DatabaseSaveData SaveDatabase(DatabaseData data, string filepath = null, string definitionsPath = null, bool verbose = false, bool cropAllMaps = true)
+		internal static DatabaseSaveData SaveDatabase(DatabaseData data, string filepath = null, string definitionsPath = null, bool verbose = false, bool cropAllMaps = true, bool externalOnly = false)
 		{
 			if (data == null) return null;
 			if (data.maps != null)
@@ -311,6 +311,7 @@ namespace ClassicTilestorm
 					.ToArray()
 				: (data.mapIds ?? Array.Empty<string>());
 
+			var skippedInternalMapCount = 0;
 			if (data.maps != null)
 			{
 				var externalMapIds = data.maps
@@ -323,7 +324,17 @@ namespace ClassicTilestorm
 					if (map == null)
 						continue;
 
-					MapCatalog.SaveMap(map);
+					if (externalOnly)
+					{
+						if (MapCatalog.GetStorageLocation(map.HashID) == MapCatalog.MapStorageLocation.External)
+							MapCatalog.SaveCommunityMap(map);
+						else
+							skippedInternalMapCount++;
+					}
+					else
+					{
+						MapCatalog.SaveMap(map);
+					}
 				}
 
 				try
@@ -371,10 +382,13 @@ namespace ClassicTilestorm
 				? DefinitionCatalog.InternalDefinitionsFile
 				: definitionsPath;
 
-			FileUtils.EnsureFolder(Path.GetDirectoryName(path));
-			WriteJsonIfChanged(path, json);
-			FileUtils.EnsureFolder(Path.GetDirectoryName(defsPath));
-			WriteJsonIfChanged(defsPath, definitionsJson);
+			if (!externalOnly)
+			{
+				FileUtils.EnsureFolder(Path.GetDirectoryName(path));
+				WriteJsonIfChanged(path, json);
+				FileUtils.EnsureFolder(Path.GetDirectoryName(defsPath));
+				WriteJsonIfChanged(defsPath, definitionsJson);
+			}
 
 			try
 			{
@@ -382,6 +396,7 @@ namespace ClassicTilestorm
 					.Where(def => def != null)
 					.Select(def => HTB50Settings.ToString(def.HashID))
 					.ToHashSet(StringComparer.OrdinalIgnoreCase);
+				var skippedInternalDefinitionCount = 0;
 
 				foreach (var externalDefinition in externalDefinitions)
 				{
@@ -389,6 +404,16 @@ namespace ClassicTilestorm
 						continue;
 
 					DefinitionCatalog.SaveExternalDefinition(externalDefinition);
+				}
+
+				if (externalOnly)
+				{
+					skippedInternalDefinitionCount = internalDefinitions.Count;
+					if (skippedInternalMapCount > 0 || skippedInternalDefinitionCount > 0)
+					{
+						Debug.LogWarning(
+							$"SaveDatabase: skipped {skippedInternalMapCount} internal map(s) and {skippedInternalDefinitionCount} internal definition(s) in runtime save mode.");
+					}
 				}
 
 				if (Directory.Exists(DefinitionCatalog.PersistentDefinitionsFolder))
@@ -414,9 +439,13 @@ namespace ClassicTilestorm
 			MapCatalog.ClearCache();
 			DefinitionCatalog.ClearCache();
 
-			Debug.Log($"Database saved → {path} / {defsPath} " +
-					  $"(maps: {internalMapIds?.Length ?? 0}, " +
-					  $"definitions: {data.definitions?.Length ?? 0}");
+			Debug.Log(externalOnly
+				? $"Database saved (external runtime content only) → {ApplicationSettings.SystemMapsFolder} / {DefinitionCatalog.PersistentDefinitionsFolder} " +
+				  $"(external maps: {data.maps?.Count(m => m != null && MapCatalog.GetStorageLocation(m.HashID) == MapCatalog.MapStorageLocation.External) ?? 0}, " +
+				  $"external definitions: {externalDefinitions.Count})"
+				: $"Database saved → {path} / {defsPath} " +
+				  $"(maps: {internalMapIds?.Length ?? 0}, " +
+				  $"definitions: {data.definitions?.Length ?? 0}");
 
 			return new DatabaseSaveData(
 				path,

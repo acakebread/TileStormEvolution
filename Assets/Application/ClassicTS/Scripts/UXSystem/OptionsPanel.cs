@@ -58,7 +58,7 @@ namespace ClassicTilestorm
 				if (null != SaveDatabaseButton)
 				{
 					SaveDatabaseButton.onClick.AddListener(() => mainController.SaveDatabase());
-					SaveDatabaseButton.interactable = Application.isEditor;
+					SaveDatabaseButton.interactable = true;
 				}
 				if (null != ImportMapButton)
 				{

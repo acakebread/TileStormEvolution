@@ -272,7 +272,6 @@ namespace ClassicTilestorm
 
 		public void SaveDatabase()
 		{
-#if UNITY_EDITOR
 			if (ResourceManager.database == null)
 			{
 				Debug.LogError("Cannot save: database not loaded");
@@ -284,10 +283,8 @@ namespace ClassicTilestorm
 				ResourceManager.ApplyMapChanges(CurrentMap);
 			}
 
-			ResourceSerializer.SaveDatabase(ResourceManager.database, verbose: true);
-#else
-			Debug.Log("Save Database only works in Editor");
-#endif
+			bool externalOnly = !Application.isEditor;
+			ResourceSerializer.SaveDatabase(ResourceManager.database, verbose: true, externalOnly: externalOnly);
 		}
 
 		public void ImportMapAsAtomic()
