@@ -195,16 +195,6 @@
     "model": "E6ca5M"
   },
   {
-    "id": "3GVJyw",
-    "name": "ind legacy wall straight",
-    "model": "4PiACt"
-  },
-  {
-    "id": "5Un9xE",
-    "name": "ind legacy wall corner",
-    "model": "C0cxAM"
-  },
-  {
     "id": "DvCe9T",
     "name": "egy tile door",
     "model": "224jrK",
@@ -648,24 +638,9 @@
     "model": "7G1eUR"
   },
   {
-    "id": "4nKU0M",
-    "name": "debug tile",
-    "model": "6aw3ju"
-  },
-  {
     "id": "603Cit",
     "name": "legacy pyramid",
     "model": "2d8rDa"
-  },
-  {
-    "id": "74Y092",
-    "name": "ind tile boundary 2",
-    "model": "47aajq"
-  },
-  {
-    "id": "1u4HhK",
-    "name": "ind tile boundary 3",
-    "model": "1TK6U0"
   },
   {
     "id": "AEDTuj",
