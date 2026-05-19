@@ -869,7 +869,7 @@ MonoBehaviour:
     - line: '|   webGLExceptionSupport: 1'
     - line: '|   webGLNameFilesAsHashes: 1'
     - line: '|   webGLShowDiagnostics: 0'
-    - line: '|   webGLDataCaching: 0'
+    - line: '|   webGLDataCaching: 1'
     - line: '|   webGLDebugSymbols: 0'
     - line: '|   webGLEmscriptenArgs: '
     - line: '|   webGLModulesDirectory: '
