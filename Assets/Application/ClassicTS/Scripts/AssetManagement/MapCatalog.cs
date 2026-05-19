@@ -249,6 +249,7 @@ using UnityEditor;
 			WriteJsonIfChanged(path, json);
 
 			CachedMaps[map.HashID] = map;
+			WebGLPersistentStorage.Flush();
 			return true;
 		}
 
@@ -464,6 +465,7 @@ using UnityEditor;
 
 			File.Delete(file);
 			CachedMaps.Remove(hash);
+			WebGLPersistentStorage.Flush();
 			return true;
 		}
 

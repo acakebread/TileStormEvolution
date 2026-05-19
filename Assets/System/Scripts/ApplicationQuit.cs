@@ -16,6 +16,7 @@ namespace MassiveHadronLtd
 		private static void OnQuitting()
 		{
 			IsQuitting = true;
+			WebGLPersistentStorage.Flush();
 		}
 	}
 }

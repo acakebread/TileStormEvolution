@@ -157,5 +157,36 @@ mergeInto(LibraryManager.library, {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  },
+
+  MassiveHadron_SyncPersistentData: function (populate, receiverPtr, onCompletePtr) {
+    var receiver = UTF8ToString(receiverPtr);
+    var onComplete = UTF8ToString(onCompletePtr);
+
+    function finish(success, message) {
+      var payload = success ? '1' : '0';
+      if (message && message.length > 0) {
+        payload += '|' + message;
+      }
+      SendMessage(receiver, onComplete, payload);
+    }
+
+    try {
+      if (typeof FS === 'undefined' || typeof FS.syncfs !== 'function') {
+        finish(false, 'FS.syncfs unavailable');
+        return;
+      }
+
+      FS.syncfs(!!populate, function (err) {
+        if (err) {
+          finish(false, err.message || String(err));
+          return;
+        }
+
+        finish(true, '');
+      });
+    } catch (ex) {
+      finish(false, ex && ex.message ? ex.message : String(ex));
+    }
   }
 });

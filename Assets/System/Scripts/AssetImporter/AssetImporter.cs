@@ -52,6 +52,7 @@ namespace MassiveHadronLtd
 			CopyDependenciesWithStructure(sourceObjPath, importRoot);
 			if (registerImported)
 				ModelResourceTable.RegisterImported(string.IsNullOrWhiteSpace(forcedHashId) ? ExtractImportHash(sourceObjPath, importOption) : forcedHashId, destObjPath);
+			WebGLPersistentStorage.Flush();
 
 			Debug.Log($"Import completed: {importRoot}");
 			return destObjPath;

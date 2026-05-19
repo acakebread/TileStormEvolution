@@ -201,6 +201,7 @@ namespace ClassicTilestorm
 				var json = JsonConvert.SerializeObject(definition, Formatting.Indented, DefinitionSerializerSettings);
 				WriteJsonIfChanged(Path.Combine(PersistentDefinitionsFolder, BuildFileName(definition)), json);
 				ExternalDefinitionsLoaded = false;
+				WebGLPersistentStorage.Flush();
 				return true;
 			}
 			catch (Exception ex)
@@ -223,6 +224,7 @@ namespace ClassicTilestorm
 
 			File.Delete(file);
 			ExternalDefinitionsLoaded = false;
+			WebGLPersistentStorage.Flush();
 			return true;
 		}
 

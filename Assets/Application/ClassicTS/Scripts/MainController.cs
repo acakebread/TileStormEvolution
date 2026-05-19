@@ -86,6 +86,19 @@ namespace ClassicTilestorm
 			};
 
 			if (!FindAnyObjectByType<EventSystem>()) new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+			WebGLPersistentStorage.EnsureLoaded(_ => CompleteStartupInitialization());
+#else
+			CompleteStartupInitialization();
+#endif
+		}
+
+		private void CompleteStartupInitialization()
+		{
+			if (gameController != null)
+				return;
+
 			ResourceSerializer.Initialise();
 			gameController = gameObject.AddComponent<GameController>();
 			editorController = gameObject.AddComponent<EditorController>();
@@ -255,9 +268,18 @@ namespace ClassicTilestorm
 
 		public void LoadDatabase()
 		{
-			#if UNITY_EDITOR
+#if UNITY_WEBGL && !UNITY_EDITOR
+			WebGLPersistentStorage.EnsureLoaded(_ => ReloadDatabaseNow());
+#else
+			ReloadDatabaseNow();
+#endif
+		}
+
+		private void ReloadDatabaseNow()
+		{
+#if UNITY_EDITOR
 			UnityEditor.AssetDatabase.Refresh();
-			#endif
+#endif
 
 			ResourceSerializer.Initialise();
 
@@ -285,6 +307,7 @@ namespace ClassicTilestorm
 
 			bool externalOnly = !Application.isEditor;
 			ResourceSerializer.SaveDatabase(ResourceManager.database, verbose: true, externalOnly: externalOnly);
+			WebGLPersistentStorage.Flush();
 		}
 
 		public void ImportMapAsAtomic()
