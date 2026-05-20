@@ -25,6 +25,7 @@ Creators can also publish maps back to the same repository from inside the build
 - Click `Publish Current`.
 
 The app commits the exported map file into the repo, then updates `manifest.json` so the new map appears in the browser list.
+It also writes a separate preview thumbnail into `thumbs/` using the same map hash as the filename, so the image stays out of the map package itself.
 
 ## Recommended repository layout
 
@@ -34,6 +35,7 @@ Inside that repository:
 
 - `manifest.json` at the repository root
 - `maps/` folder containing exported map packages
+- `thumbs/` folder containing preview thumbnails named `<mapHash>.png`
 
 Example manifest:
 
@@ -72,6 +74,7 @@ Create these items in the repository:
 
 - `manifest.json`
 - `maps/` directory
+- `thumbs/` directory
 
 If you do it through the GitHub web UI:
 
@@ -81,6 +84,7 @@ If you do it through the GitHub web UI:
 4. Paste the JSON example above.
 5. Commit the file.
 6. Create the `maps/` folder by adding a file inside it, for example `maps/.gitkeep`, then commit.
+7. Create the `thumbs/` folder the same way if you want the directory to exist before the first upload.
 
 ## Step 4: Create an upload token
 
@@ -135,6 +139,7 @@ In a build with the upload token configured:
 5. Refresh the browser list.
 
 If everything is wired correctly, the new map should now appear in the manifest and become available to all players after the Pages site updates.
+The matching thumbnail will live at `thumbs/<mapHash>.png` and can be loaded by the portal without being bundled into the map file.
 
 ## CORS
 
@@ -153,6 +158,10 @@ The published Pages site itself is just static files, so the player browser can 
 - The new map does not appear in the browser
   - Confirm the app updated `manifest.json` in the repo.
   - Wait for GitHub Pages to rebuild, then refresh the shared panel.
+
+- The map appears but the thumbnail is missing
+  - Confirm the matching file exists at `thumbs/<mapHash>.png`.
+  - If the map was deleted and re-uploaded, make sure the thumbnail was generated again for the current hash.
 
 - The repo URL is not inferred correctly
   - Fill in `Map Repository GitHub Repository` manually as `owner/repository`.

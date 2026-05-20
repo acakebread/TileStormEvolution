@@ -139,6 +139,18 @@ namespace ClassicTilestorm
 			return AddCacheBust(BuildUrl("maps/" + entry.fileName));
 		}
 
+		internal static string BuildThumbnailUrl(Entry entry)
+		{
+			if (entry == null)
+				return null;
+
+			string key = BuildThumbnailKey(entry);
+			if (string.IsNullOrWhiteSpace(key))
+				return null;
+
+			return BuildUrl($"thumbs/{key}.png");
+		}
+
 		internal static IEnumerator FetchManifest(Action<Manifest> onSuccess, Action<string> onError)
 		{
 			if (!TryGetBaseUrl(out var baseUrl))
@@ -381,6 +393,40 @@ namespace ClassicTilestorm
 				}
 			}
 
+			string thumbnailPath = BuildThumbnailPath(entry);
+			if (!string.IsNullOrWhiteSpace(thumbnailPath))
+			{
+				string thumbSha = null;
+				string thumbFetchError = null;
+				yield return FetchGitHubContent(repository, thumbnailPath, token,
+					content => thumbSha = content?.sha,
+					(statusCode, errorText) =>
+					{
+						if (statusCode != 404)
+							thumbFetchError = BuildGitHubError("Failed to inspect thumbnail before deletion", statusCode, errorText);
+					});
+
+				if (!string.IsNullOrWhiteSpace(thumbFetchError))
+				{
+					onError?.Invoke(thumbFetchError);
+					yield break;
+				}
+
+				if (!string.IsNullOrWhiteSpace(thumbSha))
+				{
+					string deleteError = null;
+					yield return DeleteGitHubContent(repository, thumbnailPath, token, $"Delete TileStorm map thumbnail {entry.DisplayName}", thumbSha,
+						(success, statusCode, responseText) =>
+						{
+							if (!success)
+								deleteError = BuildGitHubError("Failed to delete thumbnail file", statusCode, responseText);
+						});
+
+					if (!string.IsNullOrWhiteSpace(deleteError))
+						Debug.LogWarning(deleteError);
+				}
+			}
+
 			string manifestFetchError = null;
 			GitHubContentResponse manifestContent = null;
 			yield return FetchGitHubContent(repository, ManifestFileName, token,
@@ -504,6 +550,53 @@ namespace ClassicTilestorm
 				yield break;
 			}
 
+			byte[] thumbnailBytes = null;
+			string thumbnailError = null;
+			yield return MapThumbnailGenerator.CapturePng(
+				map,
+				bytes => thumbnailBytes = bytes,
+				error => thumbnailError = error,
+				MapThumbnailGenerator.DefaultThumbnailWidth,
+				MapThumbnailGenerator.DefaultThumbnailHeight);
+
+			if (!string.IsNullOrWhiteSpace(thumbnailError))
+				Debug.LogWarning(thumbnailError);
+
+			string thumbnailPath = BuildThumbnailPath(map, export);
+			if (thumbnailBytes != null && thumbnailBytes.Length > 0 && !string.IsNullOrWhiteSpace(thumbnailPath))
+			{
+				string thumbnailBase64 = Convert.ToBase64String(thumbnailBytes);
+				string thumbnailSha = null;
+				string thumbnailFetchError = null;
+				yield return FetchGitHubContent(repository, thumbnailPath, uploadToken,
+					content => thumbnailSha = content?.sha,
+					(statusCode, errorText) =>
+					{
+						if (statusCode != 404)
+							thumbnailFetchError = BuildGitHubError("Failed to inspect existing thumbnail file", statusCode, errorText);
+					});
+
+				if (!string.IsNullOrWhiteSpace(thumbnailFetchError))
+				{
+					onError?.Invoke(thumbnailFetchError);
+					yield break;
+				}
+
+				string thumbnailCommitMessage = $"Publish map thumbnail {(string.IsNullOrWhiteSpace(map.name) ? "Untitled" : map.name)}";
+				string thumbnailWriteError = null;
+				yield return PutGitHubContent(repository, thumbnailPath, uploadToken, thumbnailCommitMessage, thumbnailBase64, "image/png", thumbnailSha,
+					(success, statusCode, responseText) =>
+					{
+						if (!success)
+							thumbnailWriteError = BuildGitHubError("Failed to publish thumbnail file", statusCode, responseText);
+					});
+
+				if (!string.IsNullOrWhiteSpace(thumbnailWriteError))
+				{
+					Debug.LogWarning(thumbnailWriteError);
+				}
+			}
+
 			string manifestFetchError = null;
 			GitHubContentResponse manifestContent = null;
 			yield return FetchGitHubContent(repository, ManifestFileName, uploadToken,
@@ -590,6 +683,39 @@ namespace ClassicTilestorm
 
 		private static string BuildRepositoryMapFileName(Map map, ResourceSerializer.AtomicMapExportData export)
 		{
+			string baseName = BuildRepositoryResourceBaseName(map, export);
+			string extension = export.IsArchive ? ".zip" : ".json";
+			return $"{baseName}{extension}";
+		}
+
+		private static string BuildThumbnailPath(Map map, ResourceSerializer.AtomicMapExportData export)
+		{
+			string baseName = BuildRepositoryResourceBaseName(map, export);
+			return string.IsNullOrWhiteSpace(baseName) ? null : $"thumbs/{baseName}.png";
+		}
+
+		private static string BuildThumbnailPath(Entry entry)
+		{
+			string baseName = BuildThumbnailKey(entry);
+			return string.IsNullOrWhiteSpace(baseName) ? null : $"thumbs/{baseName}.png";
+		}
+
+		private static string BuildThumbnailKey(Entry entry)
+		{
+			if (entry == null)
+				return null;
+
+			if (!string.IsNullOrWhiteSpace(entry.mapHash))
+				return entry.mapHash.Trim();
+
+			if (!string.IsNullOrWhiteSpace(entry.fileName))
+				return Path.GetFileNameWithoutExtension(entry.fileName).Trim();
+
+			return null;
+		}
+
+		private static string BuildRepositoryResourceBaseName(Map map, ResourceSerializer.AtomicMapExportData export)
+		{
 			if (map != null)
 				map.EnsureHashID();
 
@@ -597,8 +723,7 @@ namespace ClassicTilestorm
 			if (string.IsNullOrWhiteSpace(hash))
 				hash = Path.GetFileNameWithoutExtension(export.FileName);
 
-			string extension = export.IsArchive ? ".zip" : ".json";
-			return $"{hash}{extension}";
+			return hash;
 		}
 
 		private static IEnumerator FetchGitHubContent(GitHubRepositoryInfo repository, string path, string token, Action<GitHubContentResponse> onSuccess, Action<int, string> onNotFoundOrError)
