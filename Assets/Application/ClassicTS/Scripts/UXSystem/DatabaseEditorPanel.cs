@@ -772,7 +772,7 @@ namespace ClassicTilestorm
 			var list = ResourceManager.Maps.ToList();
 			list.Insert(insertIndex, newMap);
 			Map.EnsureUniqueHashIDs(list);
-			newMap.name = $"NEW_MAP_{HTB50Settings.ToString(newMap.HashID)}";
+			newMap.name = $"user_map_{HTB50Settings.ToString(newMap.HashID)}";
 			ResourceManager.database.maps = list.ToArray();
 			ResourceManager.SyncMapIds();
 
