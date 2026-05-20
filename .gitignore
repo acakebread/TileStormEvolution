@@ -13,6 +13,8 @@
 /[Aa]ssets/[Pp]rivate/*
 /[Aa]ssets/Resources/AssetManifests.meta
 /[Aa]ssets/Resources/AssetManifests/*
+/[Aa]ssets/Resources/PerformanceTestRun*.json
+/[Aa]ssets/Resources/PerformanceTestRun*.json.meta
 /.utmp
 
 # MemoryCaptures can get excessive in size.
