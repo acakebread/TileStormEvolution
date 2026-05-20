@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TileStorm Authoring Guide</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, sans-serif;
+      background: #0f1115;
+      color: #eef2f8;
+      line-height: 1.7;
+    }
+    main {
+      width: min(900px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 32px 0 56px;
+    }
+    .panel {
+      background: rgba(18, 22, 30, 0.95);
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 18px;
+      padding: 24px;
+    }
+    h1, h2 { line-height: 1.15; }
+    h1 { margin-top: 0; }
+    h2 { margin-top: 30px; }
+    p, li { color: #aab4c3; }
+    a { color: #8ad4ff; }
+    ul { padding-left: 20px; }
+    .small { font-size: 0.95rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="panel">
+      <p class="small"><a href="./index.html">Back to portal</a></p>
+      <h1>TileStorm Content Authoring Guide</h1>
+      <p>
+        This is a short placeholder guide for creators and submitters. It covers the basics only so the portal stays simple.
+      </p>
+
+      <h2>1. Create Content</h2>
+      <ul>
+        <li>Build a map in TileStorm and keep the final published version clean.</li>
+        <li>Use the in-game publish flow to generate the export package.</li>
+        <li>The published map file stays in `maps/`; the preview image stays in `thumbs/`.</li>
+      </ul>
+
+      <h2>2. Submit Content</h2>
+      <ul>
+        <li>Open the shared map panel in a build with publish access.</li>
+        <li>Press <strong>Publish Current</strong>.</li>
+        <li>The upload will send the map package and a matching thumbnail separately using the same hash name.</li>
+      </ul>
+
+      <h2>3. Download Content</h2>
+      <ul>
+        <li>Open the portal landing page.</li>
+        <li>Pick a map and open its map file link or import it through the game.</li>
+        <li>The thumbnail is just a preview asset and is not part of the map export.</li>
+      </ul>
+
+      <h2>4. Notes</h2>
+      <ul>
+        <li>Delete by hash removes the map file and the matching thumbnail.</li>
+        <li>Keep thumbnails small and readable.</li>
+        <li>This guide is intentionally not exhaustive.</li>
+      </ul>
+    </div>
+  </main>
+</body>
+</html>
