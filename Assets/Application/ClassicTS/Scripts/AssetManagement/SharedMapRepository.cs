@@ -101,10 +101,21 @@ namespace ClassicTilestorm
 			public string sha;
 		}
 
+		[Serializable]
+		private sealed class GitHubDeleteRequest
+		{
+			public string message;
+			public string sha;
+			public string branch;
+		}
+
 		internal static bool HasConfiguredBaseUrl => !string.IsNullOrWhiteSpace(ApplicationSettings.MapRepositoryBaseUrl);
 
-		internal static string BuildManifestUrl()
-			=> BuildUrl(ManifestFileName);
+		internal static string BuildManifestUrl(bool cacheBust = false)
+		{
+			string url = BuildUrl(ManifestFileName);
+			return cacheBust ? AddCacheBust(url) : url;
+		}
 
 		internal static string BuildUploadUrl()
 			=> BuildUrl(UploadPath);
@@ -117,15 +128,15 @@ namespace ClassicTilestorm
 			if (!string.IsNullOrWhiteSpace(entry.downloadUrl))
 			{
 				if (Uri.TryCreate(entry.downloadUrl, UriKind.Absolute, out var absolute))
-					return absolute.ToString();
+					return AddCacheBust(absolute.ToString());
 
-				return BuildUrl(entry.downloadUrl);
+				return AddCacheBust(BuildUrl(entry.downloadUrl));
 			}
 
 			if (string.IsNullOrWhiteSpace(entry.fileName))
 				return null;
 
-			return BuildUrl("maps/" + entry.fileName);
+			return AddCacheBust(BuildUrl("maps/" + entry.fileName));
 		}
 
 		internal static IEnumerator FetchManifest(Action<Manifest> onSuccess, Action<string> onError)
@@ -136,7 +147,7 @@ namespace ClassicTilestorm
 				yield break;
 			}
 
-			using var request = UnityWebRequest.Get(BuildManifestUrl());
+			using var request = UnityWebRequest.Get(BuildManifestUrl(cacheBust: true));
 			request.downloadHandler = new DownloadHandlerBuffer();
 			yield return request.SendWebRequest();
 
@@ -301,6 +312,142 @@ namespace ClassicTilestorm
 				response.debugResponse = request.downloadHandler?.text;
 
 			onSuccess?.Invoke(response);
+		}
+
+		internal static IEnumerator DeleteMap(Entry entry, Action<string> onSuccess, Action<string> onError)
+		{
+			if (entry == null)
+			{
+				onError?.Invoke("No repository entry was selected.");
+				yield break;
+			}
+
+			if (!TryGetBaseUrl(out var baseUrl))
+			{
+				onError?.Invoke("Repository URL is not configured.");
+				yield break;
+			}
+
+			if (!TryGetGitHubRepositoryInfo(baseUrl, out var repository))
+			{
+				onError?.Invoke("Deletion is currently only supported for GitHub Pages repositories.");
+				yield break;
+			}
+
+			string token = ApplicationSettings.MapRepositoryUploadKey;
+			if (string.IsNullOrWhiteSpace(token))
+			{
+				onError?.Invoke("GitHub upload token is not configured.");
+				yield break;
+			}
+
+			string filePath = string.IsNullOrWhiteSpace(entry.fileName)
+				? null
+				: $"maps/{Path.GetFileName(entry.fileName)}";
+
+			if (!string.IsNullOrWhiteSpace(filePath))
+			{
+				string mapSha = null;
+				string mapFetchError = null;
+				yield return FetchGitHubContent(repository, filePath, token,
+					content => mapSha = content?.sha,
+					(statusCode, errorText) =>
+					{
+						if (statusCode != 404)
+							mapFetchError = BuildGitHubError("Failed to inspect map file before deletion", statusCode, errorText);
+					});
+
+				if (!string.IsNullOrWhiteSpace(mapFetchError))
+				{
+					onError?.Invoke(mapFetchError);
+					yield break;
+				}
+
+				if (!string.IsNullOrWhiteSpace(mapSha))
+				{
+					string deleteError = null;
+					yield return DeleteGitHubContent(repository, filePath, token, $"Delete TileStorm map {entry.DisplayName}", mapSha,
+						(success, statusCode, responseText) =>
+						{
+							if (!success)
+								deleteError = BuildGitHubError("Failed to delete map file", statusCode, responseText);
+						});
+
+					if (!string.IsNullOrWhiteSpace(deleteError))
+					{
+						onError?.Invoke(deleteError);
+						yield break;
+					}
+				}
+			}
+
+			string manifestFetchError = null;
+			GitHubContentResponse manifestContent = null;
+			yield return FetchGitHubContent(repository, ManifestFileName, token,
+				content => manifestContent = content,
+				(statusCode, errorText) =>
+				{
+					if (statusCode != 404)
+						manifestFetchError = BuildGitHubError("Failed to inspect manifest before deletion", statusCode, errorText);
+				});
+
+			if (!string.IsNullOrWhiteSpace(manifestFetchError))
+			{
+				onError?.Invoke(manifestFetchError);
+				yield break;
+			}
+
+			Manifest manifest = null;
+			try
+			{
+				if (!string.IsNullOrWhiteSpace(manifestContent?.content))
+				{
+					string manifestJson = DecodeGitHubBase64(manifestContent.content, manifestContent.encoding);
+					if (!string.IsNullOrWhiteSpace(manifestJson))
+						manifest = JsonConvert.DeserializeObject<Manifest>(manifestJson);
+				}
+			}
+			catch (Exception ex)
+			{
+				onError?.Invoke($"Failed to parse repository manifest: {ex.Message}");
+				yield break;
+			}
+
+			manifest ??= new Manifest();
+			manifest.repositoryName = string.IsNullOrWhiteSpace(manifest.repositoryName) ? "TileStorm Shared Maps" : manifest.repositoryName;
+			manifest.entries ??= Array.Empty<Entry>();
+
+			int beforeCount = manifest.entries.Length;
+			manifest.entries = manifest.entries
+				.Where(existing => existing != null && !EntryMatches(existing, entry))
+				.OrderByDescending(existing => existing.UpdatedUtcDateTime)
+				.ThenBy(existing => existing.DisplayName, StringComparer.OrdinalIgnoreCase)
+				.ToArray();
+			manifest.generatedUtc = DateTime.UtcNow.ToString("o");
+
+			if (manifestContent == null && beforeCount == manifest.entries.Length)
+			{
+				onSuccess?.Invoke($"Deleted {entry.DisplayName} file if present. No manifest entry was found.");
+				yield break;
+			}
+
+			string manifestJsonPayload = JsonConvert.SerializeObject(manifest, Formatting.Indented);
+			string manifestBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(manifestJsonPayload));
+			string manifestWriteError = null;
+			yield return PutGitHubContent(repository, ManifestFileName, token, "Update TileStorm map manifest after deletion", manifestBase64, "application/json; charset=utf-8", manifestContent?.sha,
+				(success, statusCode, responseText) =>
+				{
+					if (!success)
+						manifestWriteError = BuildGitHubError("Failed to update manifest after deletion", statusCode, responseText);
+				});
+
+			if (!string.IsNullOrWhiteSpace(manifestWriteError))
+			{
+				onError?.Invoke(manifestWriteError);
+				yield break;
+			}
+
+			onSuccess?.Invoke($"Deleted {entry.DisplayName} from the shared repository.");
 		}
 
 		private static IEnumerator UploadCurrentMapToGitHub(Map map, bool crop, bool padded, bool verbose, GitHubRepositoryInfo repository, Action<UploadResponse> onSuccess, Action<string> onError)
@@ -492,6 +639,29 @@ namespace ClassicTilestorm
 			onComplete?.Invoke(success, (int)request.responseCode, request.downloadHandler?.text);
 		}
 
+		private static IEnumerator DeleteGitHubContent(GitHubRepositoryInfo repository, string path, string token, string message, string sha, Action<bool, int, string> onComplete)
+		{
+			var payload = new GitHubDeleteRequest
+			{
+				message = message,
+				sha = sha,
+				branch = string.IsNullOrWhiteSpace(repository.branch) ? "main" : repository.branch
+			};
+
+			string json = JsonConvert.SerializeObject(payload, Formatting.None);
+			using var request = new UnityWebRequest(BuildGitHubContentsWriteUrl(repository, path), UnityWebRequest.kHttpVerbDELETE);
+			request.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(json));
+			request.downloadHandler = new DownloadHandlerBuffer();
+			request.SetRequestHeader("Content-Type", "application/json; charset=utf-8");
+			ApplyGitHubHeaders(request, token);
+			yield return request.SendWebRequest();
+
+			bool success = request.result == UnityWebRequest.Result.Success && request.responseCode == 200;
+			if (!success)
+				Debug.LogWarning($"SharedMapRepository GitHub DELETE failed for '{path}': HTTP {(int)request.responseCode} {request.error}\n{request.downloadHandler?.text}");
+			onComplete?.Invoke(success, (int)request.responseCode, request.downloadHandler?.text);
+		}
+
 		private static void ApplyGitHubHeaders(UnityWebRequest request, string token)
 		{
 			if (request == null)
@@ -538,6 +708,23 @@ namespace ClassicTilestorm
 				return $"{prefix}: HTTP {statusCode} ({responseText})";
 
 			return $"{prefix}: HTTP {statusCode}";
+		}
+
+		private static bool EntryMatches(Entry left, Entry right)
+		{
+			if (left == null || right == null)
+				return false;
+
+			return Matches(left.fileName, right.fileName) ||
+			       Matches(left.id, right.id) ||
+			       Matches(left.mapHash, right.mapHash) ||
+			       Matches(left.fileName, right.id) ||
+			       Matches(left.id, right.fileName);
+
+			static bool Matches(string a, string b)
+				=> !string.IsNullOrWhiteSpace(a) &&
+				   !string.IsNullOrWhiteSpace(b) &&
+				   string.Equals(a.Trim(), b.Trim(), StringComparison.OrdinalIgnoreCase);
 		}
 
 		private static string DecodeGitHubBase64(string content, string encoding)
@@ -646,6 +833,15 @@ namespace ClassicTilestorm
 				return baseUrl.TrimEnd('/');
 
 			return $"{baseUrl.TrimEnd('/')}/{relativePath}";
+		}
+
+		private static string AddCacheBust(string url)
+		{
+			if (string.IsNullOrWhiteSpace(url))
+				return url;
+
+			string separator = url.Contains("?") ? "&" : "?";
+			return $"{url}{separator}ts={DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}";
 		}
 
 		private static void NormalizeManifest(Manifest manifest, string baseUrl)

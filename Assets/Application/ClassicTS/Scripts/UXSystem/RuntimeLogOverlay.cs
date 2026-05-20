@@ -19,6 +19,7 @@ namespace ClassicTilestorm
 		private Rect windowRect = new Rect(30f, 60f, 760f, 520f);
 		private Vector2 scroll;
 		private bool isOpen;
+		private ImguiRaycastBlocker raycastBlocker;
 
 		[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
 		private static void Bootstrap()
@@ -113,6 +114,9 @@ namespace ClassicTilestorm
 			if (instance == this)
 				instance = null;
 
+			raycastBlocker?.Destroy();
+			raycastBlocker = null;
+
 			if (subscribed && instance == null)
 			{
 				Application.logMessageReceived -= HandleUnityLog;
@@ -120,9 +124,19 @@ namespace ClassicTilestorm
 			}
 		}
 
+		private void OnDisable()
+		{
+			raycastBlocker?.SetVisible(false);
+		}
+
 		private void SetOpen(bool open)
 		{
 			isOpen = open;
+			if (isOpen)
+				SyncRaycastBlocker();
+			else
+				raycastBlocker?.SetVisible(false);
+
 			enabled = isOpen;
 		}
 
@@ -134,7 +148,23 @@ namespace ClassicTilestorm
 			EnsureStyles();
 			windowRect.width = Mathf.Min(windowRect.width, Screen.width - 20f);
 			windowRect.height = Mathf.Min(windowRect.height, Screen.height - 20f);
+			var previousRect = windowRect;
 			windowRect = GUILayout.Window(WindowId, windowRect, DrawWindow, "Runtime Log", windowStyle);
+			SyncRaycastBlocker();
+			ImguiInputBlocker.BlockMouseInput(windowRect);
+			ImguiInputBlocker.BlockMouseInput(previousRect);
+		}
+
+		private void SyncRaycastBlocker()
+		{
+			if (!isOpen)
+			{
+				raycastBlocker?.SetVisible(false);
+				return;
+			}
+
+			raycastBlocker ??= new ImguiRaycastBlocker($"{nameof(RuntimeLogOverlay)} Raycast Blocker");
+			raycastBlocker.Sync(windowRect);
 		}
 
 		private void DrawWindow(int id)

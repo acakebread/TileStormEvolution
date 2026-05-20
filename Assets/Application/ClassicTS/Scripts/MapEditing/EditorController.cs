@@ -250,7 +250,11 @@ namespace ClassicTilestorm
 				currentWorld,
 				inFocus: !mouseOverGUI);
 
-			if (!ViewPreviewUtil.IsInFocus && mouseOverGUI) return;
+			if (!ViewPreviewUtil.IsInFocus && mouseOverGUI)
+			{
+				FinishGestureIfReleasedOverGui();
+				return;
+			}
 			if (IsSingleSelect && selection[0].OnGizmoInput(this)) return;
 			if (ViewPreviewUtil.IsInFocus) return;
 
@@ -368,6 +372,25 @@ namespace ClassicTilestorm
 						if (InputX.GetMouseButtonUp(0))
 							SetMode(ControllerMode.SelectAttachment);
 					}
+					break;
+			}
+		}
+
+		private void FinishGestureIfReleasedOverGui()
+		{
+			if (InputX.GetMouseButton(0) || InputX.GetMouseButton(1) || InputX.GetMouseButton(2))
+				return;
+
+			switch (mode)
+			{
+				case ControllerMode.Evaluate:
+					SetMode(ControllerMode.Idle);
+					break;
+				case ControllerMode.DragTile:
+					SetMode(ControllerMode.SelectTile);
+					break;
+				case ControllerMode.DragAttachment:
+					SetMode(ControllerMode.SelectAttachment);
 					break;
 			}
 		}

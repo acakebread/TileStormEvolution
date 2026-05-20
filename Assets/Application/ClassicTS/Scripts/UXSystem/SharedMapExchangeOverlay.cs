@@ -18,7 +18,9 @@ namespace ClassicTilestorm
 		private static readonly Rect DefaultWindowRect = new Rect(40f, 80f, 840f, 600f);
 		private static GUIStyle windowStyle;
 		private static GUIStyle helpStyle;
-		private static GUIStyle selectedBoxStyle;
+		private static GUIStyle localBoxStyle;
+		private static GUIStyle remoteBoxStyle;
+		private static GUIStyle mixedBoxStyle;
 
 		private bool isOpen;
 		private bool isRefreshing;
@@ -28,8 +30,10 @@ namespace ClassicTilestorm
 		private string detailLine;
 		private string repositoryUrl;
 		private IReadOnlyList<SharedMapRepository.Entry> entries = Array.Empty<SharedMapRepository.Entry>();
-		private SharedMapRepository.Entry selectedEntry;
-		private string selectedFilePath;
+		private IReadOnlyList<CatalogRow> catalogRows = Array.Empty<CatalogRow>();
+		private SharedMapRepository.Entry pendingDeleteEntry;
+		private ImguiRaycastBlocker raycastBlocker;
+		private float deleteConfirmUntil;
 
 		public static void Open() => EnsureInstance().SetOpen(true);
 		public static void Toggle()
@@ -78,6 +82,14 @@ namespace ClassicTilestorm
 		{
 			if (instance == this)
 				instance = null;
+
+			raycastBlocker?.Destroy();
+			raycastBlocker = null;
+		}
+
+		private void OnDisable()
+		{
+			raycastBlocker?.SetVisible(false);
 		}
 
 		private void SetOpen(bool open)
@@ -87,10 +99,12 @@ namespace ClassicTilestorm
 			{
 				repositoryUrl = ApplicationSettings.MapRepositoryBaseUrl;
 				enabled = true;
+				SyncRaycastBlocker();
 				RefreshRepository();
 			}
 			else
 			{
+				raycastBlocker?.SetVisible(false);
 				enabled = false;
 			}
 		}
@@ -100,13 +114,29 @@ namespace ClassicTilestorm
 			if (!isOpen)
 				return;
 
-			windowRect = GUILayout.Window(0x5A11D, windowRect, DrawWindow, "Online Map Repository", GetWindowStyle());
+			var previousRect = windowRect;
+			windowRect = GUILayout.Window(0x5A11D, windowRect, DrawWindow, "Map Catalogue", GetWindowStyle());
+			SyncRaycastBlocker();
+			ImguiInputBlocker.BlockMouseInput(windowRect);
+			ImguiInputBlocker.BlockMouseInput(previousRect);
+		}
+
+		private void SyncRaycastBlocker()
+		{
+			if (!isOpen)
+			{
+				raycastBlocker?.SetVisible(false);
+				return;
+			}
+
+			raycastBlocker ??= new ImguiRaycastBlocker($"{nameof(SharedMapExchangeOverlay)} Raycast Blocker");
+			raycastBlocker.Sync(windowRect);
 		}
 
 		private void DrawWindow(int windowId)
 		{
-			GUILayout.Label("This panel reads a GitHub Pages map repository over HTTPS. Players only need to open it, pick a map, and import.", GetHelpStyle());
-			GUILayout.Label("Publishers can commit the current map back to the repository if an upload token is configured locally or in the build.", GetHelpStyle());
+			GUILayout.Label("This catalogue combines the current loaded map, local user maps, and the live shared repository manifest. Built-in levels are hidden.", GetHelpStyle());
+			GUILayout.Label("GitHub Pages can take a short while to publish changes, so Refresh shows whatever the public manifest says right now.", GetHelpStyle());
 
 			GUILayout.Space(10f);
 			GUILayout.BeginHorizontal();
@@ -120,12 +150,8 @@ namespace ClassicTilestorm
 
 			GUILayout.Space(6f);
 			GUILayout.BeginHorizontal();
-			if (GUILayout.Button("Import Selected", GUILayout.Height(30f)))
-				ImportSelectedEntry();
-			if (GUILayout.Button("Import Latest", GUILayout.Height(30f)))
-				ImportLatestEntry();
-			if (GUILayout.Button("Publish Current", GUILayout.Height(30f)))
-				PublishCurrentMap();
+			if (GUILayout.Button("Import / Update All Remote", GUILayout.Height(30f)))
+				ImportAllRemoteMaps();
 			GUILayout.EndHorizontal();
 
 			if (!string.IsNullOrWhiteSpace(statusLine))
@@ -142,62 +168,46 @@ namespace ClassicTilestorm
 			if (isRefreshing)
 				GUILayout.Label("Loading repository manifest...");
 
-			GUILayout.Label("Available maps:");
+			GUILayout.Label("Maps:");
 			scroll = GUILayout.BeginScrollView(scroll);
 
-			if (entries == null || entries.Count == 0)
+			if (catalogRows == null || catalogRows.Count == 0)
 			{
 				GUILayout.Label("No maps found.");
 			}
 			else
 			{
-				foreach (var entry in entries)
-					DrawEntry(entry);
+				foreach (var row in catalogRows)
+					DrawRow(row);
 			}
 
 			GUILayout.EndScrollView();
 
-			if (!string.IsNullOrWhiteSpace(selectedFilePath))
-			{
-				GUILayout.Space(8f);
-				GUILayout.Label($"Selected file: {selectedFilePath}");
-			}
-
 			GUI.DragWindow(new Rect(0, 0, 10000, 24));
 		}
 
-		private void DrawEntry(SharedMapRepository.Entry entry)
+		private void DrawRow(CatalogRow row)
 		{
-			if (entry == null)
+			if (row == null)
 				return;
 
-			bool isSelected = selectedEntry == entry;
-			var prevColor = GUI.color;
-			if (isSelected)
-				GUI.color = new Color(0.82f, 0.9f, 1f, 1f);
-
-			GUILayout.BeginVertical(isSelected ? GetSelectedBoxStyle() : GUI.skin.box);
-			GUILayout.Label(entry.DisplayName);
-			GUILayout.Label(string.IsNullOrWhiteSpace(entry.fileName) ? "<no file>" : entry.fileName);
-			GUILayout.Label($"{FormatSize(entry.sizeBytes)}  |  {FormatTimestamp(entry.UpdatedUtcDateTime)}");
-			if (!string.IsNullOrWhiteSpace(entry.description))
-				GUILayout.Label(entry.description, GetHelpStyle());
+			GUILayout.BeginVertical(GetRowStyle(row));
+			GUILayout.Label(row.DisplayName);
+			GUILayout.Label(row.SourceSummary, GetHelpStyle());
+			if (!string.IsNullOrWhiteSpace(row.DetailSummary))
+				GUILayout.Label(row.DetailSummary, GetHelpStyle());
 
 			GUILayout.BeginHorizontal();
-			if (GUILayout.Button(isSelected ? "Selected" : "Select", GUILayout.Width(90f)))
-				SelectEntry(entry);
-			if (GUILayout.Button("Import Now", GUILayout.Width(100f)))
-				StartImport(entry);
+			if (row.HasStoredLocal && GUILayout.Button("Load", GUILayout.Width(80f)))
+				LoadLocalMap(row);
+			if (row.HasRemote && GUILayout.Button(row.HasLocal ? "Update Local" : "Import", GUILayout.Width(110f)))
+				StartImport(row.RemoteEntry);
+			if (row.HasLocal && GUILayout.Button(row.IsCurrent ? "Publish Loaded" : "Publish", GUILayout.Width(120f)))
+				PublishLocalMap(row);
+			if (row.HasRemote && GUILayout.Button(IsDeleteConfirmationActive(row.RemoteEntry) ? "Confirm Delete" : "Delete Remote", GUILayout.Width(130f)))
+				DeleteMap(row.RemoteEntry);
 			GUILayout.EndHorizontal();
 			GUILayout.EndVertical();
-			GUI.color = prevColor;
-		}
-
-		private void SelectEntry(SharedMapRepository.Entry entry)
-		{
-			selectedEntry = entry;
-			selectedFilePath = entry?.fileName;
-			statusLine = entry == null ? "Selection cleared." : $"Selected {entry.DisplayName}.";
 		}
 
 		private void RefreshRepository()
@@ -224,12 +234,14 @@ namespace ClassicTilestorm
 				manifest =>
 				{
 					entries = manifest?.entries ?? Array.Empty<SharedMapRepository.Entry>();
-					selectedEntry = entries.FirstOrDefault();
-					selectedFilePath = selectedEntry?.fileName;
+					RebuildCatalogRows(forceRefreshLocal: true);
+					pendingDeleteEntry = null;
 					statusLine = string.IsNullOrWhiteSpace(manifest?.repositoryName)
-						? $"Loaded {entries.Count} map(s) from the repository."
-						: $"Loaded {entries.Count} map(s) from {manifest.repositoryName}.";
-					detailLine = null;
+						? $"Loaded {catalogRows.Count} catalogue entries, including {entries.Count} remote map(s)."
+						: $"Loaded {catalogRows.Count} catalogue entries, including {entries.Count} remote map(s) from {manifest.repositoryName}.";
+					detailLine = string.IsNullOrWhiteSpace(manifest?.generatedUtc)
+						? $"Manifest source: {SharedMapRepository.BuildManifestUrl()}"
+						: $"Manifest generated: {manifest.generatedUtc} | Source: {SharedMapRepository.BuildManifestUrl()}";
 				},
 				error =>
 				{
@@ -240,27 +252,66 @@ namespace ClassicTilestorm
 			isRefreshing = false;
 		}
 
-		private void ImportSelectedEntry()
+		private void RebuildCatalogRows(bool forceRefreshLocal)
 		{
-			if (selectedEntry == null)
+			var rows = new Dictionary<string, CatalogRow>(StringComparer.OrdinalIgnoreCase);
+			var internalHashes = MapCatalog.GetInternalMaps(forceRefreshLocal)
+				.Where(entry => entry.HashId != 0)
+				.Select(entry => entry.HashId)
+				.ToHashSet();
+
+			foreach (var persistentEntry in MapCatalog.GetExternalMaps(forceRefreshLocal))
 			{
-				statusLine = "Select a map first.";
-				return;
+				if (internalHashes.Contains(persistentEntry.HashId))
+					continue;
+
+				var row = GetOrCreateRow(rows, BuildLocalKey(persistentEntry));
+				row.PersistentEntry = persistentEntry;
 			}
 
-			StartImport(selectedEntry);
+			foreach (var remoteEntry in entries ?? Array.Empty<SharedMapRepository.Entry>())
+			{
+				if (remoteEntry == null)
+					continue;
+
+				if (TryGetRemoteHash(remoteEntry, out var remoteHash) && internalHashes.Contains(remoteHash))
+					continue;
+
+				var row = GetOrCreateRow(rows, BuildRemoteKey(remoteEntry));
+				if (!row.HasRemote || remoteEntry.UpdatedUtcDateTime > row.RemoteEntry.UpdatedUtcDateTime)
+					row.RemoteEntry = remoteEntry;
+			}
+
+			var currentMap = MainController.CurrentMap;
+			if (currentMap != null)
+			{
+				currentMap.EnsureHashID();
+				if (currentMap.HashID != 0 && !internalHashes.Contains(currentMap.HashID))
+					GetOrCreateRow(rows, BuildHashKey(currentMap.HashID)).CurrentMap = currentMap;
+			}
+
+			catalogRows = rows.Values
+				.Select(row =>
+				{
+					row.RefreshDerivedState();
+					return row;
+				})
+				.OrderByDescending(row => row.IsCurrent)
+				.ThenByDescending(row => row.RemoteUpdatedUtc)
+				.ThenBy(row => row.DisplayName, StringComparer.OrdinalIgnoreCase)
+				.ToArray();
 		}
 
-		private void ImportLatestEntry()
+		private static CatalogRow GetOrCreateRow(Dictionary<string, CatalogRow> rows, string key)
 		{
-			var latest = entries?.OrderByDescending(e => e.UpdatedUtcDateTime).FirstOrDefault() ?? entries?.FirstOrDefault();
-			if (latest == null)
+			key = string.IsNullOrWhiteSpace(key) ? Guid.NewGuid().ToString("N") : key;
+			if (!rows.TryGetValue(key, out var row))
 			{
-				statusLine = "No map entries are available.";
-				return;
+				row = new CatalogRow { Key = key };
+				rows[key] = row;
 			}
 
-			StartImport(latest);
+			return row;
 		}
 
 		private void StartImport(SharedMapRepository.Entry entry)
@@ -302,9 +353,9 @@ namespace ClassicTilestorm
 
 					ApplicationSettings.LoadMapName = HTB50Settings.ToString(imported.HashID);
 					controller.LoadMap(ApplicationSettings.LoadMapName);
-					selectedFilePath = entry.fileName;
 					statusLine = $"Imported {imported.name}.";
 					detailLine = null;
+					RebuildCatalogRows(forceRefreshLocal: true);
 				},
 				error =>
 				{
@@ -315,10 +366,34 @@ namespace ClassicTilestorm
 			isRefreshing = false;
 		}
 
-		private void PublishCurrentMap()
+		private void LoadLocalMap(CatalogRow row)
+		{
+			if (row == null || !row.HasLocal)
+				return;
+
+			var controller = FindAnyObjectByType<MainController>(FindObjectsInactive.Include);
+			if (controller == null)
+			{
+				statusLine = "No MainController was available to load the map.";
+				return;
+			}
+
+			ApplicationSettings.LoadMapName = HTB50Settings.ToString(row.LocalHash);
+			controller.LoadMap(ApplicationSettings.LoadMapName);
+			statusLine = $"Loaded {row.DisplayName}.";
+			RebuildCatalogRows(forceRefreshLocal: false);
+		}
+
+		private void PublishLocalMap(CatalogRow row)
 		{
 			if (isRefreshing)
 				return;
+
+			if (row == null || !row.HasLocal)
+			{
+				statusLine = "No local map is available to publish.";
+				return;
+			}
 
 			if (string.IsNullOrWhiteSpace(ApplicationSettings.MapRepositoryUploadKey))
 			{
@@ -326,14 +401,127 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			var map = MainController.CurrentMap;
+			var map = row.IsCurrent && MainController.CurrentMap != null
+				? MainController.CurrentMap
+				: row.LocalMap;
+
 			if (map == null)
 			{
-				statusLine = "No current map is loaded.";
+				statusLine = "The selected local map could not be loaded for publishing.";
 				return;
 			}
 
 			StartCoroutine(UploadCoroutine(map));
+		}
+
+		private void DeleteMap(SharedMapRepository.Entry entry)
+		{
+			if (isRefreshing)
+				return;
+
+			if (entry == null)
+			{
+				statusLine = "No shared map entry was provided for deletion.";
+				return;
+			}
+
+			if (string.IsNullOrWhiteSpace(ApplicationSettings.MapRepositoryUploadKey))
+			{
+				statusLine = "Upload token is not configured.";
+				return;
+			}
+
+			if (!IsDeleteConfirmationActive(entry))
+			{
+				pendingDeleteEntry = entry;
+				deleteConfirmUntil = Time.realtimeSinceStartup + 8f;
+				statusLine = $"Press Delete again on {entry.DisplayName} to permanently remove it.";
+				detailLine = "This deletes the repository file and removes it from manifest.json.";
+				return;
+			}
+
+			StartCoroutine(DeleteCoroutine(entry));
+		}
+
+		private bool IsDeleteConfirmationActive(SharedMapRepository.Entry entry)
+			=> entry != null && pendingDeleteEntry == entry && Time.realtimeSinceStartup <= deleteConfirmUntil;
+
+		private System.Collections.IEnumerator DeleteCoroutine(SharedMapRepository.Entry entry)
+		{
+			isRefreshing = true;
+			statusLine = $"Deleting {entry.DisplayName}...";
+			detailLine = null;
+
+			yield return SharedMapRepository.DeleteMap(
+				entry,
+				message =>
+				{
+					statusLine = string.IsNullOrWhiteSpace(message) ? "Delete completed." : message;
+					detailLine = null;
+				},
+				error =>
+				{
+					statusLine = error;
+					detailLine = null;
+				});
+
+			pendingDeleteEntry = null;
+			deleteConfirmUntil = 0f;
+			isRefreshing = false;
+			RefreshRepository();
+		}
+
+		private void ImportAllRemoteMaps()
+		{
+			if (isRefreshing)
+				return;
+
+			var remoteRows = catalogRows?.Where(row => row != null && row.HasRemote).ToArray() ?? Array.Empty<CatalogRow>();
+			if (remoteRows.Length == 0)
+			{
+				statusLine = "No remote maps are available to import or update.";
+				return;
+			}
+
+			StartCoroutine(ImportAllRemoteCoroutine(remoteRows));
+		}
+
+		private System.Collections.IEnumerator ImportAllRemoteCoroutine(IReadOnlyList<CatalogRow> remoteRows)
+		{
+			isRefreshing = true;
+			int importedCount = 0;
+			var errors = new List<string>();
+
+			for (int i = 0; i < remoteRows.Count; i++)
+			{
+				var row = remoteRows[i];
+				if (row?.RemoteEntry == null)
+					continue;
+
+				statusLine = $"Importing remote map {i + 1}/{remoteRows.Count}: {row.RemoteEntry.DisplayName}...";
+				bool imported = false;
+				string importError = null;
+				yield return SharedMapRepository.DownloadAndImport(
+					row.RemoteEntry,
+					map =>
+					{
+						imported = map != null;
+					},
+					error =>
+					{
+						importError = error;
+					});
+
+				if (imported)
+					importedCount++;
+				else if (!string.IsNullOrWhiteSpace(importError))
+					errors.Add($"{row.RemoteEntry.DisplayName}: {importError}");
+			}
+
+			RebuildCatalogRows(forceRefreshLocal: true);
+			statusLine = $"Imported/updated {importedCount} remote map(s).";
+			detailLine = errors.Count == 0 ? null : string.Join("\n", errors.Take(3));
+			isRefreshing = false;
 		}
 
 		private System.Collections.IEnumerator UploadCoroutine(Map map)
@@ -364,6 +552,128 @@ namespace ClassicTilestorm
 
 			isRefreshing = false;
 			RefreshRepository();
+		}
+
+		private static string BuildLocalKey(MapCatalog.MapEntry entry)
+			=> BuildHashKey(entry.HashId);
+
+		private static string BuildRemoteKey(SharedMapRepository.Entry entry)
+		{
+			if (TryGetRemoteHash(entry, out var hash))
+				return BuildHashKey(hash);
+
+			return string.IsNullOrWhiteSpace(entry?.fileName)
+				? $"remote:{entry?.id}"
+				: $"remote:{entry.fileName}";
+		}
+
+		private static bool TryGetRemoteHash(SharedMapRepository.Entry entry, out HashId hash)
+		{
+			hash = 0;
+			if (entry == null)
+				return false;
+
+			if (TryParseHash(entry.mapHash, out hash))
+				return true;
+
+			return !string.IsNullOrWhiteSpace(entry.fileName) &&
+			       MapCatalog.TryGetMapHashFromFileName(entry.fileName, out hash);
+		}
+
+		private static string BuildHashKey(HashId hash)
+			=> hash == 0 ? null : $"hash:{HTB50Settings.ToString(hash)}";
+
+		private static bool TryParseHash(string value, out HashId hash)
+		{
+			hash = 0;
+			if (string.IsNullOrWhiteSpace(value))
+				return false;
+
+			try
+			{
+				hash = HTB50.Decode(value.Trim());
+				return hash != 0;
+			}
+			catch
+			{
+				return false;
+			}
+		}
+
+		private sealed class CatalogRow
+		{
+			public string Key;
+			public Map CurrentMap;
+			public MapCatalog.MapEntry PersistentEntry;
+			public SharedMapRepository.Entry RemoteEntry;
+
+			public bool IsCurrent { get; private set; }
+			public bool HasPersistent => PersistentEntry.Map != null;
+			public bool HasStoredLocal => HasPersistent;
+			public bool HasLocal => CurrentMap != null || HasPersistent;
+			public bool HasRemote => RemoteEntry != null;
+			public Map LocalMap => CurrentMap ?? PersistentEntry.Map;
+			public HashId LocalHash => CurrentMap != null ? CurrentMap.HashID : PersistentEntry.HashId;
+			public DateTime RemoteUpdatedUtc => HasRemote ? RemoteEntry.UpdatedUtcDateTime : DateTime.MinValue;
+
+			public string DisplayName
+			{
+				get
+				{
+					if (CurrentMap != null && !string.IsNullOrWhiteSpace(CurrentMap.name))
+						return CurrentMap.name;
+
+					if (HasPersistent && !string.IsNullOrWhiteSpace(PersistentEntry.DisplayName))
+						return PersistentEntry.DisplayName;
+
+					return HasRemote ? RemoteEntry.DisplayName : "Untitled";
+				}
+			}
+
+			public string SourceSummary
+			{
+				get
+				{
+					var parts = new List<string>();
+					if (IsCurrent)
+						parts.Add("Loaded in memory");
+					if (HasPersistent)
+						parts.Add("Persistent");
+					if (HasRemote)
+						parts.Add("Remote");
+
+					return parts.Count == 0 ? "Unknown source" : string.Join(" | ", parts);
+				}
+			}
+
+			public string DetailSummary
+			{
+				get
+				{
+					var details = new List<string>();
+					if (HasLocal && LocalHash != 0)
+						details.Add($"Hash {HTB50Settings.ToString(LocalHash)}");
+					if (!string.IsNullOrWhiteSpace(PersistentEntry.FilePath))
+						details.Add(Path.GetFileName(PersistentEntry.FilePath));
+					if (HasRemote)
+						details.Add($"{RemoteEntry.fileName} | {FormatSize(RemoteEntry.sizeBytes)} | {FormatTimestamp(RemoteUpdatedUtc)}");
+
+					return string.Join(" | ", details.Where(detail => !string.IsNullOrWhiteSpace(detail)));
+				}
+			}
+
+			public void RefreshDerivedState()
+			{
+				if (CurrentMap != null)
+				{
+					CurrentMap.EnsureHashID();
+					IsCurrent = CurrentMap.HashID != 0;
+				}
+				else
+				{
+					IsCurrent = false;
+				}
+			}
 		}
 
 		private static string FormatSize(long sizeBytes)
@@ -421,15 +731,34 @@ namespace ClassicTilestorm
 			return helpStyle;
 		}
 
-		private static GUIStyle GetSelectedBoxStyle()
+		private static GUIStyle GetRowStyle(CatalogRow row)
 		{
-			if (selectedBoxStyle != null)
-				return selectedBoxStyle;
+			if (row == null)
+				return GUI.skin.box;
 
+			if (row.HasRemote && row.HasLocal)
+				return mixedBoxStyle ??= CreateRowStyle(new Color(0.10f, 0.24f, 0.24f, 0.88f));
+
+			if (row.HasRemote)
+				return remoteBoxStyle ??= CreateRowStyle(new Color(0.08f, 0.24f, 0.12f, 0.88f));
+
+			if (row.HasLocal)
+				return localBoxStyle ??= CreateRowStyle(new Color(0.09f, 0.16f, 0.32f, 0.88f));
+
+			return GUI.skin.box;
+		}
+
+		private static GUIStyle CreateRowStyle(Color color)
+		{
 			var style = new GUIStyle(GUI.skin.box);
-			style.normal.background = MakeSolidTexture(new Color(0.18f, 0.26f, 0.36f, 0.85f));
-			selectedBoxStyle = style;
-			return selectedBoxStyle;
+			var texture = MakeSolidTexture(color);
+			style.normal.background = texture;
+			style.onNormal.background = texture;
+			style.hover.background = texture;
+			style.onHover.background = texture;
+			style.active.background = texture;
+			style.onActive.background = texture;
+			return style;
 		}
 
 		private static Texture2D MakeSolidTexture(Color color)
