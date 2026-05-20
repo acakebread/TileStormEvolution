@@ -57,6 +57,7 @@ namespace ClassicTilestorm
 		private static bool ExternalDefinitionsLoaded;
 
 		private const string FileHashSeparator = "__";
+		private const bool UseReadablePersistentFileNames = false;
 		public static string PersistentDefinitionsFolder => ApplicationSettings.SystemDefinitionsFolder;
 		private static string LegacyPersistentDefinitionsFolder => Path.Combine(Application.persistentDataPath, "Definitions");
 		public static string InternalDefinitionsFile => Path.Combine(Application.dataPath, "Resources", "AssetDatabase", "definitions.json");
@@ -183,15 +184,19 @@ namespace ClassicTilestorm
 			{
 				Directory.CreateDirectory(PersistentDefinitionsFolder);
 
-				if (!TryGetDefinitionHashFromFileName(BuildFileName(definition), out var hash))
+				definition.EnsureHashID();
+				var hash = definition.HashID;
+				if (hash == 0)
 					return false;
 
+				var fileName = BuildFileName(definition);
+				var path = Path.Combine(PersistentDefinitionsFolder, fileName);
 				foreach (var existing in Directory.EnumerateFiles(PersistentDefinitionsFolder, "*.json", SearchOption.TopDirectoryOnly).ToArray())
 				{
 					if (!TryGetDefinitionHashFromFileName(existing, out var existingHash) || existingHash != hash)
 						continue;
 
-					if (!string.Equals(existing, Path.Combine(PersistentDefinitionsFolder, BuildFileName(definition)), StringComparison.OrdinalIgnoreCase) &&
+					if (!string.Equals(existing, path, StringComparison.OrdinalIgnoreCase) &&
 						File.Exists(existing))
 					{
 						File.Delete(existing);
@@ -199,7 +204,7 @@ namespace ClassicTilestorm
 				}
 
 				var json = JsonConvert.SerializeObject(definition, Formatting.Indented, DefinitionSerializerSettings);
-				WriteJsonIfChanged(Path.Combine(PersistentDefinitionsFolder, BuildFileName(definition)), json);
+				WriteJsonIfChanged(path, json);
 				ExternalDefinitionsLoaded = false;
 				WebGLPersistentStorage.Flush();
 				return true;
@@ -275,17 +280,21 @@ namespace ClassicTilestorm
 				return false;
 
 			var separatorIndex = stem.LastIndexOf(FileHashSeparator, StringComparison.Ordinal);
-			if (separatorIndex < 0 || separatorIndex >= stem.Length - FileHashSeparator.Length)
-				return false;
-
-			var hashText = stem.Substring(separatorIndex + FileHashSeparator.Length);
+			var hashText = separatorIndex >= 0 && separatorIndex < stem.Length - FileHashSeparator.Length
+				? stem.Substring(separatorIndex + FileHashSeparator.Length)
+				: stem;
 			return ResourceIdUtil.TryParseCanonicalHash(hashText, out hash);
 		}
 
 		public static string BuildFileName(Definition definition)
 		{
+			definition?.EnsureHashID();
+			var hash = HTB50Settings.ToString(definition?.HashID ?? 0);
+			if (!UseReadablePersistentFileNames)
+				return $"{hash}.json";
+
 			var safeName = SanitizeFileNameComponent(string.IsNullOrWhiteSpace(definition?.name) ? "Untitled" : definition.name);
-			return $"{safeName}{FileHashSeparator}{HTB50Settings.ToString(definition.HashID)}.json";
+			return $"{safeName}{FileHashSeparator}{hash}.json";
 		}
 
 		private static void EnsureInternalDefinitions(bool forceRefresh = false)

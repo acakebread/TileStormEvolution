@@ -466,13 +466,14 @@ namespace ClassicTilestorm
 				yield break;
 			}
 
-			string mapPath = $"maps/{export.FileName}";
 			var mapPayload = export.IsArchive
 				? export.Archive
 				: Encoding.UTF8.GetBytes(export.Json);
+			string repositoryFileName = BuildRepositoryMapFileName(map, export);
 			string mapBase64 = Convert.ToBase64String(mapPayload);
 			string mapSha = null;
 			string mapFetchError = null;
+			string mapPath = $"maps/{repositoryFileName}";
 
 			yield return FetchGitHubContent(repository, mapPath, uploadToken,
 				content => mapSha = content?.sha,
@@ -542,10 +543,10 @@ namespace ClassicTilestorm
 
 			var newEntry = new Entry
 			{
-				id = export.FileName,
+				id = repositoryFileName,
 				name = string.IsNullOrWhiteSpace(map.name) ? "Untitled" : map.name,
-				fileName = export.FileName,
-				downloadUrl = $"maps/{export.FileName}",
+				fileName = repositoryFileName,
+				downloadUrl = $"maps/{repositoryFileName}",
 				contentType = export.MimeType,
 				mapHash = HTB50Settings.ToString(map.HashID),
 				description = string.Empty,
@@ -554,7 +555,7 @@ namespace ClassicTilestorm
 			};
 
 			var mergedEntries = manifest.entries
-				.Where(entry => entry != null && !string.Equals(entry.fileName, newEntry.fileName, StringComparison.OrdinalIgnoreCase))
+				.Where(entry => entry != null && !EntryMatches(entry, newEntry))
 				.ToList();
 			mergedEntries.Add(newEntry);
 			mergedEntries = mergedEntries
@@ -585,6 +586,19 @@ namespace ClassicTilestorm
 				message = $"Published {newEntry.name} to GitHub Pages.",
 				entry = newEntry
 			});
+		}
+
+		private static string BuildRepositoryMapFileName(Map map, ResourceSerializer.AtomicMapExportData export)
+		{
+			if (map != null)
+				map.EnsureHashID();
+
+			string hash = HTB50Settings.ToString(map?.HashID ?? 0);
+			if (string.IsNullOrWhiteSpace(hash))
+				hash = Path.GetFileNameWithoutExtension(export.FileName);
+
+			string extension = export.IsArchive ? ".zip" : ".json";
+			return $"{hash}{extension}";
 		}
 
 		private static IEnumerator FetchGitHubContent(GitHubRepositoryInfo repository, string path, string token, Action<GitHubContentResponse> onSuccess, Action<int, string> onNotFoundOrError)
