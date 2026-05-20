@@ -1,5 +1,4 @@
 using System;
-using System;
 using System.Collections;
 using System.Linq;
 using MassiveHadronLtd;
@@ -82,13 +81,19 @@ namespace ClassicTilestorm
 				camera.aspect = (float)width / height;
 				camera.nearClipPlane = 0.03f;
 				camera.farClipPlane = Mathf.Max(250f, bounds.size.magnitude * 10f);
-				camera.cullingMask = ~0;
+				camera.cullingMask = PreviewRenderLayers.previewFullMask;
 
-				// A soft oblique angle gives a readable list thumbnail without hiding too much of the map.
-				var lookDirection = new Vector3(-1f, 0.85f, -1f).normalized;
-				var distance = GetFramingDistance(bounds, camera.fieldOfView, width, height);
-				var target = bounds.center + Vector3.up * Mathf.Max(0.25f, bounds.extents.y * 0.1f);
-				var position = target - lookDirection * distance;
+				// Use an explicit 30-degree downward pitch from the horizontal plane.
+				var pitchDegrees = 30f;
+				var pitchRadians = pitchDegrees * Mathf.Deg2Rad;
+				var planarDirection = new Vector3(-1f, 0f, -1f).normalized;
+				var planarDistance = GetFramingDistance(bounds, camera.fieldOfView, width, height) * 0.45f;
+				var target = new Vector3(
+					bounds.center.x,
+					bounds.min.y + Mathf.Clamp(bounds.extents.y * 0.08f, 0.25f, 1.25f),
+					bounds.center.z);
+				var verticalDistance = planarDistance * Mathf.Tan(pitchRadians);
+				var position = target - planarDirection * planarDistance + Vector3.up * verticalDistance;
 				camera.transform.SetPositionAndRotation(position, Quaternion.LookRotation(target - position, Vector3.up));
 
 				renderTexture = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32)

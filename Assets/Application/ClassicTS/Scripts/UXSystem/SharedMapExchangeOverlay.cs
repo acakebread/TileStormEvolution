@@ -239,9 +239,7 @@ namespace ClassicTilestorm
 					statusLine = string.IsNullOrWhiteSpace(manifest?.repositoryName)
 						? $"Loaded {catalogRows.Count} catalogue entries, including {entries.Count} remote map(s)."
 						: $"Loaded {catalogRows.Count} catalogue entries, including {entries.Count} remote map(s) from {manifest.repositoryName}.";
-					detailLine = string.IsNullOrWhiteSpace(manifest?.generatedUtc)
-						? $"Manifest source: {SharedMapRepository.BuildManifestUrl()}"
-						: $"Manifest generated: {manifest.generatedUtc} | Source: {SharedMapRepository.BuildManifestUrl()}";
+					detailLine = $"Manifest source: {SharedMapRepository.BuildManifestUrl()}";
 				},
 				error =>
 				{
