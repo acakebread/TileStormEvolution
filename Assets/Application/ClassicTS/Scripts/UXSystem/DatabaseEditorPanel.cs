@@ -763,8 +763,7 @@ namespace ClassicTilestorm
 
 		private void InsertMap()
 		{
-			var newName = GenerateUniqueMapName("Map");
-			var newMap = new Map(16, 16, newName);
+			var newMap = new Map(16, 16);
 
 			var insertIndex = (lastSelectedMapIndex >= 0)
 				? lastSelectedMapIndex + 1
@@ -773,6 +772,7 @@ namespace ClassicTilestorm
 			var list = ResourceManager.Maps.ToList();
 			list.Insert(insertIndex, newMap);
 			Map.EnsureUniqueHashIDs(list);
+			newMap.name = $"NEW_MAP_{HTB50Settings.ToString(newMap.HashID)}";
 			ResourceManager.database.maps = list.ToArray();
 			ResourceManager.SyncMapIds();
 
@@ -1140,23 +1140,6 @@ namespace ClassicTilestorm
 
 			ApplicationSettings.LoadMapName = HTB50Settings.ToString(CurrentMap.HashID);
 			controller.LoadMap(ApplicationSettings.LoadMapName);
-		}
-
-		private string GenerateUniqueMapName(string prefix = "Map")
-		{
-			var existing = ResourceManager.Maps
-				.Select(m => m?.name)
-				.Where(n => !string.IsNullOrEmpty(n))
-				.ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-			string candidate;
-			var suffix = 1;
-			do
-			{
-				candidate = $"{prefix} {suffix++}";
-			} while (existing.Contains(candidate));
-
-			return candidate;
 		}
 
 		// --------------------------------------------------------------------------------

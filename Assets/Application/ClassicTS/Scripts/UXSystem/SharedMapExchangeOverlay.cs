@@ -204,8 +204,10 @@ namespace ClassicTilestorm
 				StartImport(row.RemoteEntry);
 			if (row.HasLocal && GUILayout.Button(row.IsCurrent ? "Publish Loaded" : "Publish", GUILayout.Width(120f)))
 				PublishLocalMap(row);
-			if (row.HasRemote && GUILayout.Button(IsDeleteConfirmationActive(row.RemoteEntry) ? "Confirm Delete" : "Delete Remote", GUILayout.Width(130f)))
+#if UNITY_EDITOR
+			if (row.HasRemote && ApplicationSettings.HasPrivateMapRepositoryUploadKey && GUILayout.Button(IsDeleteConfirmationActive(row.RemoteEntry) ? "Confirm Delete" : "Delete Remote", GUILayout.Width(130f)))
 				DeleteMap(row.RemoteEntry);
+#endif
 			GUILayout.EndHorizontal();
 			GUILayout.EndVertical();
 		}
@@ -412,6 +414,7 @@ namespace ClassicTilestorm
 			StartCoroutine(UploadCoroutine(map));
 		}
 
+#if UNITY_EDITOR
 		private void DeleteMap(SharedMapRepository.Entry entry)
 		{
 			if (isRefreshing)
@@ -423,9 +426,9 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			if (string.IsNullOrWhiteSpace(ApplicationSettings.MapRepositoryUploadKey))
+			if (!ApplicationSettings.HasPrivateMapRepositoryUploadKey)
 			{
-				statusLine = "Upload token is not configured.";
+				statusLine = "Admin deletion is not enabled on this machine.";
 				return;
 			}
 
@@ -468,6 +471,7 @@ namespace ClassicTilestorm
 			isRefreshing = false;
 			RefreshRepository();
 		}
+#endif
 
 		private void ImportAllRemoteMaps()
 		{
