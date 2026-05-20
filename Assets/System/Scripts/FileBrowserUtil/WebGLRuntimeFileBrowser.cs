@@ -133,12 +133,14 @@ namespace MassiveHadronLtd.FileBrowserUtil
 		}
 
 		[Serializable]
+#pragma warning disable CS0649 // Populated by JsonUtility from JavaScript file-picker callbacks.
 		private sealed class UploadFilePayload
 		{
 			public string name;
 			public string relativePath;
 			public string base64;
 		}
+#pragma warning restore CS0649
 
 		private sealed class UploadHost : MonoBehaviour
 		{

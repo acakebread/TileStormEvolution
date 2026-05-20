@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 using System.Linq;
+using System.Runtime.InteropServices;
 using MassiveHadronLtd;
 using MassiveHadronLtd.FileBrowserUtil;
 using UnityEngine.EventSystems;
@@ -18,6 +20,12 @@ namespace ClassicTilestorm
 		private EditorController editorController;
 		private EggbotController eggbotController;
 		private MainCameraController cameraController;
+		private static string launchMapQuery;
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+		[DllImport("__Internal")]
+		private static extern string MassiveHadron_GetQueryParameter(string name);
+#endif
 
 		public static Map CurrentMap { get; set; }
 		public static Transform MapRoot { get; set; }
@@ -104,8 +112,157 @@ namespace ClassicTilestorm
 			editorController = gameObject.AddComponent<EditorController>();
 			cameraController = gameObject.AddComponent<MainCameraController>();
 			OnChangeMapRequested += HandleChangeMap;
-			LoadMap(ApplicationSettings.LoadMapName);
+			launchMapQuery = TryGetLaunchMapQuery();
+			if (!string.IsNullOrWhiteSpace(launchMapQuery))
+			{
+				Debug.Log($"Launch map query detected: {launchMapQuery}");
+				StartCoroutine(LoadLaunchMapOrDefault());
+			}
+			else
+			{
+				Debug.Log("No launch map query detected. Loading configured default map.");
+				LoadMap(ApplicationSettings.LoadMapName);
+			}
 			SetPreviewMode(ApplicationSettings.CurrentMode);//invoke to enable and disable game and editor controllers - ToDo improve this
+		}
+
+		private System.Collections.IEnumerator LoadLaunchMapOrDefault()
+		{
+			yield return SharedMapRepository.FetchManifest(
+				manifest =>
+				{
+					Debug.Log($"Launch map manifest loaded: {manifest?.entries?.Length ?? 0} entrie(s).");
+					var entry = FindLaunchManifestEntry(manifest?.entries, launchMapQuery);
+					if (entry != null)
+					{
+						Debug.Log($"Launch map matched repository entry: {entry.DisplayName} ({entry.fileName})");
+						StartCoroutine(ImportLaunchMap(entry));
+						return;
+					}
+
+					Debug.LogWarning($"Launch map '{launchMapQuery}' was not found in the repository manifest. Loading default map instead.");
+					LoadMap(ApplicationSettings.LoadMapName);
+				},
+				error =>
+				{
+					Debug.LogWarning($"Launch map lookup failed: {error}. Loading default map instead.");
+					LoadMap(ApplicationSettings.LoadMapName);
+				});
+		}
+
+		private System.Collections.IEnumerator ImportLaunchMap(SharedMapRepository.Entry entry)
+		{
+			Debug.Log($"Downloading launch map from repository: {entry?.DisplayName}");
+			yield return SharedMapRepository.DownloadAndImport(
+				entry,
+				imported =>
+				{
+					if (imported == null)
+					{
+						LoadMap(ApplicationSettings.LoadMapName);
+						return;
+					}
+
+					ApplicationSettings.LoadMapName = HTB50Settings.ToString(imported.HashID);
+					Debug.Log($"Launch map imported: {imported.name} [{ApplicationSettings.LoadMapName}]");
+					LoadMap(ApplicationSettings.LoadMapName);
+				},
+				error =>
+				{
+					Debug.LogWarning($"Launch map download failed: {error}. Loading default map instead.");
+					LoadMap(ApplicationSettings.LoadMapName);
+				});
+		}
+
+		private static SharedMapRepository.Entry FindLaunchManifestEntry(IEnumerable<SharedMapRepository.Entry> entries, string query)
+		{
+			if (string.IsNullOrWhiteSpace(query))
+				return null;
+
+			var normalizedQuery = NormalizeLaunchIdentifier(query);
+			return entries?.FirstOrDefault(entry =>
+				entry != null &&
+				(string.Equals(NormalizeLaunchIdentifier(entry.fileName), normalizedQuery, StringComparison.OrdinalIgnoreCase) ||
+				 string.Equals(NormalizeLaunchIdentifier(entry.id), normalizedQuery, StringComparison.OrdinalIgnoreCase) ||
+				 string.Equals(NormalizeLaunchIdentifier(entry.mapHash), normalizedQuery, StringComparison.OrdinalIgnoreCase)));
+		}
+
+		private static string NormalizeLaunchIdentifier(string value)
+		{
+			if (string.IsNullOrWhiteSpace(value))
+				return null;
+
+			var normalized = Uri.UnescapeDataString(value).Trim();
+			if (normalized.EndsWith(".json", StringComparison.OrdinalIgnoreCase) ||
+				normalized.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+			{
+				normalized = Path.GetFileNameWithoutExtension(normalized);
+			}
+
+			return normalized;
+		}
+
+		private static string TryGetLaunchMapQuery()
+		{
+#if UNITY_WEBGL
+			try
+			{
+#if !UNITY_EDITOR
+				string bridgeValue = MassiveHadron_GetQueryParameter("map");
+				if (!string.IsNullOrWhiteSpace(bridgeValue))
+				{
+					Debug.Log($"WebGL launch map bridge value: {bridgeValue}");
+					return bridgeValue.Trim();
+				}
+
+				Debug.Log("WebGL launch map bridge returned no value.");
+#endif
+
+				var url = Application.absoluteURL;
+				Debug.Log($"Application.absoluteURL: {url}");
+				if (string.IsNullOrWhiteSpace(url))
+				{
+					Debug.Log("Application.absoluteURL was empty.");
+					return null;
+				}
+
+				if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+				{
+					Debug.LogWarning($"Could not parse Application.absoluteURL: {url}");
+					return null;
+				}
+
+				var query = uri.Query;
+				if (string.IsNullOrWhiteSpace(query))
+				{
+					Debug.Log("Application.absoluteURL had no query string.");
+					return null;
+				}
+
+				foreach (var pair in query.TrimStart('?').Split('&'))
+				{
+					if (string.IsNullOrWhiteSpace(pair))
+						continue;
+
+					var parts = pair.Split(new[] { '=' }, 2);
+					if (parts.Length != 2)
+						continue;
+
+					if (!string.Equals(Uri.UnescapeDataString(parts[0]), "map", StringComparison.OrdinalIgnoreCase))
+						continue;
+
+					return Uri.UnescapeDataString(parts[1]).Trim();
+				}
+
+				Debug.Log("Application.absoluteURL query string did not contain a map parameter.");
+			}
+			catch (Exception ex)
+			{
+				Debug.LogWarning($"Failed to read launch map query: {ex.Message}");
+				return null;
+			}
+#endif
+			return null;
 		}
 
 		private void Update() => eggbotController?.UpdateEggbot(CurrentMap);

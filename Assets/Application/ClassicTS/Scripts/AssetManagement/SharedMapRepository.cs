@@ -199,6 +199,13 @@ namespace ClassicTilestorm
 				yield break;
 			}
 
+			if (LooksLikeHtml(bytes))
+			{
+				string sample = Encoding.UTF8.GetString(bytes, 0, Math.Min(bytes.Length, 120)).Trim();
+				onError?.Invoke($"Downloaded content was HTML instead of a map package. Check the launch URL or repository file URL. Sample: {sample}");
+				yield break;
+			}
+
 			string tempPath = GetTempPackagePath(entry);
 			try
 			{
@@ -543,6 +550,17 @@ namespace ClassicTilestorm
 
 			byte[] data = Convert.FromBase64String(content);
 			return Encoding.UTF8.GetString(data);
+		}
+
+		private static bool LooksLikeHtml(byte[] bytes)
+		{
+			if (bytes == null || bytes.Length == 0)
+				return false;
+
+			string prefix = Encoding.UTF8.GetString(bytes, 0, Math.Min(bytes.Length, 32)).TrimStart('\uFEFF', '\u0000', ' ', '\t', '\r', '\n');
+			return prefix.StartsWith("<!DOCTYPE html", StringComparison.OrdinalIgnoreCase) ||
+			       prefix.StartsWith("<html", StringComparison.OrdinalIgnoreCase) ||
+			       prefix.StartsWith("<head", StringComparison.OrdinalIgnoreCase);
 		}
 
 		private static bool TryGetGitHubRepositoryInfo(string baseUrl, out GitHubRepositoryInfo info)

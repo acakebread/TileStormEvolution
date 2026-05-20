@@ -14,8 +14,10 @@ namespace MassiveHadronLtd
 
 		private static SyncHost host;
 		private static bool initialLoadCompleted;
+#pragma warning disable CS0414 // Read by the WebGL build path; editor builds compile that path out.
 		private static bool initialLoadInProgress;
 		private static bool flushInProgress;
+#pragma warning restore CS0414
 		private static bool flushQueued;
 		private static readonly List<Action<bool>> InitialLoadCallbacks = new();
 

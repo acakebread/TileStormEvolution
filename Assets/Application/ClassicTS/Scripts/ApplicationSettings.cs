@@ -366,7 +366,9 @@ namespace ClassicTilestorm
 				string path = Path.Combine(projectRoot, MapRepositoryPrivateTokenFile);
 				Directory.CreateDirectory(Path.GetDirectoryName(path));
 				File.WriteAllText(path, value ?? string.Empty);
+#if UNITY_EDITOR
 				AssetDatabase.Refresh();
+#endif
 				Debug.Log(string.IsNullOrWhiteSpace(value)
 					? $"Cleared private map repository token file: {path}"
 					: $"Updated private map repository token file: {path}");
