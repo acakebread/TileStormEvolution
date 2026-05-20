@@ -26,10 +26,11 @@ namespace ClassicTilestorm
 		private readonly float animationSpeed = 300f;
 
 		// Layout constants
-		private const float buttonWidth = 90f;
+		private const float buttonWidth = 82f;
+		private const float compactButtonWidth = 56f;
 		private const float buttonHeight = 30f;
 		private const float buttonStartX = 10f;
-		private const float spacing = 10f;
+		private const float spacing = 8f;
 		private const float labelWidth = 50f;
 		private const float mapNameWidth = 120f;
 		private const float panelGap = 5f;
@@ -162,6 +163,14 @@ namespace ClassicTilestorm
 			GuiUtils.ColoredButton(new Rect(currentX, y, buttonWidth, buttonHeight), "Reload",
 				new Color(0.6f, 0.6f, 0.2f), () => onChangeMapRequested(0));
 			currentX += buttonWidth + spacing;
+
+			GuiUtils.ColoredButton(new Rect(currentX, y, buttonWidth, buttonHeight), "Share",
+				new Color(0.35f, 0.55f, 0.95f), () => SharedMapExchangeOverlay.Toggle());
+			currentX += buttonWidth + spacing;
+
+			GuiUtils.ColoredButton(new Rect(currentX, y, compactButtonWidth, buttonHeight), "Log",
+				new Color(0.25f, 0.45f, 0.55f), () => RuntimeLogOverlay.Toggle());
+			currentX += compactButtonWidth + spacing;
 
 			GuiUtils.ColoredButton(new Rect(currentX, y, buttonWidth, buttonHeight), "Preset",
 				new Color(0.2f, 0.8f, 0.2f), () => OnPresetRequested?.Invoke());

@@ -188,5 +188,61 @@ mergeInto(LibraryManager.library, {
     } catch (ex) {
       finish(false, ex && ex.message ? ex.message : String(ex));
     }
+  },
+
+  MassiveHadron_GetQueryParameter: function (namePtr) {
+    var name = UTF8ToString(namePtr);
+    if (!name || name.length === 0) {
+      return stringToNewUTF8('');
+    }
+
+    function readFromLocation(locationLike) {
+      if (!locationLike) {
+        return '';
+      }
+
+      var search = locationLike.search || '';
+      if (!search && locationLike.href) {
+        var question = locationLike.href.indexOf('?');
+        if (question >= 0) {
+          search = locationLike.href.substring(question);
+          var hash = search.indexOf('#');
+          if (hash >= 0) {
+            search = search.substring(0, hash);
+          }
+        }
+      }
+
+      if (!search || search.length <= 1) {
+        return '';
+      }
+
+      var params = new URLSearchParams(search);
+      return params.get(name) || '';
+    }
+
+    var value = '';
+    try {
+      value = readFromLocation(window.location);
+      if (!value && window.parent && window.parent !== window) {
+        value = readFromLocation(window.parent.location);
+      }
+      if (!value && name === 'map') {
+        var stored = window.localStorage ? window.localStorage.getItem('TileStormLaunchMap') : '';
+        var storedAt = window.localStorage ? parseInt(window.localStorage.getItem('TileStormLaunchMapTime') || '0', 10) : 0;
+        var isFresh = storedAt > 0 && (Date.now() - storedAt) < (10 * 60 * 1000);
+        if (stored && isFresh) {
+          value = stored;
+        }
+        if (window.localStorage) {
+          window.localStorage.removeItem('TileStormLaunchMap');
+          window.localStorage.removeItem('TileStormLaunchMapTime');
+        }
+      }
+    } catch (ex) {
+      value = '';
+    }
+
+    return stringToNewUTF8(value);
   }
 });
