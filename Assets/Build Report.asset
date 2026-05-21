@@ -15,7 +15,7 @@ MonoBehaviour:
   entries:
   - asset: {fileID: 8300000, guid: 8fdb6610ede9ab74d8de0bcc7c38b178, type: 3}
     path: Assets/Application/Resources/ClassicTS/Music/Egypt.mp3
-    size: 4505506
+    size: 4553938
     group: 16
     dependency: {fileID: 8300000, guid: 8fdb6610ede9ab74d8de0bcc7c38b178, type: 3}
   - asset: {fileID: 8900000, guid: 84a97d7e2b6eaa64bad1dc674d9495b9, type: 3}
@@ -25,32 +25,32 @@ MonoBehaviour:
     dependency: {fileID: 0}
   - asset: {fileID: 8300000, guid: f232df7aae4b2bd44a85c81bb2a91e35, type: 3}
     path: Assets/Application/Resources/ClassicTS/Music/Medieval.mp3
-    size: 1659950
+    size: 1690133
     group: 16
     dependency: {fileID: 8300000, guid: f232df7aae4b2bd44a85c81bb2a91e35, type: 3}
   - asset: {fileID: 8300000, guid: 8b9c2e533f1873841a55a6f6b7a04e29, type: 3}
     path: Assets/Application/Resources/ClassicTS/Music/Victorian.mp3
-    size: 1345840
+    size: 1371113
     group: 16
     dependency: {fileID: 8300000, guid: 8b9c2e533f1873841a55a6f6b7a04e29, type: 3}
   - asset: {fileID: 8300000, guid: 8b7d5b32e70758e4eb485064b2a8f175, type: 3}
     path: Assets/Application/Resources/ClassicTS/Music/Jungle.mp3
-    size: 1274082
+    size: 1284828
     group: 16
     dependency: {fileID: 8300000, guid: 8b7d5b32e70758e4eb485064b2a8f175, type: 3}
   - asset: {fileID: 8900000, guid: c308b7e433438d7469f6224ef8bf0f1d, type: 3}
     path: Assets/Application/Resources/ClassicTS/SkyCubes/Sky-5.hdr
-    size: 1239412
+    size: 1244392
     group: 1
     dependency: {fileID: 8900000, guid: c308b7e433438d7469f6224ef8bf0f1d, type: 3}
   - asset: {fileID: 8300000, guid: 3fc1a2ba8567c3449b5009447df9e741, type: 3}
     path: Assets/Application/Resources/ClassicTS/Music/Egyptian2.mp3
-    size: 1114781
+    size: 1128532
     group: 16
     dependency: {fileID: 8300000, guid: 3fc1a2ba8567c3449b5009447df9e741, type: 3}
   - asset: {fileID: 8900000, guid: 1280e194543e5354daf0ecdc5cc0eb95, type: 3}
     path: Assets/Application/Resources/ClassicTS/SkyCubes/Sky-1.hdr
-    size: 1100272
+    size: 1098884
     group: 1
     dependency: {fileID: 8900000, guid: 1280e194543e5354daf0ecdc5cc0eb95, type: 3}
   - asset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -60,47 +60,47 @@ MonoBehaviour:
     dependency: {fileID: 102900000, guid: 6a75fae5cc4a9ba488bc5c21d8b1502c, type: 3}
   - asset: {fileID: 8300000, guid: 2d6b5779af243d84483766e706fa3e53, type: 3}
     path: Assets/Application/Resources/ClassicTS/Music/TileStormTheme.mp3
-    size: 953895
+    size: 937472
     group: 16
     dependency: {fileID: 8300000, guid: 2d6b5779af243d84483766e706fa3e53, type: 3}
   - asset: {fileID: 8900000, guid: 715cd6190484cce4b88e8dea2f29eedf, type: 3}
     path: Assets/Application/Resources/ClassicTS/SkyCubes/Sky-2.hdr
-    size: 848056
+    size: 849432
     group: 1
     dependency: {fileID: 8900000, guid: 715cd6190484cce4b88e8dea2f29eedf, type: 3}
   - asset: {fileID: 8900000, guid: 7fd7d9461453d2b408df48d08b5b4a5a, type: 3}
     path: Assets/Application/Resources/ClassicTS/SkyCubes/Sky-4.hdr
-    size: 835588
+    size: 833636
     group: 1
     dependency: {fileID: 8900000, guid: 7fd7d9461453d2b408df48d08b5b4a5a, type: 3}
-  - asset: {fileID: 8300000, guid: 42f212fef4f2be14ca1d3ad236442e18, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Music/Industrial.mp3
-    size: 828543
-    group: 16
-    dependency: {fileID: 8300000, guid: 42f212fef4f2be14ca1d3ad236442e18, type: 3}
   - asset: {fileID: 8900000, guid: 9342a10f13ece344581515f464f7369e, type: 3}
     path: Assets/Application/Resources/ClassicTS/SkyCubes/Sky-5a.hdr
-    size: 822216
+    size: 820544
     group: 1
     dependency: {fileID: 8900000, guid: 9342a10f13ece344581515f464f7369e, type: 3}
-  - asset: {fileID: 8900000, guid: 850d27bfecbd34c4fbe40b18167e3aa9, type: 3}
-    path: Assets/Application/Resources/ClassicTS/SkyCubes/Sky-3.hdr
-    size: 805252
-    group: 1
-    dependency: {fileID: 8900000, guid: 850d27bfecbd34c4fbe40b18167e3aa9, type: 3}
+  - asset: {fileID: 8300000, guid: 42f212fef4f2be14ca1d3ad236442e18, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Music/Industrial.mp3
+    size: 817518
+    group: 16
+    dependency: {fileID: 8300000, guid: 42f212fef4f2be14ca1d3ad236442e18, type: 3}
   - asset: {fileID: 8300000, guid: 21e28e3b68d92e749943c4e7dd95facd, type: 3}
     path: Assets/Application/Resources/ClassicTS/Music/Victorian2.mp3
-    size: 782368
+    size: 805193
     group: 16
     dependency: {fileID: 8300000, guid: 21e28e3b68d92e749943c4e7dd95facd, type: 3}
+  - asset: {fileID: 8900000, guid: 850d27bfecbd34c4fbe40b18167e3aa9, type: 3}
+    path: Assets/Application/Resources/ClassicTS/SkyCubes/Sky-3.hdr
+    size: 804936
+    group: 1
+    dependency: {fileID: 8900000, guid: 850d27bfecbd34c4fbe40b18167e3aa9, type: 3}
   - asset: {fileID: 8900000, guid: b33d9e62ec18b0a4e8f4e5d6ad85e936, type: 3}
     path: Assets/Application/Resources/ClassicTS/SkyCubes/Sky-1a.hdr
-    size: 668996
+    size: 669424
     group: 1
     dependency: {fileID: 8900000, guid: b33d9e62ec18b0a4e8f4e5d6ad85e936, type: 3}
   - asset: {fileID: 8900000, guid: 32ba038326149864bb6b27f37d7dbf95, type: 3}
     path: Assets/Application/Resources/ClassicTS/SkyCubes/Sky-4a.hdr
-    size: 652428
+    size: 651020
     group: 1
     dependency: {fileID: 8900000, guid: 32ba038326149864bb6b27f37d7dbf95, type: 3}
   - asset: {fileID: 4800000, guid: 933532a4fcc9baf4fa0491de14d08ed7, type: 3}
@@ -110,19 +110,19 @@ MonoBehaviour:
     dependency: {fileID: 0}
   - asset: {fileID: 8300000, guid: 21cbd1812a2abc14f9c345625016e655, type: 3}
     path: Assets/Application/Resources/ClassicTS/Music/Medieval2.mp3
-    size: 580227
+    size: 586145
     group: 16
     dependency: {fileID: 8300000, guid: 21cbd1812a2abc14f9c345625016e655, type: 3}
-  - asset: {fileID: 8900000, guid: d981464a644ef6540953973fd8c1dfb3, type: 3}
-    path: Assets/Application/Resources/ClassicTS/SkyCubes/Sky-2a.hdr
-    size: 559408
-    group: 1
-    dependency: {fileID: 8900000, guid: d981464a644ef6540953973fd8c1dfb3, type: 3}
   - asset: {fileID: 8900000, guid: 1c4883a5021495a46bd06f9b854184f8, type: 3}
     path: Assets/Application/Resources/ClassicTS/SkyCubes/Sky-3a.hdr
-    size: 558180
+    size: 557048
     group: 1
     dependency: {fileID: 8900000, guid: 1c4883a5021495a46bd06f9b854184f8, type: 3}
+  - asset: {fileID: 8900000, guid: d981464a644ef6540953973fd8c1dfb3, type: 3}
+    path: Assets/Application/Resources/ClassicTS/SkyCubes/Sky-2a.hdr
+    size: 556240
+    group: 1
+    dependency: {fileID: 8900000, guid: d981464a644ef6540953973fd8c1dfb3, type: 3}
   - asset: {fileID: 8900000, guid: 7f1b42ce19c5dd84081ae233caf23e28, type: 3}
     path: Assets/Application/Resources/ClassicTS/SkyCubes/Industrial/industrial.png
     size: 433168
@@ -290,7 +290,7 @@ MonoBehaviour:
     dependency: {fileID: 0}
   - asset: {fileID: 4695226594433876902, guid: ed34c90972540be42a54339edf746755, type: 3}
     path: Assets/Application/ClassicTS/Data/UI/OptionsPanel.prefab
-    size: 65988
+    size: 68924
     group: 64
     dependency: {fileID: 102900000, guid: 6a75fae5cc4a9ba488bc5c21d8b1502c, type: 3}
   - asset: {fileID: 4800000, guid: 93446b5c5339d4f00b85c159e1159b7c, type: 3}
@@ -423,8 +423,13 @@ MonoBehaviour:
     size: 43828
     group: 4
     dependency: {fileID: 2800000, guid: da00bfc31e24e9f44b38565bfcfaa893, type: 3}
+  - asset: {fileID: 8300000, guid: b27cd15618b7db54380bbdd1f6121b07, type: 3}
+    path: Assets/Application/Resources/Global/Sounds/Stone.mp3
+    size: 41209
+    group: 16
+    dependency: {fileID: 8300000, guid: b27cd15618b7db54380bbdd1f6121b07, type: 3}
   - asset: {fileID: 2800000, guid: dc198d5b2de726f4c93bbae27a6a2ce7, type: 3}
-    path: Assets/Art/Levels/Med/Textures/Normals/med_tree_n.png
+    path: Assets/Art/Levels/Med/Textures/med_tree_n.png
     size: 40452
     group: 4
     dependency: {fileID: 0}
@@ -449,15 +454,10 @@ MonoBehaviour:
     group: 4
     dependency: {fileID: 0}
   - asset: {fileID: 2800000, guid: 4c4d90f1e1c7ef54f89f4422af12f1d8, type: 3}
-    path: Assets/Art/Levels/Med/Textures/Normals/med_brick_Normal.png
+    path: Assets/Art/Levels/Med/Textures/med_brick_Normal.png
     size: 32900
     group: 4
     dependency: {fileID: 0}
-  - asset: {fileID: 8300000, guid: b27cd15618b7db54380bbdd1f6121b07, type: 3}
-    path: Assets/Application/Resources/Global/Sounds/Stone.mp3
-    size: 32871
-    group: 16
-    dependency: {fileID: 8300000, guid: b27cd15618b7db54380bbdd1f6121b07, type: 3}
   - asset: {fileID: 919132149155446097, guid: 23e0fce5ba526864bbd275b705029673, type: 3}
     path: Assets/Application/Production/Resources/Levels/Med/med_tile_boundary_tree_01_hd.fbx
     size: 32825
@@ -484,12 +484,12 @@ MonoBehaviour:
     group: 32768
     dependency: {fileID: 0}
   - asset: {fileID: 2800000, guid: a6ff87afdba9c754a9d64eee67befdbc, type: 3}
-    path: Assets/Art/Levels/Med/Textures/Normals/med_float_corner_Normal.png
+    path: Assets/Art/Levels/Med/Textures/med_float_corner_Normal.png
     size: 30576
     group: 4
     dependency: {fileID: 0}
   - asset: {fileID: 2800000, guid: 171cd72858f4b4b4a99a7146b461af3c, type: 3}
-    path: Assets/Art/Levels/Med/Textures/Normals/med_float_cross_Normal.png
+    path: Assets/Art/Levels/Med/Textures/med_float_cross_Normal.png
     size: 30468
     group: 4
     dependency: {fileID: 0}
@@ -499,7 +499,7 @@ MonoBehaviour:
     group: 32768
     dependency: {fileID: 0}
   - asset: {fileID: 2800000, guid: 6e9fbade8a1a9e5448a0ba33803ed0ab, type: 3}
-    path: Assets/Art/Levels/Med/Textures/Normals/med_boundary_cage_Normal.png
+    path: Assets/Art/Levels/Med/Textures/med_boundary_cage_Normal.png
     size: 29644
     group: 4
     dependency: {fileID: 0}
@@ -509,7 +509,7 @@ MonoBehaviour:
     group: 4
     dependency: {fileID: 2800000, guid: 1046d74eaea775a43855dcbf94a2f626, type: 3}
   - asset: {fileID: 2800000, guid: a86aa094e6d114e4c9cd63d4235a5347, type: 3}
-    path: Assets/Art/Levels/Med/Textures/Normals/med_floortiles_Normal.png
+    path: Assets/Art/Levels/Med/Textures/med_floortiles_Normal.png
     size: 28536
     group: 4
     dependency: {fileID: 0}
@@ -563,11 +563,6 @@ MonoBehaviour:
     size: 24848
     group: 4
     dependency: {fileID: 2800000, guid: 93fa7cf3748e751469b31e5a2ddeacc4, type: 3}
-  - asset: {fileID: 8300000, guid: e24e4f3ccf3c42c4cbdd944966aa91ba, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Sounds/ChimeUp.wav
-    size: 24833
-    group: 16
-    dependency: {fileID: 8300000, guid: e24e4f3ccf3c42c4cbdd944966aa91ba, type: 3}
   - asset: {fileID: 2800000, guid: aa1902651d9a6b64bb7bbe0883900ea4, type: 3}
     path: Assets/Application/Resources/Evolution/Geometry/Materials/med_float_Normal.png
     size: 24436
@@ -695,7 +690,7 @@ MonoBehaviour:
     dependency: {fileID: 0}
   - asset: {fileID: 919132149155446097, guid: e7dae65e943bef94fa69fc0cdeff6f5d, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/jun_boundary_temple.obj
-    size: 19382
+    size: 19410
     group: 8
     dependency: {fileID: 919132149155446097, guid: e7dae65e943bef94fa69fc0cdeff6f5d, type: 3}
   - asset: {fileID: 2800000, guid: 0ff0fd6b8cfe3eb44bb401d033455481, type: 3}
@@ -743,6 +738,11 @@ MonoBehaviour:
     size: 18340
     group: 32768
     dependency: {fileID: 0}
+  - asset: {fileID: 8300000, guid: e24e4f3ccf3c42c4cbdd944966aa91ba, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Sounds/ChimeUp.wav
+    size: 18272
+    group: 16
+    dependency: {fileID: 8300000, guid: e24e4f3ccf3c42c4cbdd944966aa91ba, type: 3}
   - asset: {fileID: 2800000, guid: 81d37b15b65061a49a487d224619a838, type: 3}
     path: Assets/Application/Resources/Evolution/Geometry/Materials/med_console_Leaves_BC.png
     size: 18148
@@ -770,7 +770,7 @@ MonoBehaviour:
     dependency: {fileID: 2800000, guid: 59b9818438bd18e4fbbaeb59820a9f05, type: 3}
   - asset: {fileID: 919132149155446097, guid: c89da96f55bb51a4db9fa7011f9ca3e6, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/eggbot_ind.obj
-    size: 17358
+    size: 17386
     group: 8
     dependency: {fileID: 919132149155446097, guid: c89da96f55bb51a4db9fa7011f9ca3e6, type: 3}
   - asset: {fileID: 2800000, guid: c5143a03630c56940bb5e92486b15a8b, type: 3}
@@ -785,12 +785,12 @@ MonoBehaviour:
     dependency: {fileID: 102900000, guid: 6a75fae5cc4a9ba488bc5c21d8b1502c, type: 3}
   - asset: {fileID: 919132149155446097, guid: 9bfb23f9f75f08d45bcee93d944fe8bc, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/eggbot_med.obj
-    size: 17046
+    size: 17074
     group: 8
     dependency: {fileID: 919132149155446097, guid: 9bfb23f9f75f08d45bcee93d944fe8bc, type: 3}
   - asset: {fileID: 919132149155446097, guid: 1c7fa02c6f2e23c4ca2ec2dabf43603c, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/eggbot_egy.obj
-    size: 17034
+    size: 17062
     group: 8
     dependency: {fileID: 919132149155446097, guid: 1c7fa02c6f2e23c4ca2ec2dabf43603c, type: 3}
   - asset: {fileID: 2800000, guid: 2078deb3d3270744daabff73e6e2521e, type: 3}
@@ -800,7 +800,7 @@ MonoBehaviour:
     dependency: {fileID: 0}
   - asset: {fileID: 919132149155446097, guid: dacde6017b66adb40bba391ed16a17ab, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/eggbot_jun.obj
-    size: 16826
+    size: 16854
     group: 8
     dependency: {fileID: 919132149155446097, guid: dacde6017b66adb40bba391ed16a17ab, type: 3}
   - asset: {fileID: 2800000, guid: 86334bdfb57939847a5326ea2caadb1a, type: 3}
@@ -864,11 +864,6 @@ MonoBehaviour:
     size: 16052
     group: 4
     dependency: {fileID: 2800000, guid: b80185a7e7190924dbfab00a614d9698, type: 3}
-  - asset: {fileID: 8300000, guid: d88a93e459c93f04aa77bb47e0b5966a, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Sounds/Coin.wav
-    size: 15955
-    group: 16
-    dependency: {fileID: 8300000, guid: d88a93e459c93f04aa77bb47e0b5966a, type: 3}
   - asset: {fileID: 2800000, guid: 614a4c5b8e4c1bd4db0c6480ccd27793, type: 3}
     path: Assets/Application/Resources/Evolution/Geometry/Materials/med_grass_AlbedoTransparency.png
     size: 15916
@@ -881,7 +876,7 @@ MonoBehaviour:
     dependency: {fileID: 0}
   - asset: {fileID: 919132149155446097, guid: e6da25bbc159b7f438249ce30e1951dd, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/eggbot_default.obj
-    size: 15550
+    size: 15578
     group: 8
     dependency: {fileID: 919132149155446097, guid: e6da25bbc159b7f438249ce30e1951dd, type: 3}
   - asset: {fileID: 2800000, guid: c92a741d6859fc34ba6fd3430c61590a, type: 3}
@@ -906,7 +901,7 @@ MonoBehaviour:
     dependency: {fileID: 2800000, guid: 2368742b53b248649831bf8e56ae63cb, type: 3}
   - asset: {fileID: 919132149155446097, guid: 4aed56d73a60a39469c692310a443731, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/jun_boundary_statue.obj
-    size: 15114
+    size: 15142
     group: 8
     dependency: {fileID: 919132149155446097, guid: 4aed56d73a60a39469c692310a443731, type: 3}
   - asset: {fileID: 2800000, guid: 39b0c3fac233e414ea40ab5d59b133a0, type: 3}
@@ -969,6 +964,11 @@ MonoBehaviour:
     size: 13884
     group: 4
     dependency: {fileID: 2800000, guid: ed84592daccf4464683dbba45d7403ba, type: 3}
+  - asset: {fileID: 4800000, guid: fe393ace9b354375a9cb14cdbbc28be4, type: 3}
+    path: Assets/TextMesh Pro/Shaders/TMP_SDF-Mobile.shader
+    size: 13412
+    group: 32768
+    dependency: {fileID: 102900000, guid: 6a75fae5cc4a9ba488bc5c21d8b1502c, type: 3}
   - asset: {fileID: 2800000, guid: 33f986e6c3201f4469a65dd42046dcd2, type: 3}
     path: Assets/Art/Levels/Med/Textures/med_tree_01_diffuse.png
     size: 13324
@@ -1004,16 +1004,16 @@ MonoBehaviour:
     size: 12756
     group: 4
     dependency: {fileID: 2800000, guid: 8f47270f0b2dc194cb4bff9d11485536, type: 3}
+  - asset: {fileID: 919132149155446097, guid: d0e9d6a1c71c1f64aa18a93e71025653, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Geometry/egy_anubis.obj
+    size: 12562
+    group: 8
+    dependency: {fileID: 919132149155446097, guid: d0e9d6a1c71c1f64aa18a93e71025653, type: 3}
   - asset: {fileID: 2800000, guid: 661ae1d5107d7074da175eab359da671, type: 3}
     path: Assets/Art/Levels/Med/Textures/med_gate_mid_AO.png
     size: 12552
     group: 4
     dependency: {fileID: 0}
-  - asset: {fileID: 919132149155446097, guid: d0e9d6a1c71c1f64aa18a93e71025653, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Geometry/egy_anubis.obj
-    size: 12534
-    group: 8
-    dependency: {fileID: 919132149155446097, guid: d0e9d6a1c71c1f64aa18a93e71025653, type: 3}
   - asset: {fileID: 2800000, guid: 4cbd6b166b5f11247a52f21f2be56911, type: 3}
     path: Assets/Application/Resources/Evolution/Geometry/Materials/med_boundary_stocks_AO.png
     size: 12492
@@ -1024,6 +1024,11 @@ MonoBehaviour:
     size: 12428
     group: 4
     dependency: {fileID: 2800000, guid: 4013df2cb64aba146a6fc162d8bb65af, type: 3}
+  - asset: {fileID: 4900000, guid: 82ede54177774732b98a893d9dfbea30, type: 3}
+    path: Assets/Resources/AssetDatabase/definitions.json
+    size: 12152
+    group: 1
+    dependency: {fileID: 4900000, guid: 82ede54177774732b98a893d9dfbea30, type: 3}
   - asset: {fileID: 2800000, guid: 7a77e96c79d8ce54298086257db727c1, type: 3}
     path: Assets/Application/Resources/Evolution/Geometry/Materials/med_boundary_stocks_AlbedoTransparency.png
     size: 12140
@@ -1049,19 +1054,9 @@ MonoBehaviour:
     size: 11544
     group: 4
     dependency: {fileID: 2800000, guid: 7f016c4b73f2b6b429045966b9928aaa, type: 3}
-  - asset: {fileID: 4900000, guid: 82ede54177774732b98a893d9dfbea30, type: 3}
-    path: Assets/Resources/AssetDatabase/definitions.json
-    size: 11508
-    group: 1
-    dependency: {fileID: 4900000, guid: 82ede54177774732b98a893d9dfbea30, type: 3}
-  - asset: {fileID: 4800000, guid: fe393ace9b354375a9cb14cdbbc28be4, type: 3}
-    path: Assets/TextMesh Pro/Shaders/TMP_SDF-Mobile.shader
-    size: 11136
-    group: 32768
-    dependency: {fileID: 102900000, guid: 6a75fae5cc4a9ba488bc5c21d8b1502c, type: 3}
   - asset: {fileID: 919132149155446097, guid: 8aceb7dbc1e7ea44ab2e053374e49794, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/egy_sphinx.obj
-    size: 11066
+    size: 11094
     group: 8
     dependency: {fileID: 919132149155446097, guid: 8aceb7dbc1e7ea44ab2e053374e49794, type: 3}
   - asset: {fileID: 2800000, guid: 05a3a72cc134b834bbb76c521417578f, type: 3}
@@ -1124,6 +1119,11 @@ MonoBehaviour:
     size: 10564
     group: 4
     dependency: {fileID: 2800000, guid: 7fa73b97d8832a541b6f5566b4321c4e, type: 3}
+  - asset: {fileID: 8300000, guid: d88a93e459c93f04aa77bb47e0b5966a, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Sounds/Coin.wav
+    size: 10405
+    group: 16
+    dependency: {fileID: 8300000, guid: d88a93e459c93f04aa77bb47e0b5966a, type: 3}
   - asset: {fileID: 2800000, guid: 0a8fcb1b62d70a14690a3473f0c56032, type: 3}
     path: Assets/Art/Levels/Med/Textures/med_brick_AlbedoTransparency.png
     size: 10324
@@ -1136,7 +1136,7 @@ MonoBehaviour:
     dependency: {fileID: 0}
   - asset: {fileID: 919132149155446097, guid: 6d8cfe883b81f874096cc980f58c1c6a, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/med_tile_crossroads_static.obj
-    size: 10026
+    size: 10054
     group: 8
     dependency: {fileID: 919132149155446097, guid: 6d8cfe883b81f874096cc980f58c1c6a, type: 3}
   - asset: {fileID: 2800000, guid: 73a9978e560dec448a3580d026baa546, type: 3}
@@ -1146,7 +1146,7 @@ MonoBehaviour:
     dependency: {fileID: 0}
   - asset: {fileID: 919132149155446097, guid: fb691c8ef77a2dd4aaf1e24b4f25ff74, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/med_tile_boundary_cage.obj
-    size: 9582
+    size: 9610
     group: 8
     dependency: {fileID: 919132149155446097, guid: fb691c8ef77a2dd4aaf1e24b4f25ff74, type: 3}
   - asset: {fileID: 1481385858290834, guid: daa46a58178a6ad41ae1ddc2dc7f856d, type: 3}
@@ -1154,16 +1154,16 @@ MonoBehaviour:
     size: 9571
     group: 64
     dependency: {fileID: 0}
+  - asset: {fileID: 919132149155446097, guid: 5fc3fed84ebba744caef0660cf45352b, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Geometry/ind_tile_pipe_corner.obj
+    size: 9474
+    group: 8
+    dependency: {fileID: 919132149155446097, guid: 5fc3fed84ebba744caef0660cf45352b, type: 3}
   - asset: {fileID: 2800000, guid: e91a9a323fbab7f4ab76620528b34c95, type: 3}
     path: Assets/Art/Levels/Med/Textures/med_nsew_AO.png
     size: 9472
     group: 4
     dependency: {fileID: 0}
-  - asset: {fileID: 919132149155446097, guid: 5fc3fed84ebba744caef0660cf45352b, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Geometry/ind_tile_pipe_corner.obj
-    size: 9446
-    group: 8
-    dependency: {fileID: 919132149155446097, guid: 5fc3fed84ebba744caef0660cf45352b, type: 3}
   - asset: {fileID: 4800000, guid: d104b2fc1ca6445babb8e90b0758136b, type: 3}
     path: Packages/com.unity.render-pipelines.universal/Shaders/Utils/CoreBlitColorAndDepth.shader
     size: 9396
@@ -1184,6 +1184,11 @@ MonoBehaviour:
     size: 8976
     group: 131072
     dependency: {fileID: 102900000, guid: 6a75fae5cc4a9ba488bc5c21d8b1502c, type: 3}
+  - asset: {fileID: 4900000, guid: 1e33e6c3d32e27b498ec3a32dd349cd8, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/DVwTCy.json
+    size: 8896
+    group: 1
+    dependency: {fileID: 4900000, guid: 1e33e6c3d32e27b498ec3a32dd349cd8, type: 3}
   - asset: {fileID: 4695226594433876902, guid: a7555e1569b55a04b9907c21fc39335b, type: 3}
     path: Assets/Application/ClassicTS/Data/UI/ColourSelectorPanel.prefab
     size: 8863
@@ -1214,29 +1219,34 @@ MonoBehaviour:
     size: 8312
     group: 4
     dependency: {fileID: 2800000, guid: 64b673239fbc5114690f0e38b6173cdf, type: 3}
-  - asset: {fileID: 4900000, guid: 1e33e6c3d32e27b498ec3a32dd349cd8, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/DVwTCy.json
-    size: 8004
+  - asset: {fileID: 4900000, guid: d4d90b284ee8aa645b25ba634af6aa97, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/8F0T2d.json
+    size: 8264
     group: 1
-    dependency: {fileID: 4900000, guid: 1e33e6c3d32e27b498ec3a32dd349cd8, type: 3}
+    dependency: {fileID: 4900000, guid: d4d90b284ee8aa645b25ba634af6aa97, type: 3}
   - asset: {fileID: 919132149155446097, guid: f01dff17029aeb64bae9bee1df5e1916, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/ind_tile_door.obj
-    size: 7986
+    size: 8014
     group: 8
     dependency: {fileID: 919132149155446097, guid: f01dff17029aeb64bae9bee1df5e1916, type: 3}
+  - asset: {fileID: 4900000, guid: b6285ee7eda19e546a64f98868d82998, type: 3}
+    path: Assets/Resources/AssetManifests/Models.txt
+    size: 7928
+    group: 1
+    dependency: {fileID: 4900000, guid: b6285ee7eda19e546a64f98868d82998, type: 3}
+  - asset: {fileID: 4900000, guid: a490850b7c2ef1247b89529700350ed8, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/EAG2Tk.json
+    size: 7904
+    group: 1
+    dependency: {fileID: 4900000, guid: a490850b7c2ef1247b89529700350ed8, type: 3}
   - asset: {fileID: 919132149155446097, guid: c320841493ff6014eae52bbf7d8e7a7e, type: 3}
     path: Assets/Application/Production/Resources/Levels/Med/med_corner_static_nw_hd.fbx
     size: 7847
     group: 8
     dependency: {fileID: 919132149155446097, guid: c320841493ff6014eae52bbf7d8e7a7e, type: 3}
-  - asset: {fileID: 4900000, guid: 02cabf6359cfd484c8bad1137e6c960a, type: 3}
-    path: Assets/Resources/AssetManifests/Models.txt
-    size: 7756
-    group: 1
-    dependency: {fileID: 4900000, guid: 02cabf6359cfd484c8bad1137e6c960a, type: 3}
   - asset: {fileID: 919132149155446097, guid: 36ee849634d6c0b46acd8f9d54e2dd57, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/med_tile_door.obj
-    size: 7522
+    size: 7550
     group: 8
     dependency: {fileID: 919132149155446097, guid: 36ee849634d6c0b46acd8f9d54e2dd57, type: 3}
   - asset: {fileID: 4800000, guid: 8f6481c9e65368c42a7bdb47adb7859e, type: 3}
@@ -1244,11 +1254,11 @@ MonoBehaviour:
     size: 7500
     group: 32768
     dependency: {fileID: 0}
-  - asset: {fileID: 4900000, guid: d4d90b284ee8aa645b25ba634af6aa97, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/8F0T2d.json
-    size: 7408
+  - asset: {fileID: 4900000, guid: beb84cf00c587e7439815b832ff36594, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/CmuxvG.json
+    size: 7268
     group: 1
-    dependency: {fileID: 4900000, guid: d4d90b284ee8aa645b25ba634af6aa97, type: 3}
+    dependency: {fileID: 4900000, guid: beb84cf00c587e7439815b832ff36594, type: 3}
   - asset: {fileID: 4800000, guid: af4a2f8c1aa77c64d8dc41d18135633c, type: 3}
     path: Assets/System/Shaders/URPFrostOpaque.shader
     size: 7236
@@ -1264,11 +1274,6 @@ MonoBehaviour:
     size: 7140
     group: 32768
     dependency: {fileID: 0}
-  - asset: {fileID: 4900000, guid: a490850b7c2ef1247b89529700350ed8, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/EAG2Tk.json
-    size: 7040
-    group: 1
-    dependency: {fileID: 4900000, guid: a490850b7c2ef1247b89529700350ed8, type: 3}
   - asset: {fileID: 2800000, guid: 49b3ecf52dfa7634cb938dbf6cf20f33, type: 3}
     path: Assets/Art/Levels/Med/Textures/med_straight_AO.png
     size: 6884
@@ -1289,39 +1294,54 @@ MonoBehaviour:
     size: 6614
     group: 64
     dependency: {fileID: 0}
+  - asset: {fileID: 4900000, guid: 244b866eb7c68944a9a041e11ebbd3b1, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/8dUK6N.json
+    size: 6576
+    group: 1
+    dependency: {fileID: 4900000, guid: 244b866eb7c68944a9a041e11ebbd3b1, type: 3}
   - asset: {fileID: 4800000, guid: e8ee25143a34b8c4388709ea947055d1, type: 3}
     path: Packages/com.unity.render-pipelines.universal/Shaders/PostProcessing/ScalingSetup.shader
     size: 6544
     group: 32768
     dependency: {fileID: 0}
-  - asset: {fileID: 4900000, guid: beb84cf00c587e7439815b832ff36594, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/CmuxvG.json
-    size: 6504
-    group: 1
-    dependency: {fileID: 4900000, guid: beb84cf00c587e7439815b832ff36594, type: 3}
   - asset: {fileID: 919132149155446097, guid: bf384dcb67a0a68469423eeaa097c1e4, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/ind_tile_pipe_join_leak.obj
-    size: 6374
+    size: 6402
     group: 8
     dependency: {fileID: 919132149155446097, guid: bf384dcb67a0a68469423eeaa097c1e4, type: 3}
   - asset: {fileID: 919132149155446097, guid: 97319ede319601a48a4f5d07b21dee11, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/ind_tile_pipe_join.obj
-    size: 6334
+    size: 6362
     group: 8
     dependency: {fileID: 919132149155446097, guid: 97319ede319601a48a4f5d07b21dee11, type: 3}
+  - asset: {fileID: 919132149155446097, guid: cd463e5a295d72b40a2ad7f65167839c, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Geometry/med_tile_stocks.obj
+    size: 6290
+    group: 8
+    dependency: {fileID: 919132149155446097, guid: cd463e5a295d72b40a2ad7f65167839c, type: 3}
   - asset: {fileID: 1803786589928054, guid: d47f009476100f545971a81ede14c750, type: 3}
     path: Packages/com.unity.render-pipelines.core/Runtime/Debugging/Prefabs/Widgets/DebugUIVector4.prefab
     size: 6278
     group: 64
     dependency: {fileID: 0}
-  - asset: {fileID: 919132149155446097, guid: cd463e5a295d72b40a2ad7f65167839c, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Geometry/med_tile_stocks.obj
-    size: 6262
-    group: 8
-    dependency: {fileID: 919132149155446097, guid: cd463e5a295d72b40a2ad7f65167839c, type: 3}
+  - asset: {fileID: 4900000, guid: d8cba57331b6d714192b8cc263b82c31, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/2NqYCC.json
+    size: 6220
+    group: 1
+    dependency: {fileID: 4900000, guid: d8cba57331b6d714192b8cc263b82c31, type: 3}
+  - asset: {fileID: 4900000, guid: 69ada2d394a1bdd40af7c19187043eab, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/29MD15.json
+    size: 6144
+    group: 1
+    dependency: {fileID: 4900000, guid: 69ada2d394a1bdd40af7c19187043eab, type: 3}
+  - asset: {fileID: 4900000, guid: 39f710e4d62565543b5dceb55ea05ac8, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/6rDpFF.json
+    size: 6004
+    group: 1
+    dependency: {fileID: 4900000, guid: 39f710e4d62565543b5dceb55ea05ac8, type: 3}
   - asset: {fileID: 919132149155446097, guid: 24be62f931260a244b0732e46de69686, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/ind_tile_pipe_floor.obj
-    size: 5966
+    size: 5994
     group: 8
     dependency: {fileID: 919132149155446097, guid: 24be62f931260a244b0732e46de69686, type: 3}
   - asset: {fileID: 4800000, guid: 12dc59547ea167a4ab435097dd0f9add, type: 3}
@@ -1329,11 +1349,6 @@ MonoBehaviour:
     size: 5908
     group: 32768
     dependency: {fileID: 0}
-  - asset: {fileID: 4900000, guid: 244b866eb7c68944a9a041e11ebbd3b1, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/8dUK6N.json
-    size: 5872
-    group: 1
-    dependency: {fileID: 4900000, guid: 244b866eb7c68944a9a041e11ebbd3b1, type: 3}
   - asset: {fileID: 4800000, guid: cf81c85f95fe47e1a27f6ae460cf182c, type: 3}
     path: Assets/TextMesh Pro/Shaders/TMP_Sprite.shader
     size: 5868
@@ -1341,72 +1356,97 @@ MonoBehaviour:
     dependency: {fileID: 0}
   - asset: {fileID: 919132149155446097, guid: 2eff26ce039b0ee4eb00628ee19f610f, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/ind_tile_pipe_mid.obj
-    size: 5834
+    size: 5862
     group: 8
     dependency: {fileID: 919132149155446097, guid: 2eff26ce039b0ee4eb00628ee19f610f, type: 3}
+  - asset: {fileID: 4900000, guid: 996371155e44cbc46805405f304c9f00, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/9d0aFK.json
+    size: 5856
+    group: 1
+    dependency: {fileID: 4900000, guid: 996371155e44cbc46805405f304c9f00, type: 3}
   - asset: {fileID: 919132149155446097, guid: 9a27ee3172ac99f4bbde9643974098f1, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/med_tile_straight_static.obj
-    size: 5822
+    size: 5850
     group: 8
     dependency: {fileID: 919132149155446097, guid: 9a27ee3172ac99f4bbde9643974098f1, type: 3}
   - asset: {fileID: 919132149155446097, guid: f5d2ca8d53ff00f40abb8ff3c0e337a6, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/jun_tile_door.obj
-    size: 5766
+    size: 5794
     group: 8
     dependency: {fileID: 919132149155446097, guid: f5d2ca8d53ff00f40abb8ff3c0e337a6, type: 3}
-  - asset: {fileID: 8300000, guid: 687de61c11e85ce4cacc9950e274b535, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Sounds/Click.wav
-    size: 5748
-    group: 16
-    dependency: {fileID: 8300000, guid: 687de61c11e85ce4cacc9950e274b535, type: 3}
   - asset: {fileID: 919132149155446097, guid: 02a9c7f81413ccb4e9e3a90569d0537e, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/egy_tile_door.obj
-    size: 5746
+    size: 5774
     group: 8
     dependency: {fileID: 919132149155446097, guid: 02a9c7f81413ccb4e9e3a90569d0537e, type: 3}
+  - asset: {fileID: 4900000, guid: edc2c8d987d65c5408a09cc47286cef3, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/6AkqNU.json
+    size: 5752
+    group: 1
+    dependency: {fileID: 4900000, guid: edc2c8d987d65c5408a09cc47286cef3, type: 3}
+  - asset: {fileID: 4900000, guid: 843e925b1995323469b4c7c7132444eb, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/9Rkek6.json
+    size: 5720
+    group: 1
+    dependency: {fileID: 4900000, guid: 843e925b1995323469b4c7c7132444eb, type: 3}
   - asset: {fileID: 2800000, guid: d0064402da81e3b43aef5cbdc5fd5e6e, type: 3}
     path: Assets/Application/Resources/Evolution/Geometry/Materials/med_house_01_Metallic.png
     size: 5704
     group: 4
     dependency: {fileID: 2800000, guid: d0064402da81e3b43aef5cbdc5fd5e6e, type: 3}
-  - asset: {fileID: 4900000, guid: d8cba57331b6d714192b8cc263b82c31, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/2NqYCC.json
-    size: 5652
+  - asset: {fileID: 4900000, guid: bfaa521f10218cb49a99cd52ac6a35cb, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/E5ekWA.json
+    size: 5668
     group: 1
-    dependency: {fileID: 4900000, guid: d8cba57331b6d714192b8cc263b82c31, type: 3}
+    dependency: {fileID: 4900000, guid: bfaa521f10218cb49a99cd52ac6a35cb, type: 3}
+  - asset: {fileID: 4900000, guid: a118012c4649f7c489ddcb40d70df781, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/53h9mk.json
+    size: 5636
+    group: 1
+    dependency: {fileID: 4900000, guid: a118012c4649f7c489ddcb40d70df781, type: 3}
+  - asset: {fileID: 4900000, guid: 055b16f76d408d648848164413fef03d, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/20wHxq.json
+    size: 5632
+    group: 1
+    dependency: {fileID: 4900000, guid: 055b16f76d408d648848164413fef03d, type: 3}
   - asset: {fileID: 919132149155446097, guid: f2977e435cd04c848be87510708698bb, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/med_tile_corner_static.obj
-    size: 5582
+    size: 5610
     group: 8
     dependency: {fileID: 919132149155446097, guid: f2977e435cd04c848be87510708698bb, type: 3}
-  - asset: {fileID: 4900000, guid: 39f710e4d62565543b5dceb55ea05ac8, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/6rDpFF.json
-    size: 5532
-    group: 1
-    dependency: {fileID: 4900000, guid: 39f710e4d62565543b5dceb55ea05ac8, type: 3}
   - asset: {fileID: 919132149155446097, guid: d1809ebda9ef49d459c6ad5c68299e00, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/med_tile_big_red_hse.obj
-    size: 5514
+    size: 5542
     group: 8
     dependency: {fileID: 919132149155446097, guid: d1809ebda9ef49d459c6ad5c68299e00, type: 3}
-  - asset: {fileID: 4900000, guid: 69ada2d394a1bdd40af7c19187043eab, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/29MD15.json
+  - asset: {fileID: 4900000, guid: c97edc4e5ac71514aad9dd046fdc8226, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/CHxm0k.json
     size: 5492
     group: 1
-    dependency: {fileID: 4900000, guid: 69ada2d394a1bdd40af7c19187043eab, type: 3}
+    dependency: {fileID: 4900000, guid: c97edc4e5ac71514aad9dd046fdc8226, type: 3}
   - asset: {fileID: 919132149155446097, guid: c3dee9a9d80e054408bc6278bfe58ce8, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/med_tile_big_blue_hse.obj
-    size: 5454
+    size: 5482
     group: 8
     dependency: {fileID: 919132149155446097, guid: c3dee9a9d80e054408bc6278bfe58ce8, type: 3}
   - asset: {fileID: 919132149155446097, guid: 1b998b200a8ec5e4fae35033f9a51f29, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/jun_boundary_tree_plant.obj
-    size: 5402
+    size: 5430
     group: 8
     dependency: {fileID: 919132149155446097, guid: 1b998b200a8ec5e4fae35033f9a51f29, type: 3}
+  - asset: {fileID: 4900000, guid: 5b9f090903977844dade7d5cca3b9c63, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/3Jftm8.json
+    size: 5404
+    group: 1
+    dependency: {fileID: 4900000, guid: 5b9f090903977844dade7d5cca3b9c63, type: 3}
+  - asset: {fileID: 4900000, guid: fabbc3cc7bb5f1e469657710ac48d923, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/EVYY0m.json
+    size: 5396
+    group: 1
+    dependency: {fileID: 4900000, guid: fabbc3cc7bb5f1e469657710ac48d923, type: 3}
   - asset: {fileID: 919132149155446097, guid: c77a9686d58e55b4a98b609f7f5f28be, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/med_tile_well.obj
-    size: 5342
+    size: 5370
     group: 8
     dependency: {fileID: 919132149155446097, guid: c77a9686d58e55b4a98b609f7f5f28be, type: 3}
   - asset: {fileID: 1477735892729942, guid: 94afea5f242d72547979595ba963f335, type: 3}
@@ -1414,91 +1454,66 @@ MonoBehaviour:
     size: 5331
     group: 64
     dependency: {fileID: 0}
-  - asset: {fileID: 4900000, guid: 996371155e44cbc46805405f304c9f00, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/9d0aFK.json
-    size: 5272
+  - asset: {fileID: 4900000, guid: 3f3f8eefa0b514c49b6d783294f5e8e4, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/Adc51t.json
+    size: 5316
     group: 1
-    dependency: {fileID: 4900000, guid: 996371155e44cbc46805405f304c9f00, type: 3}
+    dependency: {fileID: 4900000, guid: 3f3f8eefa0b514c49b6d783294f5e8e4, type: 3}
+  - asset: {fileID: 4900000, guid: b575bc69ad019504eb7a171157298e5f, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/487RWU.json
+    size: 5316
+    group: 1
+    dependency: {fileID: 4900000, guid: b575bc69ad019504eb7a171157298e5f, type: 3}
   - asset: {fileID: 2800000, guid: b83873c5ba4f1ec458c32d40022b849b, type: 3}
     path: Assets/Application/Resources/Evolution/Geometry/Materials/med_trim_01_metallic_2k.png
     size: 5224
     group: 4
     dependency: {fileID: 2800000, guid: b83873c5ba4f1ec458c32d40022b849b, type: 3}
-  - asset: {fileID: 4900000, guid: edc2c8d987d65c5408a09cc47286cef3, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/6AkqNU.json
-    size: 5156
+  - asset: {fileID: 4900000, guid: fffbf843c9f076641a467c4330529e8a, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/7NuwPu.json
+    size: 5192
     group: 1
-    dependency: {fileID: 4900000, guid: edc2c8d987d65c5408a09cc47286cef3, type: 3}
+    dependency: {fileID: 4900000, guid: fffbf843c9f076641a467c4330529e8a, type: 3}
+  - asset: {fileID: 919132149155446097, guid: 339f757174d516a46aa17299931b528f, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Geometry/jun_tile_straight.obj
+    size: 5150
+    group: 8
+    dependency: {fileID: 919132149155446097, guid: 339f757174d516a46aa17299931b528f, type: 3}
   - asset: {fileID: 4800000, guid: db3190ecbb4cdbf45be2478e0f412e35, type: 3}
     path: Assets/System/Shaders/AdditiveParticlesEmissive.shader
     size: 5132
     group: 32768
     dependency: {fileID: 0}
-  - asset: {fileID: 919132149155446097, guid: 339f757174d516a46aa17299931b528f, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Geometry/jun_tile_straight.obj
-    size: 5122
-    group: 8
-    dependency: {fileID: 919132149155446097, guid: 339f757174d516a46aa17299931b528f, type: 3}
-  - asset: {fileID: 4900000, guid: 843e925b1995323469b4c7c7132444eb, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/9Rkek6.json
-    size: 5116
+  - asset: {fileID: 4900000, guid: 5e9be5ef1313f254f9931cbb19ee6ed6, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/6EVpuu.json
+    size: 5016
     group: 1
-    dependency: {fileID: 4900000, guid: 843e925b1995323469b4c7c7132444eb, type: 3}
-  - asset: {fileID: 4900000, guid: bfaa521f10218cb49a99cd52ac6a35cb, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/E5ekWA.json
-    size: 5088
-    group: 1
-    dependency: {fileID: 4900000, guid: bfaa521f10218cb49a99cd52ac6a35cb, type: 3}
-  - asset: {fileID: 4900000, guid: 055b16f76d408d648848164413fef03d, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/20wHxq.json
-    size: 5080
-    group: 1
-    dependency: {fileID: 4900000, guid: 055b16f76d408d648848164413fef03d, type: 3}
-  - asset: {fileID: 4900000, guid: a118012c4649f7c489ddcb40d70df781, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/53h9mk.json
-    size: 5056
-    group: 1
-    dependency: {fileID: 4900000, guid: a118012c4649f7c489ddcb40d70df781, type: 3}
+    dependency: {fileID: 4900000, guid: 5e9be5ef1313f254f9931cbb19ee6ed6, type: 3}
   - asset: {fileID: 4800000, guid: 7dcb4dba7a2562c41a43e8561a74dcfb, type: 3}
     path: Assets/System/Shaders/URPSurfaceFilmOpaque.shader
     size: 4948
     group: 32768
     dependency: {fileID: 0}
-  - asset: {fileID: 4900000, guid: c97edc4e5ac71514aad9dd046fdc8226, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/CHxm0k.json
-    size: 4912
-    group: 1
-    dependency: {fileID: 4900000, guid: c97edc4e5ac71514aad9dd046fdc8226, type: 3}
-  - asset: {fileID: 4900000, guid: 3f3f8eefa0b514c49b6d783294f5e8e4, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/Adc51t.json
-    size: 4860
-    group: 1
-    dependency: {fileID: 4900000, guid: 3f3f8eefa0b514c49b6d783294f5e8e4, type: 3}
   - asset: {fileID: 919132149155446097, guid: 832cf0678f1a60b4daea8cf1cbca174b, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/jun_tile_corner.obj
-    size: 4854
+    size: 4882
     group: 8
     dependency: {fileID: 919132149155446097, guid: 832cf0678f1a60b4daea8cf1cbca174b, type: 3}
-  - asset: {fileID: 4900000, guid: 5b9f090903977844dade7d5cca3b9c63, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/3Jftm8.json
-    size: 4852
+  - asset: {fileID: 4900000, guid: de79b80719521fe4ab6dd6202bf9e3b1, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/D6p6aR.json
+    size: 4868
     group: 1
-    dependency: {fileID: 4900000, guid: 5b9f090903977844dade7d5cca3b9c63, type: 3}
-  - asset: {fileID: 4900000, guid: fabbc3cc7bb5f1e469657710ac48d923, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/EVYY0m.json
-    size: 4820
-    group: 1
-    dependency: {fileID: 4900000, guid: fabbc3cc7bb5f1e469657710ac48d923, type: 3}
-  - asset: {fileID: 4900000, guid: b575bc69ad019504eb7a171157298e5f, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/487RWU.json
-    size: 4780
-    group: 1
-    dependency: {fileID: 4900000, guid: b575bc69ad019504eb7a171157298e5f, type: 3}
+    dependency: {fileID: 4900000, guid: de79b80719521fe4ab6dd6202bf9e3b1, type: 3}
   - asset: {fileID: 919132149155446097, guid: dadca620b6cec744cb1d66b7142aef4b, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/jun_boundary_plant.obj
-    size: 4778
+    size: 4806
     group: 8
     dependency: {fileID: 919132149155446097, guid: dadca620b6cec744cb1d66b7142aef4b, type: 3}
+  - asset: {fileID: 4900000, guid: 727ddbb15d9aa6e45a31208ad5fd472f, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/1cvX71.json
+    size: 4760
+    group: 1
+    dependency: {fileID: 4900000, guid: 727ddbb15d9aa6e45a31208ad5fd472f, type: 3}
   - asset: {fileID: 4695226594433876902, guid: a1652329d8d6a4a4d98344d09da2f5a0, type: 3}
     path: Assets/Application/ClassicTS/Data/UI/SkyboxEditorPanel.prefab
     size: 4724
@@ -1509,36 +1524,46 @@ MonoBehaviour:
     size: 4692
     group: 32768
     dependency: {fileID: 0}
-  - asset: {fileID: 4900000, guid: fffbf843c9f076641a467c4330529e8a, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/7NuwPu.json
-    size: 4692
+  - asset: {fileID: 4900000, guid: 5873e4e3e3905c048a53d45e2e17f140, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/EY2RwQ.json
+    size: 4688
     group: 1
-    dependency: {fileID: 4900000, guid: fffbf843c9f076641a467c4330529e8a, type: 3}
+    dependency: {fileID: 4900000, guid: 5873e4e3e3905c048a53d45e2e17f140, type: 3}
+  - asset: {fileID: 4900000, guid: 942be1e7ffdf07244ab34757428cda48, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/4Gx3FV.json
+    size: 4672
+    group: 1
+    dependency: {fileID: 4900000, guid: 942be1e7ffdf07244ab34757428cda48, type: 3}
+  - asset: {fileID: 919132149155446097, guid: f7c812db7270e9f4cbe5dd395a988107, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Geometry/jun_console.obj
+    size: 4662
+    group: 8
+    dependency: {fileID: 919132149155446097, guid: f7c812db7270e9f4cbe5dd395a988107, type: 3}
   - asset: {fileID: 4800000, guid: 378a58b2d8d527846a5f7aa89c84dcae, type: 3}
     path: Assets/System/Shaders/URPSurfaceFilm.shader
     size: 4656
     group: 32768
     dependency: {fileID: 0}
-  - asset: {fileID: 919132149155446097, guid: f7c812db7270e9f4cbe5dd395a988107, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Geometry/jun_console.obj
-    size: 4634
-    group: 8
-    dependency: {fileID: 919132149155446097, guid: f7c812db7270e9f4cbe5dd395a988107, type: 3}
   - asset: {fileID: 1153602445894428, guid: cf6cbdd672089a84796e55a21fed1cbe, type: 3}
     path: Packages/com.unity.render-pipelines.core/Runtime/Debugging/Prefabs/Resources/DebugUICanvas.prefab
     size: 4630
     group: 64
     dependency: {fileID: 1153602445894428, guid: cf6cbdd672089a84796e55a21fed1cbe, type: 3}
-  - asset: {fileID: 4900000, guid: 5e9be5ef1313f254f9931cbb19ee6ed6, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/6EVpuu.json
-    size: 4528
+  - asset: {fileID: 4900000, guid: 98c19ab3b12263542950267add789a9d, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/160xG6.json
+    size: 4612
     group: 1
-    dependency: {fileID: 4900000, guid: 5e9be5ef1313f254f9931cbb19ee6ed6, type: 3}
+    dependency: {fileID: 4900000, guid: 98c19ab3b12263542950267add789a9d, type: 3}
   - asset: {fileID: 4800000, guid: d6dae50ee9e1bfa4db75f19f99355220, type: 3}
     path: Packages/com.unity.render-pipelines.universal/Shaders/Utils/CopyDepth.shader
     size: 4524
     group: 32768
     dependency: {fileID: 0}
+  - asset: {fileID: 919132149155446097, guid: c063f832e67f9fc42a3fc5c5c0462dca, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Geometry/jun_tile_crossroads.obj
+    size: 4522
+    group: 8
+    dependency: {fileID: 919132149155446097, guid: c063f832e67f9fc42a3fc5c5c0462dca, type: 3}
   - asset: {fileID: 1100371661045084, guid: ae00bb75e0cd5b04b8fe7fb4ab662629, type: 3}
     path: Packages/com.unity.render-pipelines.core/Runtime/Debugging/Prefabs/Widgets/DebugUIIntField.prefab
     size: 4498
@@ -1549,16 +1574,16 @@ MonoBehaviour:
     size: 4498
     group: 64
     dependency: {fileID: 0}
-  - asset: {fileID: 919132149155446097, guid: c063f832e67f9fc42a3fc5c5c0462dca, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Geometry/jun_tile_crossroads.obj
-    size: 4494
-    group: 8
-    dependency: {fileID: 919132149155446097, guid: c063f832e67f9fc42a3fc5c5c0462dca, type: 3}
   - asset: {fileID: 4800000, guid: 419664288904da04db8d513851b7864e, type: 3}
     path: Assets/System/Shaders/URPMirrorOpaque.shader
     size: 4488
     group: 32768
     dependency: {fileID: 0}
+  - asset: {fileID: 4900000, guid: 135ad586863d5e940aaaea2d0655857a, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/2jdmk7.json
+    size: 4412
+    group: 1
+    dependency: {fileID: 4900000, guid: 135ad586863d5e940aaaea2d0655857a, type: 3}
   - asset: {fileID: 1824161537160572, guid: 326f7c58aed965d41bf7805a782d1e44, type: 3}
     path: Packages/com.unity.render-pipelines.core/Runtime/Debugging/Prefabs/Widgets/DebugUIVector2.prefab
     size: 4384
@@ -1569,41 +1594,41 @@ MonoBehaviour:
     size: 4380
     group: 32768
     dependency: {fileID: 0}
+  - asset: {fileID: 919132149155446097, guid: 5833d489ea66b8342a682e2687c39e86, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Geometry/egy_tutankhamun.obj
+    size: 4378
+    group: 8
+    dependency: {fileID: 919132149155446097, guid: 5833d489ea66b8342a682e2687c39e86, type: 3}
   - asset: {fileID: 4800000, guid: a15b78cf8ca26ca4fb2090293153c62c, type: 3}
     path: Packages/com.unity.render-pipelines.universal/Shaders/PostProcessing/PaniniProjection.shader
     size: 4368
     group: 32768
     dependency: {fileID: 0}
-  - asset: {fileID: 4900000, guid: de79b80719521fe4ab6dd6202bf9e3b1, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/D6p6aR.json
-    size: 4364
+  - asset: {fileID: 4900000, guid: 315729c6883158f4e9ba301d68b6ee8a, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/4Qphy3.json
+    size: 4352
     group: 1
-    dependency: {fileID: 4900000, guid: de79b80719521fe4ab6dd6202bf9e3b1, type: 3}
-  - asset: {fileID: 919132149155446097, guid: 5833d489ea66b8342a682e2687c39e86, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Geometry/egy_tutankhamun.obj
-    size: 4350
-    group: 8
-    dependency: {fileID: 919132149155446097, guid: 5833d489ea66b8342a682e2687c39e86, type: 3}
-  - asset: {fileID: 4900000, guid: 727ddbb15d9aa6e45a31208ad5fd472f, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/1cvX71.json
-    size: 4276
+    dependency: {fileID: 4900000, guid: 315729c6883158f4e9ba301d68b6ee8a, type: 3}
+  - asset: {fileID: 4900000, guid: 18de1e0214d0a76489efd3fb4774a7bb, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/1c399T.json
+    size: 4316
     group: 1
-    dependency: {fileID: 4900000, guid: 727ddbb15d9aa6e45a31208ad5fd472f, type: 3}
+    dependency: {fileID: 4900000, guid: 18de1e0214d0a76489efd3fb4774a7bb, type: 3}
+  - asset: {fileID: 4900000, guid: b68b5f3024648c84fbfc8e71323669e2, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/79QyrW.json
+    size: 4316
+    group: 1
+    dependency: {fileID: 4900000, guid: b68b5f3024648c84fbfc8e71323669e2, type: 3}
+  - asset: {fileID: 4900000, guid: 2307d1c254d5e4442aaac05fa3fe8653, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/9FmA7W.json
+    size: 4228
+    group: 1
+    dependency: {fileID: 4900000, guid: 2307d1c254d5e4442aaac05fa3fe8653, type: 3}
   - asset: {fileID: 2800000, guid: e3d24661c1e055f45a7560c033dbb837, type: 3}
     path: Packages/com.unity.render-pipelines.universal/Textures/BlueNoise64/L/LDR_LLL1_0.png
     size: 4220
     group: 4
     dependency: {fileID: 0}
-  - asset: {fileID: 4900000, guid: 5873e4e3e3905c048a53d45e2e17f140, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/EY2RwQ.json
-    size: 4220
-    group: 1
-    dependency: {fileID: 4900000, guid: 5873e4e3e3905c048a53d45e2e17f140, type: 3}
-  - asset: {fileID: 4900000, guid: 942be1e7ffdf07244ab34757428cda48, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/4Gx3FV.json
-    size: 4200
-    group: 1
-    dependency: {fileID: 4900000, guid: 942be1e7ffdf07244ab34757428cda48, type: 3}
   - asset: {fileID: 4800000, guid: 22214ffa01faa5a409cd20672dcc560e, type: 3}
     path: Assets/System/Shaders/URPGizmoTransparent.shader
     size: 4176
@@ -1614,21 +1639,21 @@ MonoBehaviour:
     size: 4174
     group: 64
     dependency: {fileID: 0}
-  - asset: {fileID: 4900000, guid: 98c19ab3b12263542950267add789a9d, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/160xG6.json
-    size: 4144
-    group: 1
-    dependency: {fileID: 4900000, guid: 98c19ab3b12263542950267add789a9d, type: 3}
   - asset: {fileID: 919132149155446097, guid: 3b558b4607cf6774cb2d53f480d2aced, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/jun_tile_stone_crossroads.obj
-    size: 4138
+    size: 4166
     group: 8
     dependency: {fileID: 919132149155446097, guid: 3b558b4607cf6774cb2d53f480d2aced, type: 3}
   - asset: {fileID: 919132149155446097, guid: f110640164bd0114ca2c4e1304013019, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/jun_tile_crossroads_static.obj
-    size: 4138
+    size: 4166
     group: 8
     dependency: {fileID: 919132149155446097, guid: f110640164bd0114ca2c4e1304013019, type: 3}
+  - asset: {fileID: 4900000, guid: 69506a7c8c8888b47a7e06ad6ab4e279, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/6yarpw.json
+    size: 4128
+    group: 1
+    dependency: {fileID: 4900000, guid: 69506a7c8c8888b47a7e06ad6ab4e279, type: 3}
   - asset: {fileID: 4800000, guid: e6e9a19c3678ded42a3bc431ebef7dbd, type: 3}
     path: Packages/com.unity.render-pipelines.universal/Shaders/Utils/FallbackError.shader
     size: 4116
@@ -1639,16 +1664,36 @@ MonoBehaviour:
     size: 4105
     group: 64
     dependency: {fileID: 102900000, guid: 6a75fae5cc4a9ba488bc5c21d8b1502c, type: 3}
+  - asset: {fileID: 4900000, guid: 80e3c040b42f0124da92216160ef6b69, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/AX1r6f.json
+    size: 4104
+    group: 1
+    dependency: {fileID: 4900000, guid: 80e3c040b42f0124da92216160ef6b69, type: 3}
   - asset: {fileID: 4800000, guid: ad682977e7bb615408eef4bdf8e80694, type: 3}
     path: Assets/System/Shaders/AlwaysOnTopUnlit.shader
     size: 4100
     group: 32768
     dependency: {fileID: 0}
-  - asset: {fileID: 4900000, guid: 135ad586863d5e940aaaea2d0655857a, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/2jdmk7.json
-    size: 3992
+  - asset: {fileID: 4900000, guid: c2216e41d37f7f645919e2b11dbaa359, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/6VDuh3.json
+    size: 4084
     group: 1
-    dependency: {fileID: 4900000, guid: 135ad586863d5e940aaaea2d0655857a, type: 3}
+    dependency: {fileID: 4900000, guid: c2216e41d37f7f645919e2b11dbaa359, type: 3}
+  - asset: {fileID: 4900000, guid: 44c2600235e380b44908c41238b453b3, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/1jEN74.json
+    size: 4068
+    group: 1
+    dependency: {fileID: 4900000, guid: 44c2600235e380b44908c41238b453b3, type: 3}
+  - asset: {fileID: 4900000, guid: 3ca475e04353ab042a68bcaa46ef8dbe, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/1qcViT.json
+    size: 4036
+    group: 1
+    dependency: {fileID: 4900000, guid: 3ca475e04353ab042a68bcaa46ef8dbe, type: 3}
+  - asset: {fileID: 4900000, guid: 6468a64bfc292a745bf966965c56e908, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/2RMCD2.json
+    size: 4000
+    group: 1
+    dependency: {fileID: 4900000, guid: 6468a64bfc292a745bf966965c56e908, type: 3}
   - asset: {fileID: 4800000, guid: 1eeecccb4e7a4ea47b9fb0e7b03a8709, type: 3}
     path: Assets/System/Shaders/URPGizmoAdditive.shader
     size: 3980
@@ -1659,96 +1704,136 @@ MonoBehaviour:
     size: 3980
     group: 32768
     dependency: {fileID: 0}
+  - asset: {fileID: 4900000, guid: 66c611bbc35de6d4a8d25c5b745ff78d, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/572WMa.json
+    size: 3972
+    group: 1
+    dependency: {fileID: 4900000, guid: 66c611bbc35de6d4a8d25c5b745ff78d, type: 3}
+  - asset: {fileID: 4900000, guid: f26db347c7a1c1b44974a502005ee13f, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/3Y4dGF.json
+    size: 3956
+    group: 1
+    dependency: {fileID: 4900000, guid: f26db347c7a1c1b44974a502005ee13f, type: 3}
   - asset: {fileID: 4800000, guid: 8c3ee818f2efa514c889881ccb2e95a2, type: 3}
     path: Packages/com.unity.render-pipelines.universal/Shaders/Utils/StencilDitherMaskSeed.shader
     size: 3948
     group: 32768
     dependency: {fileID: 0}
-  - asset: {fileID: 4900000, guid: b68b5f3024648c84fbfc8e71323669e2, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/79QyrW.json
-    size: 3944
-    group: 1
-    dependency: {fileID: 4900000, guid: b68b5f3024648c84fbfc8e71323669e2, type: 3}
   - asset: {fileID: 919132149155446097, guid: d0046c393ad809c4b92e87378962c3cf, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/med_tile_sml_blue_hse.obj
-    size: 3910
+    size: 3938
     group: 8
     dependency: {fileID: 919132149155446097, guid: d0046c393ad809c4b92e87378962c3cf, type: 3}
-  - asset: {fileID: 4900000, guid: 315729c6883158f4e9ba301d68b6ee8a, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/4Qphy3.json
-    size: 3904
-    group: 1
-    dependency: {fileID: 4900000, guid: 315729c6883158f4e9ba301d68b6ee8a, type: 3}
   - asset: {fileID: 919132149155446097, guid: e89c0050c88246249b6e0d15264a26a6, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/med_tile_sml_red_hse.obj
-    size: 3902
+    size: 3930
     group: 8
     dependency: {fileID: 919132149155446097, guid: e89c0050c88246249b6e0d15264a26a6, type: 3}
+  - asset: {fileID: 919132149155446097, guid: 57c8d323ad5f5ad4e91e4175e3accd4b, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Geometry/jun_boundary_tree_double.obj
+    size: 3926
+    group: 8
+    dependency: {fileID: 919132149155446097, guid: 57c8d323ad5f5ad4e91e4175e3accd4b, type: 3}
+  - asset: {fileID: 4900000, guid: 605720e09aa6cc244b063fa6a1c96944, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/2XYHAQ.json
+    size: 3920
+    group: 1
+    dependency: {fileID: 4900000, guid: 605720e09aa6cc244b063fa6a1c96944, type: 3}
+  - asset: {fileID: 4900000, guid: d374cd39c7811ee4bb01210b6fc89f53, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/7YY8xR.json
+    size: 3904
+    group: 1
+    dependency: {fileID: 4900000, guid: d374cd39c7811ee4bb01210b6fc89f53, type: 3}
   - asset: {fileID: 4800000, guid: 04c410c9937594faa893a11dceb85f7e, type: 3}
     path: Packages/com.unity.render-pipelines.universal/Shaders/Utils/Sampling.shader
     size: 3900
     group: 32768
     dependency: {fileID: 0}
-  - asset: {fileID: 919132149155446097, guid: 57c8d323ad5f5ad4e91e4175e3accd4b, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Geometry/jun_boundary_tree_double.obj
-    size: 3898
+  - asset: {fileID: 4900000, guid: 2616b0061ca0333428bce5a80d64d9b7, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/6HGfK5.json
+    size: 3900
+    group: 1
+    dependency: {fileID: 4900000, guid: 2616b0061ca0333428bce5a80d64d9b7, type: 3}
+  - asset: {fileID: 919132149155446097, guid: 07adee39eae17a54bbd01c6bbf448770, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Geometry/egy_console.obj
+    size: 3894
     group: 8
-    dependency: {fileID: 919132149155446097, guid: 57c8d323ad5f5ad4e91e4175e3accd4b, type: 3}
-  - asset: {fileID: 4900000, guid: 18de1e0214d0a76489efd3fb4774a7bb, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/1c399T.json
-    size: 3896
-    group: 1
-    dependency: {fileID: 4900000, guid: 18de1e0214d0a76489efd3fb4774a7bb, type: 3}
-  - asset: {fileID: 4900000, guid: 2307d1c254d5e4442aaac05fa3fe8653, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/9FmA7W.json
-    size: 3896
-    group: 1
-    dependency: {fileID: 4900000, guid: 2307d1c254d5e4442aaac05fa3fe8653, type: 3}
+    dependency: {fileID: 919132149155446097, guid: 07adee39eae17a54bbd01c6bbf448770, type: 3}
   - asset: {fileID: 4800000, guid: 1121bb4e615ca3c48b214e79e841e823, type: 3}
     path: Packages/com.unity.render-pipelines.universal/Shaders/PostProcessing/StopNaN.shader
     size: 3884
     group: 32768
     dependency: {fileID: 0}
-  - asset: {fileID: 919132149155446097, guid: 07adee39eae17a54bbd01c6bbf448770, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Geometry/egy_console.obj
-    size: 3866
-    group: 8
-    dependency: {fileID: 919132149155446097, guid: 07adee39eae17a54bbd01c6bbf448770, type: 3}
-  - asset: {fileID: 4900000, guid: 69506a7c8c8888b47a7e06ad6ab4e279, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/6yarpw.json
-    size: 3812
+  - asset: {fileID: 4900000, guid: 961074da440d8fa4d95965a1bb6656ff, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/CAfAAv.json
+    size: 3880
     group: 1
-    dependency: {fileID: 4900000, guid: 69506a7c8c8888b47a7e06ad6ab4e279, type: 3}
+    dependency: {fileID: 4900000, guid: 961074da440d8fa4d95965a1bb6656ff, type: 3}
+  - asset: {fileID: 4900000, guid: c30d44b2461b88142a180a4229c7dbd4, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/Ct2Dv8.json
+    size: 3876
+    group: 1
+    dependency: {fileID: 4900000, guid: c30d44b2461b88142a180a4229c7dbd4, type: 3}
   - asset: {fileID: 919132149155446097, guid: c05201e3fb3915e49b04420a6dbc0160, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/jun_tile_boundary_pyramid.obj
-    size: 3810
+    size: 3838
     group: 8
     dependency: {fileID: 919132149155446097, guid: c05201e3fb3915e49b04420a6dbc0160, type: 3}
+  - asset: {fileID: 4900000, guid: 279cb0df7e7b72c40b3d264aeb3788cb, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/5183DY.json
+    size: 3824
+    group: 1
+    dependency: {fileID: 4900000, guid: 279cb0df7e7b72c40b3d264aeb3788cb, type: 3}
+  - asset: {fileID: 4900000, guid: 5742d39227a7fe54899349c9967b349c, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/3YRiQ3.json
+    size: 3800
+    group: 1
+    dependency: {fileID: 4900000, guid: 5742d39227a7fe54899349c9967b349c, type: 3}
   - asset: {fileID: 919132149155446097, guid: 364f3387d5a85ec4a9978689fcfa2156, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/med_tile_sml_tudor_hse.obj
     size: 3798
     group: 8
     dependency: {fileID: 919132149155446097, guid: 364f3387d5a85ec4a9978689fcfa2156, type: 3}
+  - asset: {fileID: 4900000, guid: 449ac944f7c308b4facced073d970c60, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/4X02WJ.json
+    size: 3796
+    group: 1
+    dependency: {fileID: 4900000, guid: 449ac944f7c308b4facced073d970c60, type: 3}
   - asset: {fileID: 919132149155446097, guid: 800fbb761fe3111409622e64f83e983e, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/egy_tile_crossroads_static.obj
-    size: 3758
+    size: 3786
     group: 8
     dependency: {fileID: 919132149155446097, guid: 800fbb761fe3111409622e64f83e983e, type: 3}
-  - asset: {fileID: 4900000, guid: c2216e41d37f7f645919e2b11dbaa359, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/6VDuh3.json
-    size: 3752
-    group: 1
-    dependency: {fileID: 4900000, guid: c2216e41d37f7f645919e2b11dbaa359, type: 3}
   - asset: {fileID: 919132149155446097, guid: 2916405c6436bb54996486eca1e4a4a3, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/egy_tile_crossroads.obj
-    size: 3742
+    size: 3770
     group: 8
     dependency: {fileID: 919132149155446097, guid: 2916405c6436bb54996486eca1e4a4a3, type: 3}
+  - asset: {fileID: 4900000, guid: 440f5f195e0413c4c8cde7609617f688, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/6mTi7d.json
+    size: 3764
+    group: 1
+    dependency: {fileID: 4900000, guid: 440f5f195e0413c4c8cde7609617f688, type: 3}
+  - asset: {fileID: 4900000, guid: c5a33ed412174684eb30516618f8b31e, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/3GrKuD.json
+    size: 3752
+    group: 1
+    dependency: {fileID: 4900000, guid: c5a33ed412174684eb30516618f8b31e, type: 3}
   - asset: {fileID: 919132149155446097, guid: 9b1a774165626a4478c8a75413c19e39, type: 3}
     path: Assets/System/Resources/Geometry/arrow_straight.fbx
     size: 3739
     group: 8
     dependency: {fileID: 102900000, guid: 6a75fae5cc4a9ba488bc5c21d8b1502c, type: 3}
+  - asset: {fileID: 919132149155446097, guid: ffe6fed009f5bec47b56ff271a13dc44, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Geometry/med_tile_crossroads.obj
+    size: 3738
+    group: 8
+    dependency: {fileID: 919132149155446097, guid: ffe6fed009f5bec47b56ff271a13dc44, type: 3}
+  - asset: {fileID: 919132149155446097, guid: 368cddf41bb4e3c45a16403146896d09, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Geometry/ind_tile_crossroads_static.obj
+    size: 3734
+    group: 8
+    dependency: {fileID: 919132149155446097, guid: 368cddf41bb4e3c45a16403146896d09, type: 3}
   - asset: {fileID: 919132149155446097, guid: 19b944c9af7052f44be1347f39112b53, type: 3}
     path: Assets/System/Resources/Geometry/arrow_cw.fbx
     size: 3727
@@ -1759,289 +1844,269 @@ MonoBehaviour:
     size: 3727
     group: 8
     dependency: {fileID: 919132149155446097, guid: 231f4963f4e86af42b34cae994dc8d50, type: 3}
-  - asset: {fileID: 4900000, guid: 44c2600235e380b44908c41238b453b3, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/1jEN74.json
+  - asset: {fileID: 4900000, guid: 8c269a0e5568bd44bb607a39fb0388e2, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/4hC30a.json
     size: 3720
     group: 1
-    dependency: {fileID: 4900000, guid: 44c2600235e380b44908c41238b453b3, type: 3}
-  - asset: {fileID: 919132149155446097, guid: ffe6fed009f5bec47b56ff271a13dc44, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Geometry/med_tile_crossroads.obj
-    size: 3710
-    group: 8
-    dependency: {fileID: 919132149155446097, guid: ffe6fed009f5bec47b56ff271a13dc44, type: 3}
-  - asset: {fileID: 4900000, guid: 80e3c040b42f0124da92216160ef6b69, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/AX1r6f.json
-    size: 3708
-    group: 1
-    dependency: {fileID: 4900000, guid: 80e3c040b42f0124da92216160ef6b69, type: 3}
-  - asset: {fileID: 919132149155446097, guid: 368cddf41bb4e3c45a16403146896d09, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Geometry/ind_tile_crossroads_static.obj
-    size: 3706
-    group: 8
-    dependency: {fileID: 919132149155446097, guid: 368cddf41bb4e3c45a16403146896d09, type: 3}
+    dependency: {fileID: 4900000, guid: 8c269a0e5568bd44bb607a39fb0388e2, type: 3}
   - asset: {fileID: 919132149155446097, guid: a5585253e0afd64448ab5fd88fbf8c75, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/ind_tile_crossroads.obj
-    size: 3690
+    size: 3718
     group: 8
     dependency: {fileID: 919132149155446097, guid: a5585253e0afd64448ab5fd88fbf8c75, type: 3}
   - asset: {fileID: 919132149155446097, guid: 596f08b61cc66cf4f968f16b7473f089, type: 3}
     path: Assets/Application/Resources/Global/Geometry/tile_trans.obj
-    size: 3678
+    size: 3706
     group: 8
     dependency: {fileID: 919132149155446097, guid: 596f08b61cc66cf4f968f16b7473f089, type: 3}
-  - asset: {fileID: 4900000, guid: 3ca475e04353ab042a68bcaa46ef8dbe, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/1qcViT.json
-    size: 3640
+  - asset: {fileID: 4900000, guid: 53f7c0d7eba06b3498137b1c166400a2, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/5nFX86.json
+    size: 3692
     group: 1
-    dependency: {fileID: 4900000, guid: 3ca475e04353ab042a68bcaa46ef8dbe, type: 3}
-  - asset: {fileID: 4900000, guid: 6468a64bfc292a745bf966965c56e908, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/2RMCD2.json
+    dependency: {fileID: 4900000, guid: 53f7c0d7eba06b3498137b1c166400a2, type: 3}
+  - asset: {fileID: 4900000, guid: 04c7f7c429bca1b42a6fe9938822876d, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/CkuNQv.json
+    size: 3688
+    group: 1
+    dependency: {fileID: 4900000, guid: 04c7f7c429bca1b42a6fe9938822876d, type: 3}
+  - asset: {fileID: 4900000, guid: c7927781d0f18ff4c9cb20b1983081dd, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/4Kr3wC.json
+    size: 3688
+    group: 1
+    dependency: {fileID: 4900000, guid: c7927781d0f18ff4c9cb20b1983081dd, type: 3}
+  - asset: {fileID: 4900000, guid: ee21adc5d9b20e848a791001764ecb58, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/9UN0JH.json
+    size: 3684
+    group: 1
+    dependency: {fileID: 4900000, guid: ee21adc5d9b20e848a791001764ecb58, type: 3}
+  - asset: {fileID: 4900000, guid: 0785f0e23ae12a54aad0d469303cad8f, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/DtTYMx.json
+    size: 3680
+    group: 1
+    dependency: {fileID: 4900000, guid: 0785f0e23ae12a54aad0d469303cad8f, type: 3}
+  - asset: {fileID: 4900000, guid: be838c3e8c7c2c0468d61ee557bc45d8, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/DdpQdT.json
+    size: 3676
+    group: 1
+    dependency: {fileID: 4900000, guid: be838c3e8c7c2c0468d61ee557bc45d8, type: 3}
+  - asset: {fileID: 4900000, guid: 8425e84502bf0f345a2192c59db868c1, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/ECFy5W.json
+    size: 3656
+    group: 1
+    dependency: {fileID: 4900000, guid: 8425e84502bf0f345a2192c59db868c1, type: 3}
+  - asset: {fileID: 4900000, guid: 9c126721033da474090bb3a9a4824755, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/CKahrc.json
     size: 3620
     group: 1
-    dependency: {fileID: 4900000, guid: 6468a64bfc292a745bf966965c56e908, type: 3}
+    dependency: {fileID: 4900000, guid: 9c126721033da474090bb3a9a4824755, type: 3}
+  - asset: {fileID: 919132149155446097, guid: 9db79e59aaee43a40a1d66490a89b55e, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Geometry/med_tile_tent_green.obj
+    size: 3598
+    group: 8
+    dependency: {fileID: 919132149155446097, guid: 9db79e59aaee43a40a1d66490a89b55e, type: 3}
+  - asset: {fileID: 919132149155446097, guid: e75d0a9b677227b408a535a7342c7589, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Geometry/med_tile_tent_blue.obj
+    size: 3598
+    group: 8
+    dependency: {fileID: 919132149155446097, guid: e75d0a9b677227b408a535a7342c7589, type: 3}
+  - asset: {fileID: 919132149155446097, guid: 1162768cb126d9b448aa928cef184da4, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Geometry/jun_tile_corner_static.obj
+    size: 3594
+    group: 8
+    dependency: {fileID: 919132149155446097, guid: 1162768cb126d9b448aa928cef184da4, type: 3}
+  - asset: {fileID: 919132149155446097, guid: ff95d9df5311c6144b6779c980e7220e, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Geometry/jun_tile_stone_corner.obj
+    size: 3594
+    group: 8
+    dependency: {fileID: 919132149155446097, guid: ff95d9df5311c6144b6779c980e7220e, type: 3}
   - asset: {fileID: 919132149155446097, guid: fdfddb361192e7641838ec4cbf788474, type: 3}
     path: Assets/Application/Resources/Global/Geometry/primitive_box_chamfer.obj
     size: 3586
     group: 8
     dependency: {fileID: 919132149155446097, guid: fdfddb361192e7641838ec4cbf788474, type: 3}
-  - asset: {fileID: 4900000, guid: 66c611bbc35de6d4a8d25c5b745ff78d, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/572WMa.json
-    size: 3584
-    group: 1
-    dependency: {fileID: 4900000, guid: 66c611bbc35de6d4a8d25c5b745ff78d, type: 3}
-  - asset: {fileID: 919132149155446097, guid: 9db79e59aaee43a40a1d66490a89b55e, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Geometry/med_tile_tent_green.obj
-    size: 3570
-    group: 8
-    dependency: {fileID: 919132149155446097, guid: 9db79e59aaee43a40a1d66490a89b55e, type: 3}
-  - asset: {fileID: 919132149155446097, guid: e75d0a9b677227b408a535a7342c7589, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Geometry/med_tile_tent_blue.obj
-    size: 3570
-    group: 8
-    dependency: {fileID: 919132149155446097, guid: e75d0a9b677227b408a535a7342c7589, type: 3}
-  - asset: {fileID: 919132149155446097, guid: 1162768cb126d9b448aa928cef184da4, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Geometry/jun_tile_corner_static.obj
-    size: 3566
-    group: 8
-    dependency: {fileID: 919132149155446097, guid: 1162768cb126d9b448aa928cef184da4, type: 3}
-  - asset: {fileID: 919132149155446097, guid: ff95d9df5311c6144b6779c980e7220e, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Geometry/jun_tile_stone_corner.obj
-    size: 3566
-    group: 8
-    dependency: {fileID: 919132149155446097, guid: ff95d9df5311c6144b6779c980e7220e, type: 3}
-  - asset: {fileID: 4900000, guid: f26db347c7a1c1b44974a502005ee13f, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/3Y4dGF.json
-    size: 3560
-    group: 1
-    dependency: {fileID: 4900000, guid: f26db347c7a1c1b44974a502005ee13f, type: 3}
-  - asset: {fileID: 4900000, guid: d374cd39c7811ee4bb01210b6fc89f53, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/7YY8xR.json
-    size: 3556
-    group: 1
-    dependency: {fileID: 4900000, guid: d374cd39c7811ee4bb01210b6fc89f53, type: 3}
   - asset: {fileID: 4695226594433876902, guid: d164df16686cd7b47b4dd970ba3f74bf, type: 3}
     path: Assets/Application/ClassicTS/Data/UI/EffectEditorPanel.prefab
     size: 3552
     group: 64
     dependency: {fileID: 102900000, guid: 6a75fae5cc4a9ba488bc5c21d8b1502c, type: 3}
-  - asset: {fileID: 4900000, guid: 605720e09aa6cc244b063fa6a1c96944, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/2XYHAQ.json
-    size: 3532
+  - asset: {fileID: 4900000, guid: 8543a7e75a17bf44580d78a59510d1f4, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/478XT2.json
+    size: 3536
     group: 1
-    dependency: {fileID: 4900000, guid: 605720e09aa6cc244b063fa6a1c96944, type: 3}
-  - asset: {fileID: 4900000, guid: 961074da440d8fa4d95965a1bb6656ff, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/CAfAAv.json
-    size: 3520
+    dependency: {fileID: 4900000, guid: 8543a7e75a17bf44580d78a59510d1f4, type: 3}
+  - asset: {fileID: 4900000, guid: 2fa4e8772777e5b4bb3e2c7a574c032f, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/7KE9KD.json
+    size: 3524
     group: 1
-    dependency: {fileID: 4900000, guid: 961074da440d8fa4d95965a1bb6656ff, type: 3}
-  - asset: {fileID: 4900000, guid: 2616b0061ca0333428bce5a80d64d9b7, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/6HGfK5.json
-    size: 3504
+    dependency: {fileID: 4900000, guid: 2fa4e8772777e5b4bb3e2c7a574c032f, type: 3}
+  - asset: {fileID: 4900000, guid: 3e3ab3f0799164a44ada1babfb101b15, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/4Kn8QH.json
+    size: 3512
     group: 1
-    dependency: {fileID: 4900000, guid: 2616b0061ca0333428bce5a80d64d9b7, type: 3}
-  - asset: {fileID: 4900000, guid: c30d44b2461b88142a180a4229c7dbd4, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/Ct2Dv8.json
-    size: 3500
-    group: 1
-    dependency: {fileID: 4900000, guid: c30d44b2461b88142a180a4229c7dbd4, type: 3}
+    dependency: {fileID: 4900000, guid: 3e3ab3f0799164a44ada1babfb101b15, type: 3}
+  - asset: {fileID: 919132149155446097, guid: bebc6bbca2f187a4f9444a56900a6a3c, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Geometry/ind_console.obj
+    size: 3498
+    group: 8
+    dependency: {fileID: 919132149155446097, guid: bebc6bbca2f187a4f9444a56900a6a3c, type: 3}
   - asset: {fileID: 4800000, guid: da07703fcc09f8d4799221050659bd55, type: 3}
     path: Packages/com.unity.shadergraph/Editor/Resources/Shaders/FallbackError.shader
     size: 3496
     group: 32768
     dependency: {fileID: 4800000, guid: da07703fcc09f8d4799221050659bd55, type: 3}
-  - asset: {fileID: 919132149155446097, guid: bebc6bbca2f187a4f9444a56900a6a3c, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Geometry/ind_console.obj
-    size: 3470
-    group: 8
-    dependency: {fileID: 919132149155446097, guid: bebc6bbca2f187a4f9444a56900a6a3c, type: 3}
-  - asset: {fileID: 4900000, guid: 279cb0df7e7b72c40b3d264aeb3788cb, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/5183DY.json
-    size: 3452
+  - asset: {fileID: 4900000, guid: 4677b417f48908d44ba2e41fcdb755f8, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/4iXGmq.json
+    size: 3472
     group: 1
-    dependency: {fileID: 4900000, guid: 279cb0df7e7b72c40b3d264aeb3788cb, type: 3}
-  - asset: {fileID: 4900000, guid: 449ac944f7c308b4facced073d970c60, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/4X02WJ.json
-    size: 3436
+    dependency: {fileID: 4900000, guid: 4677b417f48908d44ba2e41fcdb755f8, type: 3}
+  - asset: {fileID: 4900000, guid: 2ef4240a6026eb943b6d0629cf1bc357, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/9TcuEu.json
+    size: 3460
     group: 1
-    dependency: {fileID: 4900000, guid: 449ac944f7c308b4facced073d970c60, type: 3}
+    dependency: {fileID: 4900000, guid: 2ef4240a6026eb943b6d0629cf1bc357, type: 3}
   - asset: {fileID: 919132149155446097, guid: d06855c0873bdeb4885d709e3ca02095, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/jun_mudpool.obj
-    size: 3418
+    size: 3446
     group: 8
     dependency: {fileID: 919132149155446097, guid: d06855c0873bdeb4885d709e3ca02095, type: 3}
   - asset: {fileID: 919132149155446097, guid: 641c2e742c7eeea4d80d86160b57d09d, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/med_tile_corner.obj
-    size: 3410
+    size: 3438
     group: 8
     dependency: {fileID: 919132149155446097, guid: 641c2e742c7eeea4d80d86160b57d09d, type: 3}
-  - asset: {fileID: 4900000, guid: 5742d39227a7fe54899349c9967b349c, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/3YRiQ3.json
-    size: 3404
-    group: 1
-    dependency: {fileID: 4900000, guid: 5742d39227a7fe54899349c9967b349c, type: 3}
-  - asset: {fileID: 4900000, guid: 440f5f195e0413c4c8cde7609617f688, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/6mTi7d.json
-    size: 3392
-    group: 1
-    dependency: {fileID: 4900000, guid: 440f5f195e0413c4c8cde7609617f688, type: 3}
-  - asset: {fileID: 4900000, guid: c7927781d0f18ff4c9cb20b1983081dd, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/4Kr3wC.json
-    size: 3380
-    group: 1
-    dependency: {fileID: 4900000, guid: c7927781d0f18ff4c9cb20b1983081dd, type: 3}
   - asset: {fileID: 919132149155446097, guid: ce8707e0408f9414ca06f6096a819d86, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/egy_tile_corner_static.obj
-    size: 3378
+    size: 3406
     group: 8
     dependency: {fileID: 919132149155446097, guid: ce8707e0408f9414ca06f6096a819d86, type: 3}
-  - asset: {fileID: 4900000, guid: 53f7c0d7eba06b3498137b1c166400a2, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/5nFX86.json
-    size: 3372
+  - asset: {fileID: 4900000, guid: 4a280b37ae44a76429800e5e59e88b18, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/1vTx5d.json
+    size: 3404
     group: 1
-    dependency: {fileID: 4900000, guid: 53f7c0d7eba06b3498137b1c166400a2, type: 3}
-  - asset: {fileID: 4900000, guid: 8c269a0e5568bd44bb607a39fb0388e2, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/4hC30a.json
-    size: 3372
+    dependency: {fileID: 4900000, guid: 4a280b37ae44a76429800e5e59e88b18, type: 3}
+  - asset: {fileID: 4900000, guid: ed637386a5dc08944889216af9116042, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/AC0H2Y.json
+    size: 3396
     group: 1
-    dependency: {fileID: 4900000, guid: 8c269a0e5568bd44bb607a39fb0388e2, type: 3}
-  - asset: {fileID: 4900000, guid: c5a33ed412174684eb30516618f8b31e, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/3GrKuD.json
-    size: 3368
-    group: 1
-    dependency: {fileID: 4900000, guid: c5a33ed412174684eb30516618f8b31e, type: 3}
+    dependency: {fileID: 4900000, guid: ed637386a5dc08944889216af9116042, type: 3}
   - asset: {fileID: 919132149155446097, guid: 2e3f54849b6f9f242b0af3cb27cdc6c1, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/egy_tile_corner.obj
-    size: 3362
+    size: 3390
     group: 8
     dependency: {fileID: 919132149155446097, guid: 2e3f54849b6f9f242b0af3cb27cdc6c1, type: 3}
-  - asset: {fileID: 4900000, guid: ee21adc5d9b20e848a791001764ecb58, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/9UN0JH.json
-    size: 3352
+  - asset: {fileID: 4900000, guid: d34e674e4155fbf408d684c28bf4ede1, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/31N2we.json
+    size: 3376
     group: 1
-    dependency: {fileID: 4900000, guid: ee21adc5d9b20e848a791001764ecb58, type: 3}
+    dependency: {fileID: 4900000, guid: d34e674e4155fbf408d684c28bf4ede1, type: 3}
+  - asset: {fileID: 919132149155446097, guid: 93d22bc00026f424fbd51443fa110478, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Geometry/jun_boundary_tree_single.obj
+    size: 3370
+    group: 8
+    dependency: {fileID: 919132149155446097, guid: 93d22bc00026f424fbd51443fa110478, type: 3}
   - asset: {fileID: 11400000, guid: 2e498d1c8094910479dc3e1b768306a4, type: 2}
     path: Assets/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF - Fallback.asset
     size: 3344
     group: 131072
     dependency: {fileID: 102900000, guid: 6a75fae5cc4a9ba488bc5c21d8b1502c, type: 3}
-  - asset: {fileID: 919132149155446097, guid: 93d22bc00026f424fbd51443fa110478, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Geometry/jun_boundary_tree_single.obj
-    size: 3342
-    group: 8
-    dependency: {fileID: 919132149155446097, guid: 93d22bc00026f424fbd51443fa110478, type: 3}
   - asset: {fileID: 4800000, guid: 36e335017ad71d54fbb10842863188ae, type: 3}
     path: Packages/com.unity.render-pipelines.core/Runtime/RenderPipelineResources/FallbackShader.shader
     size: 3336
     group: 32768
     dependency: {fileID: 0}
-  - asset: {fileID: 4900000, guid: 8425e84502bf0f345a2192c59db868c1, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/ECFy5W.json
+  - asset: {fileID: 4900000, guid: fd17d09f17c384a49bb6b59caa49bda9, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/29uqR6.json
     size: 3336
     group: 1
-    dependency: {fileID: 4900000, guid: 8425e84502bf0f345a2192c59db868c1, type: 3}
-  - asset: {fileID: 4900000, guid: be838c3e8c7c2c0468d61ee557bc45d8, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/DdpQdT.json
+    dependency: {fileID: 4900000, guid: fd17d09f17c384a49bb6b59caa49bda9, type: 3}
+  - asset: {fileID: 919132149155446097, guid: fd5383c3c27d9594092af22987c5a824, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Geometry/ind_tile_corner_static.obj
+    size: 3334
+    group: 8
+    dependency: {fileID: 919132149155446097, guid: fd5383c3c27d9594092af22987c5a824, type: 3}
+  - asset: {fileID: 4900000, guid: 4baf2d4c8508dbe4ab4fe6beeacb328f, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/DW8a8e.json
     size: 3332
     group: 1
-    dependency: {fileID: 4900000, guid: be838c3e8c7c2c0468d61ee557bc45d8, type: 3}
+    dependency: {fileID: 4900000, guid: 4baf2d4c8508dbe4ab4fe6beeacb328f, type: 3}
   - asset: {fileID: 11400000, guid: c41005c129ba4d66911b75229fd70b45, type: 2}
     path: Assets/TextMesh Pro/Resources/Sprite Assets/EmojiOne.asset
     size: 3324
     group: 131072
     dependency: {fileID: 11400000, guid: c41005c129ba4d66911b75229fd70b45, type: 2}
-  - asset: {fileID: 4900000, guid: 04c7f7c429bca1b42a6fe9938822876d, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/CkuNQv.json
-    size: 3320
-    group: 1
-    dependency: {fileID: 4900000, guid: 04c7f7c429bca1b42a6fe9938822876d, type: 3}
-  - asset: {fileID: 4900000, guid: 0785f0e23ae12a54aad0d469303cad8f, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/DtTYMx.json
-    size: 3312
-    group: 1
-    dependency: {fileID: 4900000, guid: 0785f0e23ae12a54aad0d469303cad8f, type: 3}
-  - asset: {fileID: 919132149155446097, guid: fd5383c3c27d9594092af22987c5a824, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Geometry/ind_tile_corner_static.obj
-    size: 3306
-    group: 8
-    dependency: {fileID: 919132149155446097, guid: fd5383c3c27d9594092af22987c5a824, type: 3}
   - asset: {fileID: 919132149155446097, guid: 4c72368ce8524a643a007103c20ab323, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/ind_tile_corner.obj
-    size: 3290
+    size: 3318
     group: 8
     dependency: {fileID: 919132149155446097, guid: 4c72368ce8524a643a007103c20ab323, type: 3}
-  - asset: {fileID: 4900000, guid: 9c126721033da474090bb3a9a4824755, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/CKahrc.json
-    size: 3280
+  - asset: {fileID: 4900000, guid: 3a434e4b29eab304abba9ff6b6ee5064, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/4drdPe.json
+    size: 3292
     group: 1
-    dependency: {fileID: 4900000, guid: 9c126721033da474090bb3a9a4824755, type: 3}
+    dependency: {fileID: 4900000, guid: 3a434e4b29eab304abba9ff6b6ee5064, type: 3}
+  - asset: {fileID: 4900000, guid: 751833bea57cebc4a8cb60d49aa7649b, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/EGunjr.json
+    size: 3272
+    group: 1
+    dependency: {fileID: 4900000, guid: 751833bea57cebc4a8cb60d49aa7649b, type: 3}
+  - asset: {fileID: 4900000, guid: 80d682d4493401b4d90d9b60490918aa, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/7ph1A0.json
+    size: 3260
+    group: 1
+    dependency: {fileID: 4900000, guid: 80d682d4493401b4d90d9b60490918aa, type: 3}
+  - asset: {fileID: 4900000, guid: 14e400c361bdbff4cb5cb4ce1ade5c28, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/3Jky0F.json
+    size: 3244
+    group: 1
+    dependency: {fileID: 4900000, guid: 14e400c361bdbff4cb5cb4ce1ade5c28, type: 3}
+  - asset: {fileID: 4900000, guid: bca7cd3bb032ab743bfe4825723a8545, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/2xwQ2w.json
+    size: 3240
+    group: 1
+    dependency: {fileID: 4900000, guid: bca7cd3bb032ab743bfe4825723a8545, type: 3}
   - asset: {fileID: 919132149155446097, guid: b5256eab81befef4f9fc1b7c3cbc053e, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/jun_tile_straight_static.obj
-    size: 3206
+    size: 3234
     group: 8
     dependency: {fileID: 919132149155446097, guid: b5256eab81befef4f9fc1b7c3cbc053e, type: 3}
   - asset: {fileID: 919132149155446097, guid: 15582a8ad27ade74fb8e780b94331206, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/jun_tile_stone_straight.obj
-    size: 3206
+    size: 3234
     group: 8
     dependency: {fileID: 919132149155446097, guid: 15582a8ad27ade74fb8e780b94331206, type: 3}
-  - asset: {fileID: 4900000, guid: 2fa4e8772777e5b4bb3e2c7a574c032f, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/7KE9KD.json
-    size: 3196
+  - asset: {fileID: 4900000, guid: c29e806d463e18f4e845f29a4cb7b78a, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/9xGyqu.json
+    size: 3224
     group: 1
-    dependency: {fileID: 4900000, guid: 2fa4e8772777e5b4bb3e2c7a574c032f, type: 3}
-  - asset: {fileID: 4900000, guid: 8543a7e75a17bf44580d78a59510d1f4, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/478XT2.json
-    size: 3176
+    dependency: {fileID: 4900000, guid: c29e806d463e18f4e845f29a4cb7b78a, type: 3}
+  - asset: {fileID: 4900000, guid: 4a216611d1f6eb84b8b99530ab3113b9, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/7cRt2c.json
+    size: 3220
     group: 1
-    dependency: {fileID: 4900000, guid: 8543a7e75a17bf44580d78a59510d1f4, type: 3}
-  - asset: {fileID: 4900000, guid: 3e3ab3f0799164a44ada1babfb101b15, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/4Kn8QH.json
-    size: 3168
+    dependency: {fileID: 4900000, guid: 4a216611d1f6eb84b8b99530ab3113b9, type: 3}
+  - asset: {fileID: 4900000, guid: a179cff8e73bf6d4a901742e89d49189, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/4W7cWM.json
+    size: 3204
     group: 1
-    dependency: {fileID: 4900000, guid: 3e3ab3f0799164a44ada1babfb101b15, type: 3}
+    dependency: {fileID: 4900000, guid: a179cff8e73bf6d4a901742e89d49189, type: 3}
+  - asset: {fileID: 4900000, guid: 8ea8c257f89c9b04a8746293a8177076, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/7kvWC4.json
+    size: 3200
+    group: 1
+    dependency: {fileID: 4900000, guid: 8ea8c257f89c9b04a8746293a8177076, type: 3}
+  - asset: {fileID: 919132149155446097, guid: 403e3fd0295498640b5cfbceda58a237, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Geometry/med_console.obj
+    size: 3186
+    group: 8
+    dependency: {fileID: 919132149155446097, guid: 403e3fd0295498640b5cfbceda58a237, type: 3}
   - asset: {fileID: 919132149155446097, guid: bfec206baba63b54e8443cee63e6f110, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/coin.obj
     size: 3158
     group: 8
     dependency: {fileID: 919132149155446097, guid: bfec206baba63b54e8443cee63e6f110, type: 3}
-  - asset: {fileID: 919132149155446097, guid: 403e3fd0295498640b5cfbceda58a237, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Geometry/med_console.obj
-    size: 3158
-    group: 8
-    dependency: {fileID: 919132149155446097, guid: 403e3fd0295498640b5cfbceda58a237, type: 3}
-  - asset: {fileID: 4900000, guid: 2ef4240a6026eb943b6d0629cf1bc357, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/9TcuEu.json
-    size: 3148
-    group: 1
-    dependency: {fileID: 4900000, guid: 2ef4240a6026eb943b6d0629cf1bc357, type: 3}
-  - asset: {fileID: 4900000, guid: 4677b417f48908d44ba2e41fcdb755f8, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/4iXGmq.json
-    size: 3136
-    group: 1
-    dependency: {fileID: 4900000, guid: 4677b417f48908d44ba2e41fcdb755f8, type: 3}
   - asset: {fileID: 919132149155446097, guid: bc8c28a87431fee41a47fd51c7d273e8, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/egy_tile_boundary_oblisk.obj
-    size: 3130
+    size: 3158
     group: 8
     dependency: {fileID: 919132149155446097, guid: bc8c28a87431fee41a47fd51c7d273e8, type: 3}
   - asset: {fileID: 919132149155446097, guid: 6e1bd65ca56495e4896720f6c09b23a9, type: 3}
@@ -2054,121 +2119,136 @@ MonoBehaviour:
     size: 3122
     group: 8
     dependency: {fileID: 919132149155446097, guid: 5628d10d296279c4e965613bc99b10f5, type: 3}
+  - asset: {fileID: 919132149155446097, guid: 4773f1e85db621044b80eb585fc6441d, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Geometry/ind_tile_pipe_straight.obj
+    size: 3118
+    group: 8
+    dependency: {fileID: 919132149155446097, guid: 4773f1e85db621044b80eb585fc6441d, type: 3}
+  - asset: {fileID: 4900000, guid: 659f0b8c9e2624844809241721c27b9b, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/5AuEKn.json
+    size: 3112
+    group: 1
+    dependency: {fileID: 4900000, guid: 659f0b8c9e2624844809241721c27b9b, type: 3}
   - asset: {fileID: 0}
     path: Assets/Resources/PerformanceTestRunInfo.json
     size: 3100
     group: 1
     dependency: {fileID: 0}
-  - asset: {fileID: 919132149155446097, guid: 4773f1e85db621044b80eb585fc6441d, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Geometry/ind_tile_pipe_straight.obj
-    size: 3090
-    group: 8
-    dependency: {fileID: 919132149155446097, guid: 4773f1e85db621044b80eb585fc6441d, type: 3}
-  - asset: {fileID: 4900000, guid: d34e674e4155fbf408d684c28bf4ede1, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/31N2we.json
-    size: 3088
+  - asset: {fileID: 4900000, guid: 2fe26d5c6cfb90244ab2a36d03d7e7ed, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/DmjpYW.json
+    size: 3096
     group: 1
-    dependency: {fileID: 4900000, guid: d34e674e4155fbf408d684c28bf4ede1, type: 3}
-  - asset: {fileID: 4900000, guid: 4a280b37ae44a76429800e5e59e88b18, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/1vTx5d.json
-    size: 3084
-    group: 1
-    dependency: {fileID: 4900000, guid: 4a280b37ae44a76429800e5e59e88b18, type: 3}
+    dependency: {fileID: 4900000, guid: 2fe26d5c6cfb90244ab2a36d03d7e7ed, type: 3}
   - asset: {fileID: 919132149155446097, guid: ff17d468d3a999f48a05e4392d525f77, type: 3}
     path: Assets/Application/Production/Resources/Levels/Med/med_nsew_hd.fbx
     size: 3079
     group: 8
     dependency: {fileID: 919132149155446097, guid: ff17d468d3a999f48a05e4392d525f77, type: 3}
-  - asset: {fileID: 4900000, guid: ed637386a5dc08944889216af9116042, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/AC0H2Y.json
-    size: 3064
-    group: 1
-    dependency: {fileID: 4900000, guid: ed637386a5dc08944889216af9116042, type: 3}
   - asset: {fileID: 919132149155446097, guid: 4648d9233737d7b428bd8bd097ad8d45, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/egy_tile_straight_static.obj
-    size: 3042
+    size: 3070
     group: 8
     dependency: {fileID: 919132149155446097, guid: 4648d9233737d7b428bd8bd097ad8d45, type: 3}
   - asset: {fileID: 919132149155446097, guid: 330f2478f48fb4f43aebbf793a8aa4c7, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/ind_tile_straight_static.obj
-    size: 3042
+    size: 3070
     group: 8
     dependency: {fileID: 919132149155446097, guid: 330f2478f48fb4f43aebbf793a8aa4c7, type: 3}
+  - asset: {fileID: 4900000, guid: 9d61a44575dd2bf46969bf7e5a18bb8d, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/1QKiq1.json
+    size: 3068
+    group: 1
+    dependency: {fileID: 4900000, guid: 9d61a44575dd2bf46969bf7e5a18bb8d, type: 3}
   - asset: {fileID: 919132149155446097, guid: c42e36d914affdc44bff330d6c6146dc, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/egy_tile_straight.obj
-    size: 3034
+    size: 3062
     group: 8
     dependency: {fileID: 919132149155446097, guid: c42e36d914affdc44bff330d6c6146dc, type: 3}
   - asset: {fileID: 919132149155446097, guid: 6c124f08ec8ee0b40974b086a4badaaf, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/med_tile_straight.obj
-    size: 3034
+    size: 3062
     group: 8
     dependency: {fileID: 919132149155446097, guid: 6c124f08ec8ee0b40974b086a4badaaf, type: 3}
   - asset: {fileID: 919132149155446097, guid: a432a13068ab61f4c92f0566d35625ee, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/ind_tile_straight.obj
-    size: 3034
+    size: 3062
     group: 8
     dependency: {fileID: 919132149155446097, guid: a432a13068ab61f4c92f0566d35625ee, type: 3}
+  - asset: {fileID: 4900000, guid: 666ad7187f5171549a760e1d04a99c50, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/C5Ryf3.json
+    size: 3056
+    group: 1
+    dependency: {fileID: 4900000, guid: 666ad7187f5171549a760e1d04a99c50, type: 3}
+  - asset: {fileID: 4900000, guid: 5686e1b024082e048aae7dbebdf7d2ae, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/E3rkAa.json
+    size: 3048
+    group: 1
+    dependency: {fileID: 4900000, guid: 5686e1b024082e048aae7dbebdf7d2ae, type: 3}
   - asset: {fileID: 7200000, guid: 53626a513ea68ce47b59dc1299fe3959, type: 3}
     path: Packages/com.unity.render-pipelines.universal/Shaders/Debug/ProbeVolumeSamplingDebugPositionNormal.compute
     size: 3024
     group: 512
     dependency: {fileID: 0}
-  - asset: {fileID: 4900000, guid: fd17d09f17c384a49bb6b59caa49bda9, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/29uqR6.json
-    size: 3012
+  - asset: {fileID: 4900000, guid: 4d39814ce1a87aa439b6a2df11977b6d, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/1xMGGM.json
+    size: 3020
     group: 1
-    dependency: {fileID: 4900000, guid: fd17d09f17c384a49bb6b59caa49bda9, type: 3}
-  - asset: {fileID: 4900000, guid: 4baf2d4c8508dbe4ab4fe6beeacb328f, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/DW8a8e.json
-    size: 3004
+    dependency: {fileID: 4900000, guid: 4d39814ce1a87aa439b6a2df11977b6d, type: 3}
+  - asset: {fileID: 4900000, guid: 476f99fcb2e375047bf2703c143d8420, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/0QKNcV.json
+    size: 3000
     group: 1
-    dependency: {fileID: 4900000, guid: 4baf2d4c8508dbe4ab4fe6beeacb328f, type: 3}
-  - asset: {fileID: 4900000, guid: 14e400c361bdbff4cb5cb4ce1ade5c28, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/3Jky0F.json
-    size: 2976
+    dependency: {fileID: 4900000, guid: 476f99fcb2e375047bf2703c143d8420, type: 3}
+  - asset: {fileID: 4900000, guid: c7add17250362cd49b648eda86bd19bb, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/AeqYXi.json
+    size: 2984
     group: 1
-    dependency: {fileID: 4900000, guid: 14e400c361bdbff4cb5cb4ce1ade5c28, type: 3}
-  - asset: {fileID: 4900000, guid: 3a434e4b29eab304abba9ff6b6ee5064, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/4drdPe.json
-    size: 2972
-    group: 1
-    dependency: {fileID: 4900000, guid: 3a434e4b29eab304abba9ff6b6ee5064, type: 3}
-  - asset: {fileID: 4900000, guid: 751833bea57cebc4a8cb60d49aa7649b, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/EGunjr.json
-    size: 2964
-    group: 1
-    dependency: {fileID: 4900000, guid: 751833bea57cebc4a8cb60d49aa7649b, type: 3}
-  - asset: {fileID: 4900000, guid: 4a216611d1f6eb84b8b99530ab3113b9, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/7cRt2c.json
-    size: 2952
-    group: 1
-    dependency: {fileID: 4900000, guid: 4a216611d1f6eb84b8b99530ab3113b9, type: 3}
-  - asset: {fileID: 4900000, guid: c29e806d463e18f4e845f29a4cb7b78a, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/9xGyqu.json
-    size: 2952
-    group: 1
-    dependency: {fileID: 4900000, guid: c29e806d463e18f4e845f29a4cb7b78a, type: 3}
-  - asset: {fileID: 4900000, guid: 80d682d4493401b4d90d9b60490918aa, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/7ph1A0.json
+    dependency: {fileID: 4900000, guid: c7add17250362cd49b648eda86bd19bb, type: 3}
+  - asset: {fileID: 4900000, guid: fbd15f76172665642b681b80a2bee864, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/2kw0nX.json
     size: 2936
     group: 1
-    dependency: {fileID: 4900000, guid: 80d682d4493401b4d90d9b60490918aa, type: 3}
-  - asset: {fileID: 4900000, guid: 8ea8c257f89c9b04a8746293a8177076, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/7kvWC4.json
-    size: 2932
+    dependency: {fileID: 4900000, guid: fbd15f76172665642b681b80a2bee864, type: 3}
+  - asset: {fileID: 4900000, guid: cf4ad667c59f3944a99e50bb8fe08f88, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/7KYMFY.json
+    size: 2904
     group: 1
-    dependency: {fileID: 4900000, guid: 8ea8c257f89c9b04a8746293a8177076, type: 3}
-  - asset: {fileID: 4900000, guid: bca7cd3bb032ab743bfe4825723a8545, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/2xwQ2w.json
-    size: 2920
+    dependency: {fileID: 4900000, guid: cf4ad667c59f3944a99e50bb8fe08f88, type: 3}
+  - asset: {fileID: 919132149155446097, guid: 2bc94d2c97343e54b99682339658a611, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Geometry/egy_tile_boundary_pyramid.obj
+    size: 2882
+    group: 8
+    dependency: {fileID: 919132149155446097, guid: 2bc94d2c97343e54b99682339658a611, type: 3}
+  - asset: {fileID: 4900000, guid: 58915c582a654774f9f5295fc63e5026, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/9Dv99V.json
+    size: 2872
     group: 1
-    dependency: {fileID: 4900000, guid: bca7cd3bb032ab743bfe4825723a8545, type: 3}
-  - asset: {fileID: 4900000, guid: a179cff8e73bf6d4a901742e89d49189, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/4W7cWM.json
-    size: 2896
+    dependency: {fileID: 4900000, guid: 58915c582a654774f9f5295fc63e5026, type: 3}
+  - asset: {fileID: 4900000, guid: c746cf08e3eadda47bd7d0d95f2500d7, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/0Kvr8C.json
+    size: 2868
     group: 1
-    dependency: {fileID: 4900000, guid: a179cff8e73bf6d4a901742e89d49189, type: 3}
+    dependency: {fileID: 4900000, guid: c746cf08e3eadda47bd7d0d95f2500d7, type: 3}
+  - asset: {fileID: 919132149155446097, guid: 7570051d757867c43b7834b56ec678f7, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Geometry/egy_tile_boundary_corner.obj
+    size: 2866
+    group: 8
+    dependency: {fileID: 919132149155446097, guid: 7570051d757867c43b7834b56ec678f7, type: 3}
+  - asset: {fileID: 919132149155446097, guid: 0aede50ce0c84d8469c4c3b7cd8ff0c4, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Geometry/ind_tile_boundary_corner.obj
+    size: 2866
+    group: 8
+    dependency: {fileID: 919132149155446097, guid: 0aede50ce0c84d8469c4c3b7cd8ff0c4, type: 3}
+  - asset: {fileID: 919132149155446097, guid: a658c0e01e780154f95f28175d2287ea, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Geometry/jun_tile_boundary_corner.obj
+    size: 2866
+    group: 8
+    dependency: {fileID: 919132149155446097, guid: a658c0e01e780154f95f28175d2287ea, type: 3}
+  - asset: {fileID: 919132149155446097, guid: 85e3fcdfd3eb8d44d92af081bac0d236, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Geometry/med_tile_boundary_corner.obj
+    size: 2866
+    group: 8
+    dependency: {fileID: 919132149155446097, guid: 85e3fcdfd3eb8d44d92af081bac0d236, type: 3}
   - asset: {fileID: 4159203619694149602, guid: 48fb043c850cadc4a883b53785e14c6e, type: 3}
     path: Packages/com.unity.render-pipelines.core/Runtime/Debugging/Prefabs/Widgets/DebugUIObjectPopupField.prefab
     size: 2862
@@ -2184,179 +2264,144 @@ MonoBehaviour:
     size: 2856
     group: 131072
     dependency: {fileID: 0}
-  - asset: {fileID: 919132149155446097, guid: 2bc94d2c97343e54b99682339658a611, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Geometry/egy_tile_boundary_pyramid.obj
-    size: 2854
-    group: 8
-    dependency: {fileID: 919132149155446097, guid: 2bc94d2c97343e54b99682339658a611, type: 3}
-  - asset: {fileID: 919132149155446097, guid: 7570051d757867c43b7834b56ec678f7, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Geometry/egy_tile_boundary_corner.obj
-    size: 2838
-    group: 8
-    dependency: {fileID: 919132149155446097, guid: 7570051d757867c43b7834b56ec678f7, type: 3}
-  - asset: {fileID: 919132149155446097, guid: 0aede50ce0c84d8469c4c3b7cd8ff0c4, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Geometry/ind_tile_boundary_corner.obj
-    size: 2838
-    group: 8
-    dependency: {fileID: 919132149155446097, guid: 0aede50ce0c84d8469c4c3b7cd8ff0c4, type: 3}
-  - asset: {fileID: 919132149155446097, guid: a658c0e01e780154f95f28175d2287ea, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Geometry/jun_tile_boundary_corner.obj
-    size: 2838
-    group: 8
-    dependency: {fileID: 919132149155446097, guid: a658c0e01e780154f95f28175d2287ea, type: 3}
-  - asset: {fileID: 919132149155446097, guid: 85e3fcdfd3eb8d44d92af081bac0d236, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Geometry/med_tile_boundary_corner.obj
-    size: 2838
-    group: 8
-    dependency: {fileID: 919132149155446097, guid: 85e3fcdfd3eb8d44d92af081bac0d236, type: 3}
   - asset: {fileID: 919132149155446097, guid: 3f381c3cfd823b842b680d687030ff6f, type: 3}
     path: Assets/Application/Resources/Global/Geometry/primitive_tile_default.obj
     size: 2826
     group: 8
     dependency: {fileID: 919132149155446097, guid: 3f381c3cfd823b842b680d687030ff6f, type: 3}
-  - asset: {fileID: 4900000, guid: 2fe26d5c6cfb90244ab2a36d03d7e7ed, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/DmjpYW.json
-    size: 2812
-    group: 1
-    dependency: {fileID: 4900000, guid: 2fe26d5c6cfb90244ab2a36d03d7e7ed, type: 3}
-  - asset: {fileID: 4900000, guid: 659f0b8c9e2624844809241721c27b9b, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/5AuEKn.json
-    size: 2812
-    group: 1
-    dependency: {fileID: 4900000, guid: 659f0b8c9e2624844809241721c27b9b, type: 3}
+  - asset: {fileID: 919132149155446097, guid: 51a2fe43523e5d246b46c4438f49f5cd, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Geometry/jun_boundary_grass_earth_corner.obj
+    size: 2826
+    group: 8
+    dependency: {fileID: 919132149155446097, guid: 51a2fe43523e5d246b46c4438f49f5cd, type: 3}
+  - asset: {fileID: 919132149155446097, guid: 10bf015f3659eaa4f92d91334bcb65d8, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Geometry/jun_boundary_earth_grass_corner.obj
+    size: 2826
+    group: 8
+    dependency: {fileID: 919132149155446097, guid: 10bf015f3659eaa4f92d91334bcb65d8, type: 3}
+  - asset: {fileID: 919132149155446097, guid: 88925a78d2e5c9f44bc8305452b7bd7a, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Geometry/jun_boundary_grass_earth_b.obj
+    size: 2818
+    group: 8
+    dependency: {fileID: 919132149155446097, guid: 88925a78d2e5c9f44bc8305452b7bd7a, type: 3}
+  - asset: {fileID: 919132149155446097, guid: 3410e32feeec39b41ba78258fcd7ab57, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Geometry/jun_boundary_grass_earth_a.obj
+    size: 2814
+    group: 8
+    dependency: {fileID: 919132149155446097, guid: 3410e32feeec39b41ba78258fcd7ab57, type: 3}
+  - asset: {fileID: 919132149155446097, guid: 2b0dd627962e66c40baf10855d8fe1e2, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Geometry/med_tile_boundary_edge.obj
+    size: 2810
+    group: 8
+    dependency: {fileID: 919132149155446097, guid: 2b0dd627962e66c40baf10855d8fe1e2, type: 3}
+  - asset: {fileID: 919132149155446097, guid: 4054fc02732c2434094f4472c045916a, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Geometry/ind_tile_boundary_pitted.obj
+    size: 2810
+    group: 8
+    dependency: {fileID: 919132149155446097, guid: 4054fc02732c2434094f4472c045916a, type: 3}
+  - asset: {fileID: 919132149155446097, guid: 2384fbcd4954007438f01a812e6b7cad, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Geometry/jun_tile_boundary_edge.obj
+    size: 2810
+    group: 8
+    dependency: {fileID: 919132149155446097, guid: 2384fbcd4954007438f01a812e6b7cad, type: 3}
+  - asset: {fileID: 919132149155446097, guid: 78ab80f45ee0e174cb1bac913977aaf8, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Geometry/ind_tile_boundary_plate.obj
+    size: 2810
+    group: 8
+    dependency: {fileID: 919132149155446097, guid: 78ab80f45ee0e174cb1bac913977aaf8, type: 3}
+  - asset: {fileID: 919132149155446097, guid: a1aa6b902bdcd99408a1a95a592176b3, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Geometry/ind_tile_boundary_edge.obj
+    size: 2810
+    group: 8
+    dependency: {fileID: 919132149155446097, guid: a1aa6b902bdcd99408a1a95a592176b3, type: 3}
+  - asset: {fileID: 919132149155446097, guid: c19dc461c488ffa4aa00327398b5afab, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Geometry/jun_tile_boundary.obj
+    size: 2802
+    group: 8
+    dependency: {fileID: 919132149155446097, guid: c19dc461c488ffa4aa00327398b5afab, type: 3}
   - asset: {fileID: 919132149155446097, guid: e588f6f4e07e3a849808dbd8e538d7ae, type: 3}
     path: Assets/Application/Resources/Global/Geometry/primitive_box.obj
     size: 2802
     group: 8
     dependency: {fileID: 919132149155446097, guid: e588f6f4e07e3a849808dbd8e538d7ae, type: 3}
+  - asset: {fileID: 919132149155446097, guid: ce9e1e661310a86499bc45f8366154f9, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Geometry/jun_boundary_grass.obj
+    size: 2802
+    group: 8
+    dependency: {fileID: 919132149155446097, guid: ce9e1e661310a86499bc45f8366154f9, type: 3}
+  - asset: {fileID: 919132149155446097, guid: 13dfc470a5a5df7429ddef7c937c4a50, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Geometry/ind_tile_boundary.obj
+    size: 2802
+    group: 8
+    dependency: {fileID: 919132149155446097, guid: 13dfc470a5a5df7429ddef7c937c4a50, type: 3}
+  - asset: {fileID: 919132149155446097, guid: 6e5ed6eb6a8b9dc439c1a277350e2a91, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Geometry/egy_tile_boundary_edge.obj
+    size: 2802
+    group: 8
+    dependency: {fileID: 919132149155446097, guid: 6e5ed6eb6a8b9dc439c1a277350e2a91, type: 3}
+  - asset: {fileID: 919132149155446097, guid: 488d05062ee27724c8df2c64ab7cfa24, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Geometry/jun_boundary_earth.obj
+    size: 2802
+    group: 8
+    dependency: {fileID: 919132149155446097, guid: 488d05062ee27724c8df2c64ab7cfa24, type: 3}
   - asset: {fileID: 11400000, guid: 3d43ac5eef914e4408d964f39cedefb5, type: 2}
     path: Assets/Application/Production/URP assets/UniversalRenderPipelineGlobalSettings.asset
     size: 2800
     group: 131072
     dependency: {fileID: 0}
-  - asset: {fileID: 919132149155446097, guid: 51a2fe43523e5d246b46c4438f49f5cd, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Geometry/jun_boundary_grass_earth_corner.obj
+  - asset: {fileID: 4900000, guid: d5aaa0e5840fd6f449e5bc726f2b6fb7, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/2a5WeY.json
+    size: 2800
+    group: 1
+    dependency: {fileID: 4900000, guid: d5aaa0e5840fd6f449e5bc726f2b6fb7, type: 3}
+  - asset: {fileID: 919132149155446097, guid: 5cde21821acdf714cb3de9d282876a87, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Geometry/med_tile_boundary.obj
     size: 2798
     group: 8
-    dependency: {fileID: 919132149155446097, guid: 51a2fe43523e5d246b46c4438f49f5cd, type: 3}
-  - asset: {fileID: 919132149155446097, guid: 10bf015f3659eaa4f92d91334bcb65d8, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Geometry/jun_boundary_earth_grass_corner.obj
+    dependency: {fileID: 919132149155446097, guid: 5cde21821acdf714cb3de9d282876a87, type: 3}
+  - asset: {fileID: 919132149155446097, guid: 7c26ec117e340c5478fb0919763cf323, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Geometry/egy_tile_boundary.obj
     size: 2798
     group: 8
-    dependency: {fileID: 919132149155446097, guid: 10bf015f3659eaa4f92d91334bcb65d8, type: 3}
-  - asset: {fileID: 4900000, guid: 666ad7187f5171549a760e1d04a99c50, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/C5Ryf3.json
+    dependency: {fileID: 919132149155446097, guid: 7c26ec117e340c5478fb0919763cf323, type: 3}
+  - asset: {fileID: 4900000, guid: 642ccea15dcd4fc41af57fc2d53cd1c1, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/9d54T2.json
     size: 2796
     group: 1
-    dependency: {fileID: 4900000, guid: 666ad7187f5171549a760e1d04a99c50, type: 3}
-  - asset: {fileID: 919132149155446097, guid: 88925a78d2e5c9f44bc8305452b7bd7a, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Geometry/jun_boundary_grass_earth_b.obj
-    size: 2790
-    group: 8
-    dependency: {fileID: 919132149155446097, guid: 88925a78d2e5c9f44bc8305452b7bd7a, type: 3}
-  - asset: {fileID: 919132149155446097, guid: 3410e32feeec39b41ba78258fcd7ab57, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Geometry/jun_boundary_grass_earth_a.obj
-    size: 2786
-    group: 8
-    dependency: {fileID: 919132149155446097, guid: 3410e32feeec39b41ba78258fcd7ab57, type: 3}
-  - asset: {fileID: 919132149155446097, guid: 2b0dd627962e66c40baf10855d8fe1e2, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Geometry/med_tile_boundary_edge.obj
-    size: 2782
-    group: 8
-    dependency: {fileID: 919132149155446097, guid: 2b0dd627962e66c40baf10855d8fe1e2, type: 3}
-  - asset: {fileID: 919132149155446097, guid: 4054fc02732c2434094f4472c045916a, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Geometry/ind_tile_boundary_pitted.obj
-    size: 2782
-    group: 8
-    dependency: {fileID: 919132149155446097, guid: 4054fc02732c2434094f4472c045916a, type: 3}
+    dependency: {fileID: 4900000, guid: 642ccea15dcd4fc41af57fc2d53cd1c1, type: 3}
   - asset: {fileID: 919132149155446097, guid: 9c65ab625b818c94fae99cc60dc3b299, type: 3}
     path: Assets/Application/Resources/Global/Geometry/primitive_trapezoid.obj
     size: 2782
     group: 8
     dependency: {fileID: 919132149155446097, guid: 9c65ab625b818c94fae99cc60dc3b299, type: 3}
-  - asset: {fileID: 919132149155446097, guid: 2384fbcd4954007438f01a812e6b7cad, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Geometry/jun_tile_boundary_edge.obj
-    size: 2782
-    group: 8
-    dependency: {fileID: 919132149155446097, guid: 2384fbcd4954007438f01a812e6b7cad, type: 3}
-  - asset: {fileID: 919132149155446097, guid: 78ab80f45ee0e174cb1bac913977aaf8, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Geometry/ind_tile_boundary_plate.obj
-    size: 2782
-    group: 8
-    dependency: {fileID: 919132149155446097, guid: 78ab80f45ee0e174cb1bac913977aaf8, type: 3}
-  - asset: {fileID: 919132149155446097, guid: a1aa6b902bdcd99408a1a95a592176b3, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Geometry/ind_tile_boundary_edge.obj
-    size: 2782
-    group: 8
-    dependency: {fileID: 919132149155446097, guid: a1aa6b902bdcd99408a1a95a592176b3, type: 3}
-  - asset: {fileID: 4900000, guid: 9d61a44575dd2bf46969bf7e5a18bb8d, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/1QKiq1.json
-    size: 2780
+  - asset: {fileID: 4900000, guid: 874b650249aacb743a057ad34406cc8d, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/9R1C4v.json
+    size: 2772
     group: 1
-    dependency: {fileID: 4900000, guid: 9d61a44575dd2bf46969bf7e5a18bb8d, type: 3}
-  - asset: {fileID: 919132149155446097, guid: c19dc461c488ffa4aa00327398b5afab, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Geometry/jun_tile_boundary.obj
-    size: 2774
-    group: 8
-    dependency: {fileID: 919132149155446097, guid: c19dc461c488ffa4aa00327398b5afab, type: 3}
-  - asset: {fileID: 919132149155446097, guid: ce9e1e661310a86499bc45f8366154f9, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Geometry/jun_boundary_grass.obj
-    size: 2774
-    group: 8
-    dependency: {fileID: 919132149155446097, guid: ce9e1e661310a86499bc45f8366154f9, type: 3}
-  - asset: {fileID: 919132149155446097, guid: 13dfc470a5a5df7429ddef7c937c4a50, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Geometry/ind_tile_boundary.obj
-    size: 2774
-    group: 8
-    dependency: {fileID: 919132149155446097, guid: 13dfc470a5a5df7429ddef7c937c4a50, type: 3}
-  - asset: {fileID: 919132149155446097, guid: 6e5ed6eb6a8b9dc439c1a277350e2a91, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Geometry/egy_tile_boundary_edge.obj
-    size: 2774
-    group: 8
-    dependency: {fileID: 919132149155446097, guid: 6e5ed6eb6a8b9dc439c1a277350e2a91, type: 3}
-  - asset: {fileID: 919132149155446097, guid: 488d05062ee27724c8df2c64ab7cfa24, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Geometry/jun_boundary_earth.obj
-    size: 2774
-    group: 8
-    dependency: {fileID: 919132149155446097, guid: 488d05062ee27724c8df2c64ab7cfa24, type: 3}
-  - asset: {fileID: 919132149155446097, guid: 5cde21821acdf714cb3de9d282876a87, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Geometry/med_tile_boundary.obj
-    size: 2770
-    group: 8
-    dependency: {fileID: 919132149155446097, guid: 5cde21821acdf714cb3de9d282876a87, type: 3}
-  - asset: {fileID: 919132149155446097, guid: 7c26ec117e340c5478fb0919763cf323, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Geometry/egy_tile_boundary.obj
-    size: 2770
-    group: 8
-    dependency: {fileID: 919132149155446097, guid: 7c26ec117e340c5478fb0919763cf323, type: 3}
-  - asset: {fileID: 4900000, guid: 5686e1b024082e048aae7dbebdf7d2ae, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/E3rkAa.json
-    size: 2760
+    dependency: {fileID: 4900000, guid: 874b650249aacb743a057ad34406cc8d, type: 3}
+  - asset: {fileID: 4900000, guid: 1da8944ecc86d9b4ab3d0dd1eeb27b79, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/16WQ73.json
+    size: 2768
     group: 1
-    dependency: {fileID: 4900000, guid: 5686e1b024082e048aae7dbebdf7d2ae, type: 3}
-  - asset: {fileID: 4900000, guid: 4d39814ce1a87aa439b6a2df11977b6d, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/1xMGGM.json
-    size: 2744
-    group: 1
-    dependency: {fileID: 4900000, guid: 4d39814ce1a87aa439b6a2df11977b6d, type: 3}
+    dependency: {fileID: 4900000, guid: 1da8944ecc86d9b4ab3d0dd1eeb27b79, type: 3}
   - asset: {fileID: 919132149155446097, guid: 6bdfb6fcd40fc004b841dde24d998f84, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/ind_tile_boundary_sml_corner.obj
-    size: 2738
+    size: 2766
     group: 8
     dependency: {fileID: 919132149155446097, guid: 6bdfb6fcd40fc004b841dde24d998f84, type: 3}
   - asset: {fileID: 919132149155446097, guid: 0332c6544cc368e4081bd9d8759553dd, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/jun_tile_boundary_sml_corner.obj
-    size: 2738
+    size: 2766
     group: 8
     dependency: {fileID: 919132149155446097, guid: 0332c6544cc368e4081bd9d8759553dd, type: 3}
   - asset: {fileID: 919132149155446097, guid: 897ef7add3397f94f8998e735fa2a1cb, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/med_tile_boundary_sml_corner.obj
-    size: 2738
+    size: 2766
     group: 8
     dependency: {fileID: 919132149155446097, guid: 897ef7add3397f94f8998e735fa2a1cb, type: 3}
   - asset: {fileID: 919132149155446097, guid: d3a5f40697b035140a4d614c63eecd5f, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/egy_tile_boundary_sml_corner.obj
-    size: 2738
+    size: 2766
     group: 8
     dependency: {fileID: 919132149155446097, guid: d3a5f40697b035140a4d614c63eecd5f, type: 3}
   - asset: {fileID: 2800000, guid: 5ad1bb0874a09e54bad0b1b057816f8e, type: 3}
@@ -2364,16 +2409,11 @@ MonoBehaviour:
     size: 2728
     group: 4
     dependency: {fileID: 2800000, guid: 5ad1bb0874a09e54bad0b1b057816f8e, type: 3}
-  - asset: {fileID: 4900000, guid: c7add17250362cd49b648eda86bd19bb, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/AeqYXi.json
-    size: 2720
+  - asset: {fileID: 4900000, guid: 5e06291462fa1814684552b6f149e692, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/54pTpp.json
+    size: 2716
     group: 1
-    dependency: {fileID: 4900000, guid: c7add17250362cd49b648eda86bd19bb, type: 3}
-  - asset: {fileID: 4900000, guid: 476f99fcb2e375047bf2703c143d8420, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/0QKNcV.json
-    size: 2708
-    group: 1
-    dependency: {fileID: 4900000, guid: 476f99fcb2e375047bf2703c143d8420, type: 3}
+    dependency: {fileID: 4900000, guid: 5e06291462fa1814684552b6f149e692, type: 3}
   - asset: {fileID: 1311110376158742, guid: ad83bc56407925d44a77a5bd01cd6783, type: 3}
     path: Packages/com.unity.render-pipelines.core/Runtime/Debugging/Prefabs/Widgets/DebugUIObjectList.prefab
     size: 2674
@@ -2384,11 +2424,11 @@ MonoBehaviour:
     size: 2670
     group: 64
     dependency: {fileID: 0}
-  - asset: {fileID: 4900000, guid: fbd15f76172665642b681b80a2bee864, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/2kw0nX.json
+  - asset: {fileID: 4900000, guid: af032855430d37d41a10719fa31788bf, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/3xCUuc.json
     size: 2668
     group: 1
-    dependency: {fileID: 4900000, guid: fbd15f76172665642b681b80a2bee864, type: 3}
+    dependency: {fileID: 4900000, guid: af032855430d37d41a10719fa31788bf, type: 3}
   - asset: {fileID: 919132149155446097, guid: 68559ba176b2bf84da578e9081d24329, type: 3}
     path: Assets/Application/Resources/Global/Geometry/primitive_editor_quad.obj
     size: 2662
@@ -2404,66 +2444,46 @@ MonoBehaviour:
     size: 2646
     group: 8
     dependency: {fileID: 919132149155446097, guid: 5d0e0d8e8e2b4d68a1f4e0a0a9dfc001, type: 3}
-  - asset: {fileID: 4900000, guid: cf4ad667c59f3944a99e50bb8fe08f88, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/7KYMFY.json
+  - asset: {fileID: 4900000, guid: d5d25860cc3f824429a0efe22c2fc65a, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/42nG01.json
     size: 2632
     group: 1
-    dependency: {fileID: 4900000, guid: cf4ad667c59f3944a99e50bb8fe08f88, type: 3}
-  - asset: {fileID: 4900000, guid: 58915c582a654774f9f5295fc63e5026, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/9Dv99V.json
-    size: 2600
-    group: 1
-    dependency: {fileID: 4900000, guid: 58915c582a654774f9f5295fc63e5026, type: 3}
-  - asset: {fileID: 4900000, guid: c746cf08e3eadda47bd7d0d95f2500d7, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/0Kvr8C.json
-    size: 2600
-    group: 1
-    dependency: {fileID: 4900000, guid: c746cf08e3eadda47bd7d0d95f2500d7, type: 3}
+    dependency: {fileID: 4900000, guid: d5d25860cc3f824429a0efe22c2fc65a, type: 3}
   - asset: {fileID: 919132149155446097, guid: 0ebef335c96c68d45b6612eecfd61f91, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/med_tile_slide.obj
-    size: 2598
+    size: 2626
     group: 8
     dependency: {fileID: 919132149155446097, guid: 0ebef335c96c68d45b6612eecfd61f91, type: 3}
   - asset: {fileID: 919132149155446097, guid: cc2a0e9a7dd8173408cd2406d493ce89, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/ind_tile_slide.obj
-    size: 2598
+    size: 2626
     group: 8
     dependency: {fileID: 919132149155446097, guid: cc2a0e9a7dd8173408cd2406d493ce89, type: 3}
   - asset: {fileID: 919132149155446097, guid: c4d06e167e1c5464abd6d24fb30fd289, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/egy_tile_slide.obj
-    size: 2598
+    size: 2626
     group: 8
     dependency: {fileID: 919132149155446097, guid: c4d06e167e1c5464abd6d24fb30fd289, type: 3}
   - asset: {fileID: 919132149155446097, guid: e60fce0f5bc246148918c332fe6c6704, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/jun_tile_slide.obj
-    size: 2598
+    size: 2626
     group: 8
     dependency: {fileID: 919132149155446097, guid: e60fce0f5bc246148918c332fe6c6704, type: 3}
   - asset: {fileID: 919132149155446097, guid: a3769dfc6b411264086bcc83616f3e24, type: 3}
     path: Assets/Application/Resources/Global/Geometry/tile_flat.obj
-    size: 2594
+    size: 2622
     group: 8
     dependency: {fileID: 919132149155446097, guid: a3769dfc6b411264086bcc83616f3e24, type: 3}
+  - asset: {fileID: 919132149155446097, guid: 3973e7ed1a86bf040b8d4e9c1379d2f8, type: 3}
+    path: Assets/Application/Resources/Global/Geometry/tile_quiz.obj
+    size: 2618
+    group: 8
+    dependency: {fileID: 919132149155446097, guid: 3973e7ed1a86bf040b8d4e9c1379d2f8, type: 3}
   - asset: {fileID: 919132149155446097, guid: d36ddcb4939833d4592f5c1ac68ed7b9, type: 3}
     path: Assets/Application/Resources/Global/Geometry/tile_slide.obj
     size: 2590
     group: 8
     dependency: {fileID: 919132149155446097, guid: d36ddcb4939833d4592f5c1ac68ed7b9, type: 3}
-  - asset: {fileID: 919132149155446097, guid: 3973e7ed1a86bf040b8d4e9c1379d2f8, type: 3}
-    path: Assets/Application/Resources/Global/Geometry/tile_quiz.obj
-    size: 2590
-    group: 8
-    dependency: {fileID: 919132149155446097, guid: 3973e7ed1a86bf040b8d4e9c1379d2f8, type: 3}
-  - asset: {fileID: 4900000, guid: d5aaa0e5840fd6f449e5bc726f2b6fb7, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/2a5WeY.json
-    size: 2544
-    group: 1
-    dependency: {fileID: 4900000, guid: d5aaa0e5840fd6f449e5bc726f2b6fb7, type: 3}
-  - asset: {fileID: 4900000, guid: 642ccea15dcd4fc41af57fc2d53cd1c1, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/9d54T2.json
-    size: 2540
-    group: 1
-    dependency: {fileID: 4900000, guid: 642ccea15dcd4fc41af57fc2d53cd1c1, type: 3}
   - asset: {fileID: 919132149155446097, guid: 7c59a0f0f72e9254699cd19ec79091c2, type: 3}
     path: Assets/Application/Production/Resources/Levels/Med/med_corner_se_hd.fbx
     size: 2519
@@ -2484,16 +2504,6 @@ MonoBehaviour:
     size: 2519
     group: 8
     dependency: {fileID: 919132149155446097, guid: 469b1e54a6dfb124387948fd52f7043d, type: 3}
-  - asset: {fileID: 4900000, guid: 1da8944ecc86d9b4ab3d0dd1eeb27b79, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/16WQ73.json
-    size: 2516
-    group: 1
-    dependency: {fileID: 4900000, guid: 1da8944ecc86d9b4ab3d0dd1eeb27b79, type: 3}
-  - asset: {fileID: 4900000, guid: 874b650249aacb743a057ad34406cc8d, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/9R1C4v.json
-    size: 2512
-    group: 1
-    dependency: {fileID: 4900000, guid: 874b650249aacb743a057ad34406cc8d, type: 3}
   - asset: {fileID: 1880654171993120, guid: 1c87ab2ce8b8b304d98fbe9a734b1f74, type: 3}
     path: Packages/com.unity.render-pipelines.core/Runtime/Debugging/Prefabs/Widgets/DebugUIFoldout.prefab
     size: 2490
@@ -2504,61 +2514,76 @@ MonoBehaviour:
     size: 2486
     group: 64
     dependency: {fileID: 0}
-  - asset: {fileID: 4900000, guid: 5e06291462fa1814684552b6f149e692, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/54pTpp.json
-    size: 2472
-    group: 1
-    dependency: {fileID: 4900000, guid: 5e06291462fa1814684552b6f149e692, type: 3}
   - asset: {fileID: 4800000, guid: 620b55b8040a88d468e94abe55bed5ba, type: 3}
     path: Packages/com.unity.render-pipelines.core/Runtime/Vrs/Shaders/VrsVisualization.shader
     size: 2452
     group: 32768
     dependency: {fileID: 0}
-  - asset: {fileID: 4900000, guid: af032855430d37d41a10719fa31788bf, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/3xCUuc.json
-    size: 2440
+  - asset: {fileID: 4900000, guid: b2a8809222b0a174fbdd9bf6dbb0a49e, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/C7w15p.json
+    size: 2444
     group: 1
-    dependency: {fileID: 4900000, guid: af032855430d37d41a10719fa31788bf, type: 3}
-  - asset: {fileID: 4900000, guid: d5d25860cc3f824429a0efe22c2fc65a, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/42nG01.json
+    dependency: {fileID: 4900000, guid: b2a8809222b0a174fbdd9bf6dbb0a49e, type: 3}
+  - asset: {fileID: 4900000, guid: fd36144874521274f9a5b361508c2a0f, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/AqCM2x.json
     size: 2396
     group: 1
-    dependency: {fileID: 4900000, guid: d5d25860cc3f824429a0efe22c2fc65a, type: 3}
+    dependency: {fileID: 4900000, guid: fd36144874521274f9a5b361508c2a0f, type: 3}
   - asset: {fileID: 11400000, guid: f952c082cb03451daed3ee968ac6c63e, type: 2}
     path: Assets/TextMesh Pro/Resources/Style Sheets/Default Style Sheet.asset
     size: 2392
     group: 131072
     dependency: {fileID: 11400000, guid: f952c082cb03451daed3ee968ac6c63e, type: 2}
+  - asset: {fileID: 4900000, guid: 550f261aea9056e41a08cc428e6e11dc, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/6mCdnM.json
+    size: 2380
+    group: 1
+    dependency: {fileID: 4900000, guid: 550f261aea9056e41a08cc428e6e11dc, type: 3}
+  - asset: {fileID: 4900000, guid: 8faaba96b68cf0d4e972d71734033509, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/D788vf.json
+    size: 2380
+    group: 1
+    dependency: {fileID: 4900000, guid: 8faaba96b68cf0d4e972d71734033509, type: 3}
+  - asset: {fileID: 4900000, guid: b18cb0ee415a95d4e8c1fed4caf48eba, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/83QQC1.json
+    size: 2312
+    group: 1
+    dependency: {fileID: 4900000, guid: b18cb0ee415a95d4e8c1fed4caf48eba, type: 3}
   - asset: {fileID: 2800000, guid: 117c6519cc11fbf4dbd49a17bc19821b, type: 3}
     path: Assets/Application/Resources/Evolution/Geometry/Materials/med_house_Emissive.png
     size: 2276
     group: 4
     dependency: {fileID: 2800000, guid: 117c6519cc11fbf4dbd49a17bc19821b, type: 3}
+  - asset: {fileID: 4900000, guid: a4a68ce19ff7d64478ffab221f12beda, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/EefHmn.json
+    size: 2260
+    group: 1
+    dependency: {fileID: 4900000, guid: a4a68ce19ff7d64478ffab221f12beda, type: 3}
+  - asset: {fileID: 4900000, guid: 264ff07425949fb46ab7c94ac105f098, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/2CdyXX.json
+    size: 2244
+    group: 1
+    dependency: {fileID: 4900000, guid: 264ff07425949fb46ab7c94ac105f098, type: 3}
   - asset: {fileID: 2800000, guid: 65daf0d35f023f34bb1d3032541fcc80, type: 3}
     path: Assets/Application/ClassicTS/Data/UI/Textures/graduation_scale.png
     size: 2232
     group: 4
     dependency: {fileID: 102900000, guid: 6a75fae5cc4a9ba488bc5c21d8b1502c, type: 3}
-  - asset: {fileID: 4900000, guid: b2a8809222b0a174fbdd9bf6dbb0a49e, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/C7w15p.json
+  - asset: {fileID: 4900000, guid: 59898d2e3c6f7c641a8439133ad87686, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/AvVrfX.json
     size: 2216
     group: 1
-    dependency: {fileID: 4900000, guid: b2a8809222b0a174fbdd9bf6dbb0a49e, type: 3}
+    dependency: {fileID: 4900000, guid: 59898d2e3c6f7c641a8439133ad87686, type: 3}
   - asset: {fileID: 510498794976390951, guid: 73dd80b6cd083cf44a69dab9b9a0d7f2, type: 3}
     path: Assets/Application/ClassicTS/Data/UI/ToggleItem.prefab
     size: 2207
     group: 64
     dependency: {fileID: 102900000, guid: 6a75fae5cc4a9ba488bc5c21d8b1502c, type: 3}
-  - asset: {fileID: 4900000, guid: 550f261aea9056e41a08cc428e6e11dc, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/6mCdnM.json
-    size: 2180
+  - asset: {fileID: 4900000, guid: 43b9baeab5619d84caaedc72b5900d17, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/5X3cTu.json
+    size: 2188
     group: 1
-    dependency: {fileID: 4900000, guid: 550f261aea9056e41a08cc428e6e11dc, type: 3}
-  - asset: {fileID: 4900000, guid: fd36144874521274f9a5b361508c2a0f, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/AqCM2x.json
-    size: 2180
-    group: 1
-    dependency: {fileID: 4900000, guid: fd36144874521274f9a5b361508c2a0f, type: 3}
+    dependency: {fileID: 4900000, guid: 43b9baeab5619d84caaedc72b5900d17, type: 3}
   - asset: {fileID: 2800000, guid: 1230d5577f3ae3d4681c4844db885a16, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/Materials/caust20.jpg
     size: 2168
@@ -2724,11 +2749,6 @@ MonoBehaviour:
     size: 2168
     group: 4
     dependency: {fileID: 2800000, guid: f4aaecf35d0fa0d4890d2f595c6d4d29, type: 3}
-  - asset: {fileID: 4900000, guid: 8faaba96b68cf0d4e972d71734033509, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/D788vf.json
-    size: 2168
-    group: 1
-    dependency: {fileID: 4900000, guid: 8faaba96b68cf0d4e972d71734033509, type: 3}
   - asset: {fileID: 2100000, guid: 16208bab2359eab42ac9d7d16ead9f8c, type: 2}
     path: Assets/Application/Resources/Evolution/Geometry/Materials/med_tile_boundary_cobbles_01.mat
     size: 2156
@@ -2814,11 +2834,6 @@ MonoBehaviour:
     size: 2124
     group: 4096
     dependency: {fileID: 0}
-  - asset: {fileID: 4900000, guid: b18cb0ee415a95d4e8c1fed4caf48eba, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/83QQC1.json
-    size: 2116
-    group: 1
-    dependency: {fileID: 4900000, guid: b18cb0ee415a95d4e8c1fed4caf48eba, type: 3}
   - asset: {fileID: 2100000, guid: 31623e890caa1cf4fbed34a7a2ad3421, type: 2}
     path: Assets/Application/Resources/Evolution/Geometry/Materials/med_tile_boundary_cage.mat
     size: 2112
@@ -2894,21 +2909,11 @@ MonoBehaviour:
     size: 2076
     group: 4096
     dependency: {fileID: 0}
-  - asset: {fileID: 4900000, guid: a4a68ce19ff7d64478ffab221f12beda, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/EefHmn.json
-    size: 2072
-    group: 1
-    dependency: {fileID: 4900000, guid: a4a68ce19ff7d64478ffab221f12beda, type: 3}
   - asset: {fileID: 2100000, guid: 8f66400e2b9862a4cbf0753f1b240e65, type: 2}
     path: Assets/Art/Levels/Med/Materials/med_wall_shields_pattern.mat
     size: 2068
     group: 4096
     dependency: {fileID: 0}
-  - asset: {fileID: 4900000, guid: 264ff07425949fb46ab7c94ac105f098, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/2CdyXX.json
-    size: 2064
-    group: 1
-    dependency: {fileID: 4900000, guid: 264ff07425949fb46ab7c94ac105f098, type: 3}
   - asset: {fileID: 2100000, guid: 49ed4f54bac05384ca3eaab64735faff, type: 2}
     path: Assets/Art/Levels/Med/Materials/med_gate_flag.mat
     size: 2060
@@ -2925,7 +2930,7 @@ MonoBehaviour:
     group: 4
     dependency: {fileID: 0}
   - asset: {fileID: 2800000, guid: d47c91d97f3949a4287fcfdf5ed94fd5, type: 3}
-    path: Assets/Art/Levels/Med/Textures/Normals/med_wood_Normal.png
+    path: Assets/Art/Levels/Med/Textures/med_wood_Normal.png
     size: 2052
     group: 4
     dependency: {fileID: 0}
@@ -2934,16 +2939,11 @@ MonoBehaviour:
     size: 2048
     group: 4096
     dependency: {fileID: 2100000, guid: c32cc9f30cd30a841baa761881575565, type: 2}
-  - asset: {fileID: 4900000, guid: 59898d2e3c6f7c641a8439133ad87686, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/AvVrfX.json
-    size: 2024
-    group: 1
-    dependency: {fileID: 4900000, guid: 59898d2e3c6f7c641a8439133ad87686, type: 3}
-  - asset: {fileID: 4900000, guid: 43b9baeab5619d84caaedc72b5900d17, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/5X3cTu.json
-    size: 1996
-    group: 1
-    dependency: {fileID: 4900000, guid: 43b9baeab5619d84caaedc72b5900d17, type: 3}
+  - asset: {fileID: 8300000, guid: 687de61c11e85ce4cacc9950e274b535, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Sounds/Click.wav
+    size: 1984
+    group: 16
+    dependency: {fileID: 8300000, guid: 687de61c11e85ce4cacc9950e274b535, type: 3}
   - asset: {fileID: 6156078273616792229, guid: 20aabc7ae462a854abd635426e95de42, type: 3}
     path: Assets/Application/ClassicTS/Data/UI/DefinitiionListItem.prefab
     size: 1907
@@ -3055,6 +3055,21 @@ MonoBehaviour:
     size: 1655
     group: 8
     dependency: {fileID: 919132149155446097, guid: 58d6713b83167564280c9f065bcf6f5c, type: 3}
+  - asset: {fileID: 4900000, guid: 609cc582aa89a0d4bb7a512d876980c1, type: 3}
+    path: Assets/Resources/AssetManifests/Maps.txt
+    size: 1632
+    group: 1
+    dependency: {fileID: 4900000, guid: 609cc582aa89a0d4bb7a512d876980c1, type: 3}
+  - asset: {fileID: 4900000, guid: 96c40ca8617a15a4590b9728c168e29a, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/levels.json
+    size: 1632
+    group: 1
+    dependency: {fileID: 4900000, guid: 96c40ca8617a15a4590b9728c168e29a, type: 3}
+  - asset: {fileID: 4900000, guid: 0b97c881141733844babfc2ee04b6557, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Config/Maps/5Fmdx5.json
+    size: 1620
+    group: 1
+    dependency: {fileID: 4900000, guid: 0b97c881141733844babfc2ee04b6557, type: 3}
   - asset: {fileID: 919132149155446097, guid: 61c51f466b107f5449a773765f645e18, type: 3}
     path: Assets/Application/Production/Resources/Levels/Med/med_straight_ew_hd.fbx
     size: 1619
@@ -3065,31 +3080,21 @@ MonoBehaviour:
     size: 1619
     group: 8
     dependency: {fileID: 919132149155446097, guid: 9f2666c9e05da814d99c84877a6d404a, type: 3}
+  - asset: {fileID: 4900000, guid: ca0422aa4841eff46bad3783338cb66c, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Geometry/Materials/caust00.json
+    size: 1612
+    group: 1
+    dependency: {fileID: 4900000, guid: ca0422aa4841eff46bad3783338cb66c, type: 3}
   - asset: {fileID: 2100000, guid: 79459efec17a4d00a321bdcc27bbc385, type: 2}
     path: Assets/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF - Outline.mat
     size: 1608
     group: 4096
     dependency: {fileID: 2100000, guid: 79459efec17a4d00a321bdcc27bbc385, type: 2}
-  - asset: {fileID: 4900000, guid: ca0422aa4841eff46bad3783338cb66c, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Geometry/Materials/caust00.json
-    size: 1576
-    group: 1
-    dependency: {fileID: 4900000, guid: ca0422aa4841eff46bad3783338cb66c, type: 3}
-  - asset: {fileID: 4900000, guid: 60634ba7447f44d06b353bdc4598457b, type: 3}
-    path: Assets/Resources/AssetManifests/Maps.txt
-    size: 1524
-    group: 1
-    dependency: {fileID: 4900000, guid: 60634ba7447f44d06b353bdc4598457b, type: 3}
   - asset: {fileID: 919132149155446097, guid: 0f91147c231f0064e896a6e3df53f017, type: 3}
     path: Assets/Application/Resources/Evolution/Geometry/Materials/med_trim_tile_inner_corner.fbx
     size: 1523
     group: 8
     dependency: {fileID: 919132149155446097, guid: 0f91147c231f0064e896a6e3df53f017, type: 3}
-  - asset: {fileID: 4900000, guid: 96c40ca8617a15a4590b9728c168e29a, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/levels.json
-    size: 1520
-    group: 1
-    dependency: {fileID: 4900000, guid: 96c40ca8617a15a4590b9728c168e29a, type: 3}
   - asset: {fileID: 2100000, guid: 55b6aab565c4a1e4eb54ff4728ffc0b0, type: 2}
     path: Assets/System/Resources/ForceInclude/URP simple lit.mat
     size: 1516
@@ -3101,15 +3106,10 @@ MonoBehaviour:
     group: 4
     dependency: {fileID: 2800000, guid: da4628c925577554bbc990a875689aff, type: 3}
   - asset: {fileID: 2800000, guid: 127c2769633b7a342baea072a6ac95d1, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Textures/flag.tga
+    path: Assets/Application/Resources/ClassicTS/Textures/Flag.tga
     size: 1508
     group: 4
     dependency: {fileID: 2800000, guid: 127c2769633b7a342baea072a6ac95d1, type: 3}
-  - asset: {fileID: 4900000, guid: 0b97c881141733844babfc2ee04b6557, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Config/Maps/5Fmdx5.json
-    size: 1484
-    group: 1
-    dependency: {fileID: 4900000, guid: 0b97c881141733844babfc2ee04b6557, type: 3}
   - asset: {fileID: 1100371661045084, guid: d3770aaa3bbd8384aabab9ddd383e21e, type: 3}
     path: Packages/com.unity.render-pipelines.core/Runtime/Debugging/Prefabs/Widgets/DebugUIProgressBar.prefab
     size: 1438
@@ -3390,11 +3390,11 @@ MonoBehaviour:
     size: 767
     group: 64
     dependency: {fileID: 1899515136885025588, guid: 36350362dc3d2f841b0bac00a069d122, type: 3}
-  - asset: {fileID: 4900000, guid: 3e54c0b28e1ac4fe79f59283ef27f502, type: 3}
-    path: Assets/Resources/AssetManifests/SkyCubes.txt
-    size: 644
+  - asset: {fileID: 4900000, guid: ca3a33fed173b564c9369a58e2fbc5bb, type: 3}
+    path: Assets/Resources/AssetManifests/Skycubes.txt
+    size: 660
     group: 1
-    dependency: {fileID: 4900000, guid: 3e54c0b28e1ac4fe79f59283ef27f502, type: 3}
+    dependency: {fileID: 4900000, guid: ca3a33fed173b564c9369a58e2fbc5bb, type: 3}
   - asset: {fileID: 1729209467339557997, guid: e6fa8f524cd94ef43bcf00f37230ba08, type: 3}
     path: Assets/Application/ClassicTS/Data/Prefabs/PreviewCamera.prefab
     size: 627
@@ -3460,16 +3460,16 @@ MonoBehaviour:
     size: 552
     group: 4
     dependency: {fileID: 0}
+  - asset: {fileID: 4900000, guid: ca86d657d2b809642b069331a6f3e0cb, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Geometry/Materials/eggbot_default_0.json
+    size: 508
+    group: 1
+    dependency: {fileID: 4900000, guid: ca86d657d2b809642b069331a6f3e0cb, type: 3}
   - asset: {fileID: 11400000, guid: d0bfe6afc66d86741b5df737f902d9f6, type: 2}
     path: Assets/Application/Production/URP assets/Global Volume Profile.asset
     size: 500
     group: 131072
     dependency: {fileID: 102900000, guid: 6a75fae5cc4a9ba488bc5c21d8b1502c, type: 3}
-  - asset: {fileID: 4900000, guid: ca86d657d2b809642b069331a6f3e0cb, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Geometry/Materials/eggbot_default_0.json
-    size: 496
-    group: 1
-    dependency: {fileID: 4900000, guid: ca86d657d2b809642b069331a6f3e0cb, type: 3}
   - asset: {fileID: 4800000, guid: d5a307c014552314b9f560906d708772, type: 3}
     path: Packages/com.unity.render-pipelines.universal/Shaders/XR/XRMirrorView.shader
     size: 480
@@ -3487,22 +3487,22 @@ MonoBehaviour:
     dependency: {fileID: 0}
   - asset: {fileID: 4900000, guid: 0a81f614c73e7d84685721dbd6e5c3f6, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/Materials/eggbot_med_0.json
-    size: 460
+    size: 472
     group: 1
     dependency: {fileID: 4900000, guid: 0a81f614c73e7d84685721dbd6e5c3f6, type: 3}
   - asset: {fileID: 4900000, guid: 18a7105b5d7e3d24c9ba9e8cd361670f, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/Materials/eggbot_jun_0.json
-    size: 460
+    size: 472
     group: 1
     dependency: {fileID: 4900000, guid: 18a7105b5d7e3d24c9ba9e8cd361670f, type: 3}
   - asset: {fileID: 4900000, guid: a3370451f0643a944a903980fe174879, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/Materials/eggbot_egy_0.json
-    size: 460
+    size: 472
     group: 1
     dependency: {fileID: 4900000, guid: a3370451f0643a944a903980fe174879, type: 3}
   - asset: {fileID: 4900000, guid: a49017f37a6f27a43b80d0a2c9e33cff, type: 3}
     path: Assets/Application/Resources/ClassicTS/Geometry/Materials/eggbot_ind_0.json
-    size: 460
+    size: 472
     group: 1
     dependency: {fileID: 4900000, guid: a49017f37a6f27a43b80d0a2c9e33cff, type: 3}
   - asset: {fileID: 4800000, guid: f056d8bd2a1c7e44e9729144b4c70395, type: 3}
@@ -3520,16 +3520,16 @@ MonoBehaviour:
     size: 427
     group: 64
     dependency: {fileID: 0}
+  - asset: {fileID: 4900000, guid: 2292e8339ab913149bb9f092f7cf4fc3, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Geometry/Materials/jun_mud_01.json
+    size: 404
+    group: 1
+    dependency: {fileID: 4900000, guid: 2292e8339ab913149bb9f092f7cf4fc3, type: 3}
   - asset: {fileID: 4800000, guid: 4431b1f1f743fbf4eb310a967890cbea, type: 3}
     path: Packages/com.unity.render-pipelines.universal/Shaders/XR/XROcclusionMesh.shader
     size: 396
     group: 32768
     dependency: {fileID: 0}
-  - asset: {fileID: 4900000, guid: 2292e8339ab913149bb9f092f7cf4fc3, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Geometry/Materials/jun_mud_01.json
-    size: 392
-    group: 1
-    dependency: {fileID: 4900000, guid: 2292e8339ab913149bb9f092f7cf4fc3, type: 3}
   - asset: {fileID: 2800000, guid: 071e954febf155243a6c81e48f452644, type: 3}
     path: Packages/com.unity.render-pipelines.universal/Textures/BlueNoise16/L/LDR_LLL1_9.png
     size: 380
@@ -3710,11 +3710,11 @@ MonoBehaviour:
     size: 360
     group: 32768
     dependency: {fileID: 0}
-  - asset: {fileID: 4900000, guid: 2eca0649708ce4464a796080c6ca60fa, type: 3}
+  - asset: {fileID: 4900000, guid: 50f84cdc392089b4c9f4f6fb7f3feb65, type: 3}
     path: Assets/Resources/AssetManifests/Music.txt
-    size: 340
+    size: 348
     group: 1
-    dependency: {fileID: 4900000, guid: 2eca0649708ce4464a796080c6ca60fa, type: 3}
+    dependency: {fileID: 4900000, guid: 50f84cdc392089b4c9f4f6fb7f3feb65, type: 3}
   - asset: {fileID: 4900000, guid: fade42e8bc714b018fac513c043d323b, type: 3}
     path: Assets/TextMesh Pro/Resources/LineBreaking Following Characters.txt
     size: 316
@@ -3730,11 +3730,11 @@ MonoBehaviour:
     size: 248
     group: 4
     dependency: {fileID: 2800000, guid: 09d289585e0924346b9cb2a38eec47c4, type: 3}
-  - asset: {fileID: 4900000, guid: 5ea9db29356ba4f9cb33db7507a445b2, type: 3}
+  - asset: {fileID: 4900000, guid: b4046e613191dcf4e9633eaa37f3c7de, type: 3}
     path: Assets/Resources/AssetManifests/Materials.txt
-    size: 240
+    size: 244
     group: 1
-    dependency: {fileID: 4900000, guid: 5ea9db29356ba4f9cb33db7507a445b2, type: 3}
+    dependency: {fileID: 4900000, guid: b4046e613191dcf4e9633eaa37f3c7de, type: 3}
   - asset: {fileID: 11500000, guid: 486ef00c6e004bffaf47c05cf4134fec, type: 3}
     path: Packages/com.unity.render-pipelines.core/Runtime-PrivateShared/InternalBridge/RenderPipelineEditorUtilityBridge.cs
     size: 224
@@ -3750,6 +3750,11 @@ MonoBehaviour:
     size: 208
     group: 2
     dependency: {fileID: 0}
+  - asset: {fileID: 4900000, guid: d87e7e81ea9f004438ddab76ce604cd7, type: 3}
+    path: Assets/Resources/AssetManifests/Textures.txt
+    size: 204
+    group: 1
+    dependency: {fileID: 4900000, guid: d87e7e81ea9f004438ddab76ce604cd7, type: 3}
   - asset: {fileID: 11500000, guid: 18f50ab9cd0aa054b99d7d539cd829b5, type: 3}
     path: Packages/com.unity.render-pipelines.universal/Runtime/Debug/UniversalRenderPipelineVolumeDebugSettings.cs
     size: 196
@@ -3770,16 +3775,16 @@ MonoBehaviour:
     size: 196
     group: 2
     dependency: {fileID: 0}
-  - asset: {fileID: 4900000, guid: a82a1130cd0024d669c4ddcbc37c9965, type: 3}
-    path: Assets/Resources/AssetManifests/Textures.txt
-    size: 196
-    group: 1
-    dependency: {fileID: 4900000, guid: a82a1130cd0024d669c4ddcbc37c9965, type: 3}
   - asset: {fileID: 11500000, guid: 83567ec75a578bb47b248b662dd70fe5, type: 3}
     path: Packages/com.unity.render-pipelines.core/Runtime/RenderGraph/RenderGraphResourceAccelerationStructure.cs
     size: 192
     group: 2
     dependency: {fileID: 0}
+  - asset: {fileID: 4900000, guid: b9bb346c9cfcf604ea6ab90d36d3fef0, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Geometry/Materials/Industrial_00.json
+    size: 192
+    group: 1
+    dependency: {fileID: 4900000, guid: b9bb346c9cfcf604ea6ab90d36d3fef0, type: 3}
   - asset: {fileID: 11500000, guid: 2ec995e51a6e251468d2a3fd8a686257, type: 3}
     path: Packages/com.unity.render-pipelines.universal/Runtime/UniversalRenderPipelineGlobalSettings.cs
     size: 188
@@ -3895,11 +3900,11 @@ MonoBehaviour:
     size: 180
     group: 131072
     dependency: {fileID: 0}
-  - asset: {fileID: 4900000, guid: b9bb346c9cfcf604ea6ab90d36d3fef0, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Geometry/Materials/Industrial_00.json
+  - asset: {fileID: 4900000, guid: 4ba03cb06a9dbfe4d8b4d9c18cf12ff8, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Geometry/Materials/Egypt_00.json
     size: 180
     group: 1
-    dependency: {fileID: 4900000, guid: b9bb346c9cfcf604ea6ab90d36d3fef0, type: 3}
+    dependency: {fileID: 4900000, guid: 4ba03cb06a9dbfe4d8b4d9c18cf12ff8, type: 3}
   - asset: {fileID: 11500000, guid: 1f4879aa19f83824dae229c38ed5f1f2, type: 3}
     path: Packages/com.unity.render-pipelines.core/Runtime/Stripping/RenderPipelineGraphicsSettingsStripper.cs
     size: 176
@@ -4090,11 +4095,6 @@ MonoBehaviour:
     size: 168
     group: 2
     dependency: {fileID: 0}
-  - asset: {fileID: 4900000, guid: 4ba03cb06a9dbfe4d8b4d9c18cf12ff8, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Geometry/Materials/Egypt_00.json
-    size: 168
-    group: 1
-    dependency: {fileID: 4900000, guid: 4ba03cb06a9dbfe4d8b4d9c18cf12ff8, type: 3}
   - asset: {fileID: 11500000, guid: 154f2df7349f45fa897e03ab12ec09b4, type: 3}
     path: Packages/com.unity.render-pipelines.universal/Runtime/FrameData/UniversalPostProcessingData.cs
     size: 164
@@ -4220,6 +4220,11 @@ MonoBehaviour:
     size: 164
     group: 2
     dependency: {fileID: 0}
+  - asset: {fileID: 4900000, guid: 954903e58d522d24d80e27a161e39cc0, type: 3}
+    path: Assets/Resources/AssetManifests/Sounds.txt
+    size: 164
+    group: 1
+    dependency: {fileID: 4900000, guid: 954903e58d522d24d80e27a161e39cc0, type: 3}
   - asset: {fileID: 11500000, guid: 18d3e83390dcd6349b3086b9f70391b9, type: 3}
     path: Packages/com.unity.inputsystem/InputSystem/Editor/UITKAssetEditor/InputActionsEditorSettingsProvider.cs
     size: 160
@@ -4365,11 +4370,6 @@ MonoBehaviour:
     size: 160
     group: 2
     dependency: {fileID: 0}
-  - asset: {fileID: 4900000, guid: 08b81517e3c6a42a798c4cd47924b12a, type: 3}
-    path: Assets/Resources/AssetManifests/Sounds.txt
-    size: 160
-    group: 1
-    dependency: {fileID: 4900000, guid: 08b81517e3c6a42a798c4cd47924b12a, type: 3}
   - asset: {fileID: 11500000, guid: 07b72b6a7afa9b448b3103bb66d57ca0, type: 3}
     path: Packages/com.unity.render-pipelines.core/Runtime/GPUDriven/InstanceCullingBatcherBurst.cs
     size: 156
@@ -4830,6 +4830,11 @@ MonoBehaviour:
     size: 152
     group: 2
     dependency: {fileID: 0}
+  - asset: {fileID: 4900000, guid: 8d8501c2dff6fd54caaac47242260aff, type: 3}
+    path: Assets/Application/Resources/ClassicTS/Geometry/Materials/Ind_pipes_00.json
+    size: 152
+    group: 1
+    dependency: {fileID: 4900000, guid: 8d8501c2dff6fd54caaac47242260aff, type: 3}
   - asset: {fileID: 11500000, guid: 0049e966b9953774fa3d07808a5555a9, type: 3}
     path: Packages/com.unity.inputsystem/InputSystem/Plugins/XR/Haptics/GetCurrentHapticStateCommand.cs
     size: 148
@@ -5615,11 +5620,6 @@ MonoBehaviour:
     size: 144
     group: 2
     dependency: {fileID: 0}
-  - asset: {fileID: 4900000, guid: 8d8501c2dff6fd54caaac47242260aff, type: 3}
-    path: Assets/Application/Resources/ClassicTS/Geometry/Materials/Ind_pipes_00.json
-    size: 144
-    group: 1
-    dependency: {fileID: 4900000, guid: 8d8501c2dff6fd54caaac47242260aff, type: 3}
   - asset: {fileID: 2800000, guid: f9ee4ed84c1d10c49aabb9b210b0fc44, type: 3}
     path: Packages/com.unity.render-pipelines.universal/Textures/BayerMatrix.png
     size: 140
@@ -5915,6 +5915,11 @@ MonoBehaviour:
     size: 140
     group: 2
     dependency: {fileID: 0}
+  - asset: {fileID: 4900000, guid: 2c0c8d7fd6a360541adaa901beb1f04c, type: 3}
+    path: Assets/Resources/AssetManifests/Prefabs.txt
+    size: 140
+    group: 1
+    dependency: {fileID: 4900000, guid: 2c0c8d7fd6a360541adaa901beb1f04c, type: 3}
   - asset: {fileID: 11500000, guid: 04fb4740d8c6dbc469086e13c435cd4b, type: 3}
     path: Packages/com.unity.render-pipelines.core/Runtime/Lighting/ProbeVolume/ProbeVolumeSceneData.cs
     size: 136
@@ -5932,6 +5937,11 @@ MonoBehaviour:
     dependency: {fileID: 0}
   - asset: {fileID: 11500000, guid: 09dbcfc6e83454e45ace8503dacc86ad, type: 3}
     path: Packages/com.unity.inputsystem/InputSystem/Editor/UITKAssetEditor/Views/VisualElementExtensions.cs
+    size: 136
+    group: 2
+    dependency: {fileID: 0}
+  - asset: {fileID: 11500000, guid: 0a3e3635b85e2124b9b3147aef1cdc32, type: 3}
+    path: Packages/com.unity.inputsystem/InputSystem/Plugins/XInput/XInputControllerWindows.cs
     size: 136
     group: 2
     dependency: {fileID: 0}
@@ -6465,11 +6475,6 @@ MonoBehaviour:
     size: 136
     group: 2
     dependency: {fileID: 0}
-  - asset: {fileID: 4900000, guid: 1222405291b2b418ba2c002521947929, type: 3}
-    path: Assets/Resources/AssetManifests/Prefabs.txt
-    size: 136
-    group: 1
-    dependency: {fileID: 4900000, guid: 1222405291b2b418ba2c002521947929, type: 3}
   - asset: {fileID: 4900000, guid: d82c1b31c7e74239bff1220585707d2b, type: 3}
     path: Assets/TextMesh Pro/Resources/LineBreaking Leading Characters.txt
     size: 136
@@ -6780,6 +6785,11 @@ MonoBehaviour:
     size: 132
     group: 2
     dependency: {fileID: 0}
+  - asset: {fileID: 4900000, guid: 41b8b95b531b5594a8c35ee8e03f988d, type: 3}
+    path: Assets/Private/Resources/TileStormMapRepositoryToken.txt
+    size: 132
+    group: 1
+    dependency: {fileID: 4900000, guid: 41b8b95b531b5594a8c35ee8e03f988d, type: 3}
   - asset: {fileID: 11500000, guid: 01da6c5b7c781174d818662ce6f39b8b, type: 3}
     path: Packages/com.unity.timeline/Runtime/Utilities/AnimationPreviewUtilities.cs
     size: 128
@@ -8102,11 +8112,6 @@ MonoBehaviour:
     dependency: {fileID: 0}
   - asset: {fileID: 11500000, guid: ef4e8c908ae24e438f4baea55d866f5e, type: 3}
     path: Packages/com.unity.inputsystem/InputSystem/State/InputStateBlock.cs
-    size: 120
-    group: 2
-    dependency: {fileID: 0}
-  - asset: {fileID: 11500000, guid: ef73fbf6f536c4184845d789870911a3, type: 3}
-    path: Packages/com.unity.inputsystem/InputSystem/Plugins/XInput/XboxGamepadMacOS.cs
     size: 120
     group: 2
     dependency: {fileID: 0}
@@ -11860,11 +11865,11 @@ MonoBehaviour:
     size: 60
     group: 1
     dependency: {fileID: 0}
-  - asset: {fileID: 4900000, guid: d61cf8fa24afc4be8b11d5998064608b, type: 3}
-    path: Assets/Private/Resources/TileStormMapRepositoryToken.txt
-    size: 36
+  - asset: {fileID: 4900000, guid: 054ed296a3571a242be92352e75119bd, type: 3}
+    path: Assets/Private/Resources/local resources are stored here.txt
+    size: 40
     group: 1
-    dependency: {fileID: 4900000, guid: d61cf8fa24afc4be8b11d5998064608b, type: 3}
+    dependency: {fileID: 4900000, guid: 054ed296a3571a242be92352e75119bd, type: 3}
   - asset: {fileID: 7200000, guid: cacb30de6c40c7444bbc78cb0a81fd2a, type: 3}
     path: Packages/com.unity.render-pipelines.core/Runtime/Vrs/Shaders/VrsTexture.compute
     size: 20
@@ -11872,8 +11877,8 @@ MonoBehaviour:
     dependency: {fileID: 0}
   groupFilter: -1
   view: 0
-  version: 0.1.4
+  version: 0.1.5
   applicationName: TileStormEvolution
-  buildPath: /Volumes/Develop/MD/build/TileStormEvolution-0.1.4-B
-  buildSize: 38660006
+  buildPath: C:/GIT/MassiveHadron/TileStormEvo/TileStormEvolution-0.1.5-B
+  buildSize: 38707998
   bundleSize: 0
