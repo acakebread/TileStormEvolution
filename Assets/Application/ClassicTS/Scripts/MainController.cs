@@ -419,8 +419,44 @@ namespace ClassicTilestorm
 
 		public void Solve()
 		{
-			CurrentMap?.Solve();
-			if (null != cameraController) cameraController.OnMapSolved();
+			if (CurrentMap == null)
+				return;
+
+			if (eggbotController == null)
+			{
+				CurrentMap.Solve();
+			}
+			else
+			{
+				var destinationTile = eggbotController.DestinationTile(CurrentMap);
+				if (destinationTile < 0)
+				{
+					Debug.LogWarning("Solve step skipped: no active destination waypoint.");
+					return;
+				}
+
+				if (eggbotController.NavDirection(CurrentMap) != 0)
+				{
+					Debug.Log("Solve step skipped: the current path is already complete.");
+					return;
+				}
+
+				if (!TilePathSolver.TrySolveNextStep(CurrentMap, eggbotController.CurrentTile, destinationTile, ApplicationSettings.Difficulty, out var strip))
+				{
+					var reason = string.IsNullOrWhiteSpace(TilePathSolver.LastFailureReason)
+						? "no legal incremental move was found within the solver budget."
+						: TilePathSolver.LastFailureReason;
+					Debug.Log($"Solve step skipped: {reason}");
+					return;
+				}
+
+				if (!TileStripHelper.RollStrip(CurrentMap, strip))
+				{
+					Debug.LogWarning("Solve step failed to apply the planned strip roll.");
+					return;
+				}
+			}
+
 		}
 
 		public void LoadDatabase()

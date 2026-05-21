@@ -113,7 +113,7 @@ namespace ClassicTilestorm
 			var newTiles = new int[newSize];
 			Array.Fill(newTiles, defaultIndex);
 
-			var newSolve = new int[newSize];
+			var newSolve = solve != null ? new int[newSize] : null;
 
 			for (var oldIdx = 0; oldIdx < width * height && oldIdx < tiles.Length; oldIdx++)
 			{
@@ -122,7 +122,7 @@ namespace ClassicTilestorm
 
 				newTiles[newPos] = tiles[oldIdx];
 
-				if (solve != null && oldIdx < solve.Length)
+				if (newSolve != null && oldIdx < solve.Length)
 				{
 					var delta = solve[oldIdx];
 					if (delta != 0)

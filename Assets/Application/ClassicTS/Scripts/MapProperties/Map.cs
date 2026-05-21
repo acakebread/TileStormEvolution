@@ -339,7 +339,7 @@ namespace ClassicTilestorm
 			tiles = new int[tileCount];
 			Array.Fill(tiles, 0);
 
-			solve = new int[tileCount];
+			solve = null;
 			state = Enumerable.Range(0, tileCount).ToArray();
 
 			attachments = null;
