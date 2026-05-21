@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: ce2e9527e12dfde4783ad836e8057312
+guid: 1b93a00d9d50ab74b9d7a6a84d08d6ac
 ModelImporter:
   serializedVersion: 24200
   internalIDToNameTable: []
@@ -7,18 +7,38 @@ ModelImporter:
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
-      name: med_cage
-    second: {fileID: 2100000, guid: 28d85663aa380214a8e0ae7cfa04af87, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: med_tile_boundary_cobbles
+      name: Cobblestone
     second: {fileID: 2100000, guid: c7dcc10baafd17b40af238645a3a7967, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
-      name: med_tile_boundary_sides
+      name: House_01Mat
+    second: {fileID: 2100000, guid: d96aef2de83002c4fb9e9121250b2f71, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: House_01_Ground
+    second: {fileID: 2100000, guid: c7dcc10baafd17b40af238645a3a7967, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: lambert3
+    second: {fileID: 2100000, guid: d96aef2de83002c4fb9e9121250b2f71, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: med trim texture
     second: {fileID: 2100000, guid: 62db2dfd50c42d04587ac7aa9b9613fa, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: med_tile_boundary_cobbles
+    second: {fileID: 2100000, guid: 16208bab2359eab42ac9d7d16ead9f8c, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: med_tile_boundary_sides
+    second: {fileID: 2100000, guid: aa61484a78af3ca4faae6df2984ba1fd, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0
@@ -49,7 +69,7 @@ ModelImporter:
   meshes:
     lODScreenPercentages: []
     globalScale: 1
-    meshCompression: 0
+    meshCompression: 3
     addColliders: 0
     useSRGBMaterialColor: 1
     sortHierarchyByName: 1
@@ -61,7 +81,7 @@ ModelImporter:
     nodeNameCollisionStrategy: 1
     fileIdsGeneration: 2
     swapUVChannels: 0
-    generateSecondaryUV: 0
+    generateSecondaryUV: 1
     useFileUnits: 1
     keepQuads: 0
     weldVertices: 1

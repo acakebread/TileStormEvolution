@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: e7a3b8635c04c1d4ca19bd172fb6bf9d
+guid: 883cd14cac63afb4db9223d12988da88
 ModelImporter:
   serializedVersion: 24200
   internalIDToNameTable: []
@@ -7,23 +7,8 @@ ModelImporter:
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
-      name: med_tile_boundary_cobbles
-    second: {fileID: 2100000, guid: c7dcc10baafd17b40af238645a3a7967, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: med_tile_boundary_sides
-    second: {fileID: 2100000, guid: 62db2dfd50c42d04587ac7aa9b9613fa, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: med_torch
-    second: {fileID: 2100000, guid: 85cd8c2df8719d64daf47ac0ba5fa58d, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: med_tourch
-    second: {fileID: 2100000, guid: 85cd8c2df8719d64daf47ac0ba5fa58d, type: 2}
+      name: floater
+    second: {fileID: 2100000, guid: 78d028f39606a254aa009ff0baafb971, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0
@@ -54,7 +39,7 @@ ModelImporter:
   meshes:
     lODScreenPercentages: []
     globalScale: 1
-    meshCompression: 0
+    meshCompression: 3
     addColliders: 0
     useSRGBMaterialColor: 1
     sortHierarchyByName: 1

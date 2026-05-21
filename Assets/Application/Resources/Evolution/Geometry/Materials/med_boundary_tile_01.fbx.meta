@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: 8ca98d16e71346947bbf6be22cd3e0c9
+guid: 43f6dd4c893158347b3136e447378393
 ModelImporter:
   serializedVersion: 24200
   internalIDToNameTable: []
@@ -7,23 +7,13 @@ ModelImporter:
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
-      name: med_tile_boundary_cobbles
+      name: Cobblestone
     second: {fileID: 2100000, guid: c7dcc10baafd17b40af238645a3a7967, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
-      name: med_tile_boundary_sides
+      name: med trim texture
     second: {fileID: 2100000, guid: 62db2dfd50c42d04587ac7aa9b9613fa, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: med_well
-    second: {fileID: 2100000, guid: e80abacc7c2479b42b180fae3fff87ee, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: well
-    second: {fileID: 2100000, guid: e80abacc7c2479b42b180fae3fff87ee, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0
@@ -54,7 +44,7 @@ ModelImporter:
   meshes:
     lODScreenPercentages: []
     globalScale: 1
-    meshCompression: 0
+    meshCompression: 3
     addColliders: 0
     useSRGBMaterialColor: 1
     sortHierarchyByName: 1

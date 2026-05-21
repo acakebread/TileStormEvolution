@@ -167,7 +167,7 @@ MonoBehaviour:
     - line: '|   loadStoreDebugModeEnabled: 0'
     - line: '|   visionOSBundleVersion: 1.0'
     - line: '|   tvOSBundleVersion: 1.0'
-    - line: '|   bundleVersion: 0.1.1'
+    - line: '|   bundleVersion: 0.1.4'
     - line: '|   preloadedAssets:'
     - line: '|   - {fileID: 11400000, guid: 16799f5021db3c14397cb63b67f518a5, type:
         2}'
@@ -214,7 +214,7 @@ MonoBehaviour:
     - line: '|   keepLoadedShadersAlive: 0'
     - line: '|   StripUnusedMeshComponents: 1'
     - line: '|   strictShaderVariantMatching: 0'
-    - line: '|   VertexChannelCompressionMask: 4054'
+    - line: '|   VertexChannelCompressionMask: 18'
     - line: '|   iPhoneSdkVersion: 988'
     - line: '|   iOSSimulatorArchitecture: 0'
     - line: '|   iOSTargetOSVersionString: 15.0'
@@ -873,10 +873,10 @@ MonoBehaviour:
     - line: '|   webGLDebugSymbols: 0'
     - line: '|   webGLEmscriptenArgs: '
     - line: '|   webGLModulesDirectory: '
-    - line: '|   webGLTemplate: APPLICATION:PWA'
+    - line: '|   webGLTemplate: PROJECT:MH'
     - line: '|   webGLAnalyzeBuildSize: 0'
     - line: '|   webGLUseEmbeddedResources: 0'
-    - line: '|   webGLCompressionFormat: 1'
+    - line: '|   webGLCompressionFormat: 0'
     - line: '|   webGLWasmArithmeticExceptions: 0'
     - line: '|   webGLLinkerTarget: 1'
     - line: '|   webGLThreadsSupport: 0'
@@ -887,7 +887,7 @@ MonoBehaviour:
     - line: '|   webGLMemoryLinearGrowthStep: 16'
     - line: '|   webGLMemoryGeometricGrowthStep: 0.2'
     - line: '|   webGLMemoryGeometricGrowthCap: 128'
-    - line: '|   webGLPowerPreference: 2'
+    - line: '|   webGLPowerPreference: 1'
     - line: '|   webGLWebAssemblyTable: 0'
     - line: '|   webGLWebAssemblyBigInt: 0'
     - line: '|   webGLCloseOnQuit: 0'
@@ -1048,7 +1048,7 @@ MonoBehaviour:
         m_InsightsSettingsContainer:
           m_BuildProfileEngineDiagnosticsState: 2
         m_AdaptivePerformanceEnabled: 0
-        m_CodeOptimization: 0
+        m_CodeOptimization: 4
         m_WebGLClientBrowserPath: 
         m_WebGLClientBrowserType: 0
         m_WebGLTextureSubtarget: 3
