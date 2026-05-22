@@ -14,7 +14,11 @@ using MassiveHadronLtd;
 
 public class AssetManifestGenerator : IPreprocessBuildWithReport
 {
+	private static bool _isGeneratingManifests;
+
 	public int callbackOrder => 0;
+
+	public static bool IsGeneratingManifests => _isGeneratingManifests;
 
 	public void OnPreprocessBuild(BuildReport report)
 	{
@@ -25,26 +29,40 @@ public class AssetManifestGenerator : IPreprocessBuildWithReport
 	[MenuItem("Tools/Generate Asset Manifests %&M")]
 	public static void GenerateAllManifests()
 	{
-		const string manifestFolder = "Assets/Resources/" + AssetManifestConfig.ManifestRootFolder;
+		if (_isGeneratingManifests)
+			return;
 
-		if (!Directory.Exists(manifestFolder))
-			Directory.CreateDirectory(manifestFolder);
+		_isGeneratingManifests = true;
 
-		ApplicationSettings.Editor_ForceLoadInstance();
-		AssetConfiguration.Initialize();
-
-		foreach (var (manifestName, assetType, getRoots) in AssetManifestConfig.GetAllManifestDefinitions())
+		try
 		{
-			var roots = getRoots().ToArray();
-			var entries = GetResourceEntries(manifestName, assetType, roots).ToList();
-			int written = WriteHashedManifest(manifestName, entries);
-			Debug.Log($"Generated {manifestName}: {written} assets");
+			const string manifestFolder = "Assets/Resources/" + AssetManifestConfig.ManifestRootFolder;
+
+			if (!Directory.Exists(manifestFolder))
+				Directory.CreateDirectory(manifestFolder);
+
+			ApplicationSettings.Editor_ForceLoadInstance();
+			AssetConfiguration.Initialize();
+
+			foreach (var (manifestName, assetType, getRoots) in AssetManifestConfig.GetAllManifestDefinitions())
+			{
+				var roots = getRoots().ToArray();
+				var entries = GetResourceEntries(manifestName, assetType, roots).ToList();
+				int written = WriteHashedManifest(manifestName, entries);
+				Debug.Log($"Generated {manifestName}: {written} assets");
+			}
+
+			WriteMapManifest();
+
+			AssetDatabase.Refresh();
+			AssetConfiguration.ClearAllCaches();
+			MapCatalog.ClearCache();
+			Debug.Log("<color=cyan>Asset Manifests generated successfully.</color>");
 		}
-
-		WriteMapManifest();
-
-		AssetDatabase.Refresh();
-		Debug.Log("<color=cyan>Asset Manifests generated successfully.</color>");
+		finally
+		{
+			_isGeneratingManifests = false;
+		}
 	}
 
 	[MenuItem("Tools/Admin/Migrate Resource Hashes To Folder Seeds")]

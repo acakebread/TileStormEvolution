@@ -20,7 +20,7 @@ namespace ClassicTilestorm.Assets
 		public static string GetManifestName<T>(string[] roots = null) where T : UnityEngine.Object
 		{
 			if (typeof(T) == typeof(GameObject))
-				return "Models";        // both Geometry and temporary Levels/Med go here
+				return "Models";
 
 			if (typeof(T) == typeof(Texture))
 				return "Textures";

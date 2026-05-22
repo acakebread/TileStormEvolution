@@ -63,11 +63,8 @@ using UnityEditor;
 
 			private static string InternalResourcesRoot => $"{ApplicationSettings.JsonDataResourcePath}/Maps";
 			private const string InternalManifestPath = "AssetManifests/Maps";
-			private const string FileHashSeparator = "__";
-			private const bool UseReadablePersistentFileNames = false;
 			private const bool IncludeLiveContentInExternalMove = false;
 			private static string PersistentMapsFolder => ApplicationSettings.SystemMapsFolder;
-			private static string LegacyPersistentMapsFolder => Path.Combine(Application.persistentDataPath, "Maps");
 
 			private static readonly Dictionary<HashId, Map> CachedMaps = new();
 			private static Dictionary<HashId, string> InternalResourceIndex;
@@ -489,6 +486,22 @@ using UnityEditor;
 			return true;
 		}
 
+		public static bool DeleteMap(HashId hash)
+		{
+			if (hash == 0)
+				return false;
+
+			var currentLocation = GetStorageLocation(hash);
+			var deleted = currentLocation == MapStorageLocation.Internal
+				? DeleteInternalMap(hash) || DeleteCommunityMap(hash)
+				: DeleteCommunityMap(hash) || DeleteInternalMap(hash);
+
+			if (deleted)
+				ClearCache();
+
+			return deleted;
+		}
+
 		public static int CleanupExternalMapsCollidingWithInternal()
 		{
 			EnsureInternalIndex();
@@ -531,24 +544,7 @@ using UnityEditor;
 		public static string BuildFileName(Map map)
 		{
 			map?.EnsureHashID();
-			var hash = HTB50Settings.ToString(map?.HashID ?? 0);
-			if (!UseReadablePersistentFileNames)
-				return $"{hash}.json";
-
-			var safeName = SanitizeFileNameComponent(string.IsNullOrWhiteSpace(map?.name) ? "Untitled" : map.name);
-			return $"{safeName}{FileHashSeparator}{hash}.json";
-		}
-
-		public static string SanitizeFileNameComponent(string value)
-		{
-			if (string.IsNullOrWhiteSpace(value))
-				return "Untitled";
-
-			var invalid = Path.GetInvalidFileNameChars();
-			var chars = value
-				.Select(ch => invalid.Contains(ch) || char.IsWhiteSpace(ch) ? '_' : ch)
-				.ToArray();
-			return new string(chars).Trim('_');
+			return ResourceFileNameBuilder.BuildJsonFileName(map?.HashID ?? 0);
 		}
 
 		private static Map LoadCommunityMap(HashId hash)
@@ -561,21 +557,11 @@ using UnityEditor;
 
 		private static IEnumerable<string> EnumerateCommunityMapFiles()
 		{
-			foreach (var folder in GetCommunityMapFolders())
-			{
-				if (!Directory.Exists(folder))
-					continue;
+			if (!Directory.Exists(PersistentMapsFolder))
+				yield break;
 
-				foreach (var file in Directory.EnumerateFiles(folder, "*.json", SearchOption.TopDirectoryOnly))
-					yield return file;
-			}
-		}
-
-		private static IEnumerable<string> GetCommunityMapFolders()
-		{
-			yield return PersistentMapsFolder;
-			if (!string.Equals(PersistentMapsFolder, LegacyPersistentMapsFolder, StringComparison.OrdinalIgnoreCase))
-				yield return LegacyPersistentMapsFolder;
+			foreach (var file in Directory.EnumerateFiles(PersistentMapsFolder, "*.json", SearchOption.TopDirectoryOnly))
+				yield return file;
 		}
 
 			private static Map LoadInternalMap(HashId hash)
@@ -674,20 +660,10 @@ using UnityEditor;
 			if (string.IsNullOrWhiteSpace(fileStem))
 				return false;
 
-			string candidate = null;
-			int suffixIndex = fileStem.LastIndexOf(FileHashSeparator, StringComparison.Ordinal);
-			if (suffixIndex >= 0 && suffixIndex + FileHashSeparator.Length < fileStem.Length)
-			{
-				candidate = fileStem.Substring(suffixIndex + FileHashSeparator.Length);
-			}
-			else
-			{
-				int prefixIndex = fileStem.IndexOf('_');
-				if (prefixIndex > 0)
-					candidate = fileStem.Substring(0, prefixIndex);
-				else
-					candidate = fileStem;
-			}
+			string candidate = fileStem;
+			int suffixIndex = fileStem.LastIndexOf(ResourceFileNameBuilder.FileHashSeparator, StringComparison.Ordinal);
+			if (suffixIndex >= 0 && suffixIndex + ResourceFileNameBuilder.FileHashSeparator.Length < fileStem.Length)
+				candidate = fileStem.Substring(suffixIndex + ResourceFileNameBuilder.FileHashSeparator.Length);
 
 			return ClassicTilestorm.Assets.ResourceIdUtil.TryParseCanonicalHash(candidate, out hash);
 		}

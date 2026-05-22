@@ -33,25 +33,6 @@ namespace ClassicTilestorm
 			}
 		}
 
-		[Header("geometry loading")]
-		[SerializeField]
-		private bool remapGeometry = true;
-
-		public static bool RemapGeometry
-		{
-			get => PlayerPrefsX.GetBool("RemapGeometry", instance?.remapGeometry ?? true);
-			set
-			{
-				if (instance == null) return;
-				if (instance.remapGeometry == value) return;
-				instance.remapGeometry = value;
-				PlayerPrefsX.SetBool("RemapGeometry", value, true);
-				OnRemapGeometryChanged?.Invoke(instance.remapGeometry);
-			}
-		}
-
-		public static event System.Action<bool> OnRemapGeometryChanged;
-
 		[Header("load map scrambled or solved")]
 		[SerializeField] private bool scrambled = true;
 		public static bool Scrambled => instance.scrambled;
@@ -259,7 +240,6 @@ namespace ClassicTilestorm
 				serializedObject.Update();
 
 				DrawProperty(nameof(loadMapName));
-				DrawProperty(nameof(remapGeometry));
 				DrawProperty(nameof(scrambled));
 				DrawProperty(nameof(difficulty));
 				DrawProperty(nameof(music));
@@ -324,7 +304,6 @@ namespace ClassicTilestorm
 		private void Awake()
 		{
 			instance = this;
-			remapGeometry = RemapGeometry;
 		}
 
 		private static IReadOnlyList<string> NormalizeContentRoots(IEnumerable<string> roots)
