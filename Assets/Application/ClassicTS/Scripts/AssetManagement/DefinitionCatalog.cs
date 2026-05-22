@@ -57,7 +57,6 @@ namespace ClassicTilestorm
 		private static bool ExternalDefinitionsLoaded;
 
 		public static string PersistentDefinitionsFolder => ApplicationSettings.SystemDefinitionsFolder;
-		private static string LegacyPersistentDefinitionsFolder => Path.Combine(Application.persistentDataPath, "Definitions");
 		public static string InternalDefinitionsFile => Path.Combine(Application.dataPath, "Resources", "AssetDatabase", "definitions.json");
 
 		public static void ClearCache()
@@ -348,21 +347,11 @@ namespace ClassicTilestorm
 
 		private static IEnumerable<string> EnumerateExternalDefinitionFiles()
 		{
-			foreach (var folder in GetExternalDefinitionFolders())
-			{
-				if (!Directory.Exists(folder))
-					continue;
+			if (!Directory.Exists(PersistentDefinitionsFolder))
+				yield break;
 
-				foreach (var file in Directory.EnumerateFiles(folder, "*.json", SearchOption.TopDirectoryOnly))
-					yield return file;
-			}
-		}
-
-		private static IEnumerable<string> GetExternalDefinitionFolders()
-		{
-			yield return PersistentDefinitionsFolder;
-			if (!string.Equals(PersistentDefinitionsFolder, LegacyPersistentDefinitionsFolder, StringComparison.OrdinalIgnoreCase))
-				yield return LegacyPersistentDefinitionsFolder;
+			foreach (var file in Directory.EnumerateFiles(PersistentDefinitionsFolder, "*.json", SearchOption.TopDirectoryOnly))
+				yield return file;
 		}
 
 		private static IEnumerable<DefinitionEntry> ParseDefinitionEntries(string json, DefinitionStorageLocation storageLocation, string filePath)

@@ -65,7 +65,6 @@ using UnityEditor;
 			private const string InternalManifestPath = "AssetManifests/Maps";
 			private const bool IncludeLiveContentInExternalMove = false;
 			private static string PersistentMapsFolder => ApplicationSettings.SystemMapsFolder;
-			private static string LegacyPersistentMapsFolder => Path.Combine(Application.persistentDataPath, "Maps");
 
 			private static readonly Dictionary<HashId, Map> CachedMaps = new();
 			private static Dictionary<HashId, string> InternalResourceIndex;
@@ -558,21 +557,11 @@ using UnityEditor;
 
 		private static IEnumerable<string> EnumerateCommunityMapFiles()
 		{
-			foreach (var folder in GetCommunityMapFolders())
-			{
-				if (!Directory.Exists(folder))
-					continue;
+			if (!Directory.Exists(PersistentMapsFolder))
+				yield break;
 
-				foreach (var file in Directory.EnumerateFiles(folder, "*.json", SearchOption.TopDirectoryOnly))
-					yield return file;
-			}
-		}
-
-		private static IEnumerable<string> GetCommunityMapFolders()
-		{
-			yield return PersistentMapsFolder;
-			if (!string.Equals(PersistentMapsFolder, LegacyPersistentMapsFolder, StringComparison.OrdinalIgnoreCase))
-				yield return LegacyPersistentMapsFolder;
+			foreach (var file in Directory.EnumerateFiles(PersistentMapsFolder, "*.json", SearchOption.TopDirectoryOnly))
+				yield return file;
 		}
 
 			private static Map LoadInternalMap(HashId hash)
@@ -671,20 +660,10 @@ using UnityEditor;
 			if (string.IsNullOrWhiteSpace(fileStem))
 				return false;
 
-			string candidate = null;
+			string candidate = fileStem;
 			int suffixIndex = fileStem.LastIndexOf(ResourceFileNameBuilder.FileHashSeparator, StringComparison.Ordinal);
 			if (suffixIndex >= 0 && suffixIndex + ResourceFileNameBuilder.FileHashSeparator.Length < fileStem.Length)
-			{
 				candidate = fileStem.Substring(suffixIndex + ResourceFileNameBuilder.FileHashSeparator.Length);
-			}
-			else
-			{
-				int prefixIndex = fileStem.IndexOf('_');
-				if (prefixIndex > 0)
-					candidate = fileStem.Substring(0, prefixIndex);
-				else
-					candidate = fileStem;
-			}
 
 			return ClassicTilestorm.Assets.ResourceIdUtil.TryParseCanonicalHash(candidate, out hash);
 		}
