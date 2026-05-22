@@ -9,6 +9,9 @@ namespace ClassicTilestorm
 		public const string DataRootFolder = "Data";
 		public const string UserRootFolder = "User";
 		public const string SystemRootFolder = "System";
+		public const string ApplicationRootFolder = "Application";
+		public const string InternalRootParentFolder = "Internal";
+		public const string ResourcesFolder = "Resources";
 		public const string ImmutableRootFolder = "Immutable";
 		public const string GlobalRootFolder = "Global";
 		public const string MapsFolder = "Maps";
