@@ -56,9 +56,7 @@ namespace ClassicTilestorm
 		private static bool InternalDefinitionsLoaded;
 		private static bool ExternalDefinitionsLoaded;
 
-		private const string FileHashSeparator = "__";
 		public static string PersistentDefinitionsFolder => ApplicationSettings.SystemDefinitionsFolder;
-		private static string LegacyPersistentDefinitionsFolder => Path.Combine(Application.persistentDataPath, "Definitions");
 		public static string InternalDefinitionsFile => Path.Combine(Application.dataPath, "Resources", "AssetDatabase", "definitions.json");
 
 		public static void ClearCache()
@@ -278,9 +276,9 @@ namespace ClassicTilestorm
 			if (string.IsNullOrWhiteSpace(stem))
 				return false;
 
-			var separatorIndex = stem.LastIndexOf(FileHashSeparator, StringComparison.Ordinal);
-			var hashText = separatorIndex >= 0 && separatorIndex < stem.Length - FileHashSeparator.Length
-				? stem.Substring(separatorIndex + FileHashSeparator.Length)
+			var separatorIndex = stem.LastIndexOf(ResourceFileNameBuilder.FileHashSeparator, StringComparison.Ordinal);
+			var hashText = separatorIndex >= 0 && separatorIndex < stem.Length - ResourceFileNameBuilder.FileHashSeparator.Length
+				? stem.Substring(separatorIndex + ResourceFileNameBuilder.FileHashSeparator.Length)
 				: stem;
 			return ResourceIdUtil.TryParseCanonicalHash(hashText, out hash);
 		}
@@ -288,8 +286,7 @@ namespace ClassicTilestorm
 		public static string BuildFileName(Definition definition)
 		{
 			definition?.EnsureHashID();
-			var hash = HTB50Settings.ToString(definition?.HashID ?? 0);
-			return $"{hash}.json";
+			return ResourceFileNameBuilder.BuildJsonFileName(definition?.HashID ?? 0);
 		}
 
 		private static void EnsureInternalDefinitions(bool forceRefresh = false)
@@ -350,21 +347,11 @@ namespace ClassicTilestorm
 
 		private static IEnumerable<string> EnumerateExternalDefinitionFiles()
 		{
-			foreach (var folder in GetExternalDefinitionFolders())
-			{
-				if (!Directory.Exists(folder))
-					continue;
+			if (!Directory.Exists(PersistentDefinitionsFolder))
+				yield break;
 
-				foreach (var file in Directory.EnumerateFiles(folder, "*.json", SearchOption.TopDirectoryOnly))
-					yield return file;
-			}
-		}
-
-		private static IEnumerable<string> GetExternalDefinitionFolders()
-		{
-			yield return PersistentDefinitionsFolder;
-			if (!string.Equals(PersistentDefinitionsFolder, LegacyPersistentDefinitionsFolder, StringComparison.OrdinalIgnoreCase))
-				yield return LegacyPersistentDefinitionsFolder;
+			foreach (var file in Directory.EnumerateFiles(PersistentDefinitionsFolder, "*.json", SearchOption.TopDirectoryOnly))
+				yield return file;
 		}
 
 		private static IEnumerable<DefinitionEntry> ParseDefinitionEntries(string json, DefinitionStorageLocation storageLocation, string filePath)

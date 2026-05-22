@@ -12,12 +12,8 @@ namespace ClassicTilestorm.Assets
 			AssetRegistry<Material>.ClearRegisteredRoots();
 			AssetRegistry<AudioClip>.ClearRegisteredRoots();
 
-			ModelAssets.NameRemapper = ClassicTileStormAssetRemapHelper.RemapName;
-
 			foreach (var root in ApplicationSettings.GetGeometryPaths())
 				ModelAssets.RegisterRoot(root);
-			ModelAssets.RegisterRoot("Levels");
-			ModelAssets.RegisterRoot("Levels/Med");
 			foreach (var root in ApplicationSettings.GetPrefabPaths())
 				PrefabAssets.RegisterRoot(root);
 			foreach (var root in ApplicationSettings.GetTexturePaths())

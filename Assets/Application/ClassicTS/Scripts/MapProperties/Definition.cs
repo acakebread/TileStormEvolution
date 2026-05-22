@@ -329,12 +329,6 @@ namespace ClassicTilestorm
 						else
 							((IFlagAccess)def).Flags |= (int)flag;
 					}
-					else if (trimmed.Equals("Exit", StringComparison.OrdinalIgnoreCase) ||
-							 trimmed.Equals("Home", StringComparison.OrdinalIgnoreCase) ||
-							 trimmed.Equals("Dock", StringComparison.OrdinalIgnoreCase))
-					{
-						Debug.LogWarning($"Legacy flag ignored: '{trimmed}'");
-					}
 					else
 					{
 						Debug.LogWarning($"Unknown flag: '{trimmed}'");

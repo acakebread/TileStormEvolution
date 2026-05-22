@@ -27,8 +27,6 @@ namespace ClassicTilestorm
 		[SerializeField] private Slider detailLevelSlider;
 		[SerializeField] private TMP_Text detailLevelLabel;
 
-		[SerializeField] private Toggle remapAssetsToggle;
-
 		public static Action<bool> onDifficultyToggle;
 		public static Action<bool> onMusicToggle;
 		public static Action<bool> onGridlinesToggle;
@@ -142,11 +140,6 @@ namespace ClassicTilestorm
 					OnDetailLevelChanged(initialValue);
 				}
 
-				if (null != remapAssetsToggle)
-				{
-					remapAssetsToggle.isOn = ApplicationSettings.RemapGeometry;
-					remapAssetsToggle.onValueChanged.AddListener(isOn => ApplicationSettings.RemapGeometry = isOn);
-				}
 			}
 		}
 
