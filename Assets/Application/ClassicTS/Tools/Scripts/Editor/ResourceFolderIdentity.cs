@@ -10,6 +10,11 @@ namespace ClassicTilestorm.Assets
 	{
 		public const string SeedFileName = ".massive-hadron-resource-folder";
 
+		public static bool EnsureSeedForFolder(string folder)
+		{
+			return !string.IsNullOrWhiteSpace(GetOrCreateSeed(folder));
+		}
+
 		public static bool TryComputeHashForAssetPath(string assetPath, bool createSeedIfMissing, out string hashId)
 		{
 			hashId = null;
