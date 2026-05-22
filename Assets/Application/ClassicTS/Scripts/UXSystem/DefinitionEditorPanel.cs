@@ -628,14 +628,18 @@ namespace ClassicTilestorm
 
 			if (ButtonMoveStore != null)
 			{
-				ButtonMoveStore.interactable = hasSelection && Application.isEditor && !isDefault;
+				bool isInternal = CurrentDefinition != null && DefinitionCatalog.IsInternalDefinition(CurrentDefinition.HashID);
+				bool usedByInternalMaps = hasSelection && !isDefault && isInternal && ResourceManager.IsDefinitionUsedByInternalMaps(CurrentDefinition.HashID);
+				ButtonMoveStore.interactable = hasSelection && Application.isEditor && !isDefault && !usedByInternalMaps;
 
 				if (ButtonMoveStore.GetComponentInChildren<TMP_Text>() is TMP_Text moveText)
 				{
 					moveText.text = CurrentDefinition == null
 						? "Move Store"
-						: DefinitionCatalog.IsInternalDefinition(CurrentDefinition.HashID)
-							? "Move to External"
+						: usedByInternalMaps
+							? "Move to External (used)"
+							: isInternal
+								? "Move to External"
 							: "Move to Internal";
 				}
 			}
@@ -944,14 +948,26 @@ namespace ClassicTilestorm
 			var list = ResourceManager.Definitions.ToList();
 			if (currentLocation == DefinitionCatalog.DefinitionStorageLocation.Internal)
 			{
+				if (ResourceManager.IsDefinitionUsedByInternalMaps(hash))
+				{
+					Debug.LogWarning($"DefinitionEditorPanel: cannot move definition '{def.name}' external while it is used by internal maps.");
+					return;
+				}
+
 				list.RemoveAll(d => d != null && d.HashID == hash);
 				list.Add(def);
 				ResourceManager.database.definitions = list.ToArray();
 				DefinitionCatalog.SaveInternalDefinitions(ResourceManager.Definitions.Where(d => d != null && DefinitionCatalog.IsInternalDefinition(d.HashID)).Where(d => d.HashID != hash));
 				DefinitionCatalog.SaveExternalDefinition(def);
+
+				if (!string.IsNullOrWhiteSpace(def.model) && !ResourceManager.IsModelUsedByInternalMaps(def.model))
+					ResourceDependencyHelpers.TryExportModelToExternal(def.model);
 			}
 			else
 			{
+				if (!string.IsNullOrWhiteSpace(def.model))
+					ResourceDependencyHelpers.TryPromoteExternalModelToImmutable(def.model);
+
 				list.RemoveAll(d => d != null && d.HashID == hash);
 
 				int insertIndex = 0;
@@ -974,10 +990,7 @@ namespace ClassicTilestorm
 				DefinitionCatalog.DeleteExternalDefinition(hash);
 			}
 
-#if UNITY_EDITOR
-			AssetDatabase.Refresh();
-#endif
-			DefinitionCatalog.ClearCache();
+			MapCatalog.RefreshStateAfterStorageMove();
 
 			if (ResourceManager.database != null)
 				ResourceSerializer.SaveDatabase(ResourceManager.database, verbose: true);
