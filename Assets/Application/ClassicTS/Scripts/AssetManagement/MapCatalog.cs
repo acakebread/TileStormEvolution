@@ -489,6 +489,22 @@ using UnityEditor;
 			return true;
 		}
 
+		public static bool DeleteMap(HashId hash)
+		{
+			if (hash == 0)
+				return false;
+
+			var currentLocation = GetStorageLocation(hash);
+			var deleted = currentLocation == MapStorageLocation.Internal
+				? DeleteInternalMap(hash) || DeleteCommunityMap(hash)
+				: DeleteCommunityMap(hash) || DeleteInternalMap(hash);
+
+			if (deleted)
+				ClearCache();
+
+			return deleted;
+		}
+
 		public static int CleanupExternalMapsCollidingWithInternal()
 		{
 			EnsureInternalIndex();
