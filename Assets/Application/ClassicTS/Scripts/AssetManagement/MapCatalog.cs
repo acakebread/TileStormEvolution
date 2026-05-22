@@ -63,7 +63,6 @@ using UnityEditor;
 
 			private static string InternalResourcesRoot => $"{ApplicationSettings.JsonDataResourcePath}/Maps";
 			private const string InternalManifestPath = "AssetManifests/Maps";
-			private const string FileHashSeparator = "__";
 			private const bool IncludeLiveContentInExternalMove = false;
 			private static string PersistentMapsFolder => ApplicationSettings.SystemMapsFolder;
 			private static string LegacyPersistentMapsFolder => Path.Combine(Application.persistentDataPath, "Maps");
@@ -546,8 +545,7 @@ using UnityEditor;
 		public static string BuildFileName(Map map)
 		{
 			map?.EnsureHashID();
-			var hash = HTB50Settings.ToString(map?.HashID ?? 0);
-			return $"{hash}.json";
+			return ResourceFileNameBuilder.BuildJsonFileName(map?.HashID ?? 0);
 		}
 
 		private static Map LoadCommunityMap(HashId hash)
@@ -674,10 +672,10 @@ using UnityEditor;
 				return false;
 
 			string candidate = null;
-			int suffixIndex = fileStem.LastIndexOf(FileHashSeparator, StringComparison.Ordinal);
-			if (suffixIndex >= 0 && suffixIndex + FileHashSeparator.Length < fileStem.Length)
+			int suffixIndex = fileStem.LastIndexOf(ResourceFileNameBuilder.FileHashSeparator, StringComparison.Ordinal);
+			if (suffixIndex >= 0 && suffixIndex + ResourceFileNameBuilder.FileHashSeparator.Length < fileStem.Length)
 			{
-				candidate = fileStem.Substring(suffixIndex + FileHashSeparator.Length);
+				candidate = fileStem.Substring(suffixIndex + ResourceFileNameBuilder.FileHashSeparator.Length);
 			}
 			else
 			{
