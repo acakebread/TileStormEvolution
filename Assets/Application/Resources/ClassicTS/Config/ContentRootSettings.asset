@@ -12,9 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f1d4b8f48c9c4e3ca8d2d3f0a1b2c3d4, type: 3}
   m_Name: ContentRootSettings
   m_EditorClassIdentifier: 
-  automaticallyAddRoots: 0
+  automaticallyAddRoots: 1
   contentRoots:
   - ClassicTS
   - Evolution
   - Global
-  - test

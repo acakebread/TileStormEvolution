@@ -348,7 +348,7 @@ namespace ClassicTilestorm
 
 				EditorGUILayout.LabelField("content roots", EditorStyles.boldLabel);
 				EditorGUILayout.HelpBox(
-					"Direct child folders under Assets/Application/Resources can be added here. When Automatically Add Roots is enabled, newly created root folders are appended here automatically.",
+					"Direct child folders under Assets/Application/Resources can be added here. When Automatically Add Roots is enabled, the list is rebuilt from the current folders on disk.",
 					MessageType.Info);
 
 				if (rootsProperty.arraySize == 0)
@@ -477,26 +477,66 @@ namespace ClassicTilestorm
 		{
 			private static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets, string[] movedFromAssetPaths)
 			{
-				if (importedAssets == null || importedAssets.Length == 0)
+				bool hasRelevantChange =
+					HasRelevantResourceAssetChange(importedAssets) ||
+					HasRelevantResourceAssetChange(deletedAssets) ||
+					HasRelevantResourceAssetChange(movedAssets) ||
+					HasRelevantResourceAssetChange(movedFromAssetPaths);
+
+				if (!hasRelevantChange)
 					return;
 
-				const string resourcesRootAssetPath = "Assets/Application/Resources";
-				foreach (var assetPath in importedAssets)
+				Editor_TryAutoAddContentRoots();
+
+				foreach (var assetPath in EnumerateDirectMutableRootFolders(importedAssets).Concat(EnumerateDirectMutableRootFolders(movedAssets)).Distinct(StringComparer.OrdinalIgnoreCase))
 				{
-					if (string.IsNullOrWhiteSpace(assetPath) || !AssetDatabase.IsValidFolder(assetPath))
-						continue;
-
-					var normalized = assetPath.Replace('\\', '/').TrimEnd('/');
-					if (!normalized.StartsWith(resourcesRootAssetPath + "/", StringComparison.OrdinalIgnoreCase))
-						continue;
-
-					var relative = normalized.Substring(resourcesRootAssetPath.Length + 1);
-					if (string.IsNullOrWhiteSpace(relative) || relative.Contains("/"))
-						continue;
-
-					Editor_TryAutoAddContentRoots();
-					Editor_EnsureConfiguredContentRootFolders(new[] { relative }, includeDefaults: false);
+					Editor_EnsureConfiguredContentRootFolders(new[] { assetPath }, includeDefaults: false);
 				}
+
+				Editor_QueueManifestGeneration();
+			}
+
+			private static bool HasRelevantResourceAssetChange(IEnumerable<string> assetPaths)
+				=> (assetPaths ?? Array.Empty<string>()).Any(IsUnderMutableResourcesAssetPath);
+
+			private static IEnumerable<string> EnumerateDirectMutableRootFolders(IEnumerable<string> assetPaths)
+			{
+				foreach (var assetPath in assetPaths ?? Array.Empty<string>())
+				{
+					if (!TryGetDirectMutableRootFolderName(assetPath, out var root))
+						continue;
+
+					yield return root;
+				}
+			}
+
+			private static bool TryGetDirectMutableRootFolderName(string assetPath, out string root)
+			{
+				root = null;
+				if (string.IsNullOrWhiteSpace(assetPath) || !AssetDatabase.IsValidFolder(assetPath))
+					return false;
+
+				const string resourcesRootAssetPath = "Assets/Application/Resources";
+				var normalized = assetPath.Replace('\\', '/').TrimEnd('/');
+				if (!normalized.StartsWith(resourcesRootAssetPath + "/", StringComparison.OrdinalIgnoreCase))
+					return false;
+
+				var relative = normalized.Substring(resourcesRootAssetPath.Length + 1);
+				if (string.IsNullOrWhiteSpace(relative) || relative.Contains("/"))
+					return false;
+
+				root = relative;
+				return true;
+			}
+
+			private static bool IsUnderMutableResourcesAssetPath(string assetPath)
+			{
+				if (string.IsNullOrWhiteSpace(assetPath))
+					return false;
+
+				const string resourcesRootAssetPath = "Assets/Application/Resources";
+				var normalized = assetPath.Replace('\\', '/').TrimEnd('/');
+				return normalized.StartsWith(resourcesRootAssetPath + "/", StringComparison.OrdinalIgnoreCase);
 			}
 		}
 #endif
@@ -641,29 +681,17 @@ namespace ClassicTilestorm
 					.OrderBy(root => root, StringComparer.OrdinalIgnoreCase)
 					.ToArray();
 
-				if (discoveredRoots.Length == 0)
-					return false;
-
 				var existingRoots = (settingsAsset.ContentRoots ?? Array.Empty<string>())
 					.Select(AssetPath.NormalizePath)
 					.Where(root => !string.IsNullOrWhiteSpace(root))
 					.Distinct(StringComparer.OrdinalIgnoreCase)
-					.ToList();
+					.OrderBy(root => root, StringComparer.OrdinalIgnoreCase)
+					.ToArray();
 
-				var addedAny = false;
-				foreach (var discoveredRoot in discoveredRoots)
-				{
-					if (existingRoots.Contains(discoveredRoot, StringComparer.OrdinalIgnoreCase))
-						continue;
-
-					existingRoots.Add(discoveredRoot);
-					addedAny = true;
-				}
-
-				if (!addedAny)
+				if (existingRoots.SequenceEqual(discoveredRoots, StringComparer.OrdinalIgnoreCase))
 					return false;
 
-				settingsAsset.ContentRoots = existingRoots.ToArray();
+				settingsAsset.ContentRoots = discoveredRoots;
 				EditorUtility.SetDirty(settingsAsset);
 				AssetDatabase.SaveAssets();
 				return true;
@@ -776,6 +804,21 @@ namespace ClassicTilestorm
 
 			try
 			{
+				AssetDatabase.Refresh();
+
+				var generatorType =
+					Type.GetType("AssetManifestGenerator, Assembly-CSharp-Editor") ??
+					AppDomain.CurrentDomain.GetAssemblies()
+						.Select(assembly => assembly.GetType("AssetManifestGenerator", throwOnError: false))
+						.FirstOrDefault(type => type != null);
+
+				var method = generatorType?.GetMethod("GenerateAllManifests", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+				if (method != null)
+				{
+					method.Invoke(null, null);
+					return;
+				}
+
 				EditorApplication.ExecuteMenuItem("Tools/Generate Asset Manifests");
 			}
 			catch (Exception ex)
