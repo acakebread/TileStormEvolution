@@ -371,7 +371,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ClassicTilestorm.ApplicationSettings
   loadMapName: Industrial 01
-  remapGeometry: 0
   scrambled: 1
   difficulty: 0
   music: 1
@@ -385,7 +384,7 @@ MonoBehaviour:
   mapRepositoryGitHubRepository: acakebread/TileStormDataHosting
   mapRepositoryGitHubBranch: main
   contentRoots:
-  - Uncategorised
+  - Global
   - ClassicTS
   - Evolution
   previewMode: 1

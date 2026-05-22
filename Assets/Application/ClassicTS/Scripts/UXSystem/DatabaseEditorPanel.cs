@@ -784,11 +784,26 @@ namespace ClassicTilestorm
 		{
 			if (lastSelectedMapIndex < 0 || IsReadOnlyInternalMap) return;
 
+			var map = CurrentMap;
+			if (map == null)
+				return;
+
 			var idx = lastSelectedMapIndex;
+			var hash = map.HashID;
+			if (!MapCatalog.DeleteMap(hash))
+			{
+				Debug.LogWarning($"DatabaseEditorPanel: failed to delete backing file for map '{map.name}' [{HTB50Settings.ToString(hash)}].");
+			}
+
 			var list = ResourceManager.Maps.ToList();
 			list.RemoveAt(idx);
 			ResourceManager.database.maps = list.ToArray();
 			ResourceManager.SyncMapIds();
+
+			if (ResourceManager.database != null)
+				ResourceSerializer.SaveDatabase(ResourceManager.database, verbose: true);
+
+			ResourceSerializer.Initialise();
 
 			lastSelectedMapIndex = Mathf.Clamp(idx - 1, 0, list.Count - 1);
 			RefreshMapList();
