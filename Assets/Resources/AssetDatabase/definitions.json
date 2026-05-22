@@ -14,19 +14,9 @@
     "model": "ECR3n5"
   },
   {
-    "id": "4CRGn4",
-    "name": "new med well",
-    "model": "3WeA5j"
-  },
-  {
     "id": "EaHCxc",
     "name": "new med torch",
     "model": "4CjHhN"
-  },
-  {
-    "id": "79kM6i",
-    "name": "new med cage",
-    "model": "E5wPC7"
   },
   {
     "id": "Cr4C7J",
@@ -636,5 +626,15 @@
     "model": "4YU5Pf",
     "material": "1n5i4n",
     "flags": "Move"
+  },
+  {
+    "id": "79kM6i",
+    "name": "new med cage",
+    "model": "E5wPC7"
+  },
+  {
+    "id": "4CRGn4",
+    "name": "new med well",
+    "model": "3WeA5j"
   }
 ]
