@@ -197,8 +197,8 @@ namespace ClassicTilestorm
 		}
 
 		[Header("content roots")]
-		[SerializeField] private string[] contentRoots = new[] { AssetPath.ImmutableRootFolder, AssetPath.GlobalRootFolder, "ClassicTS", "Evolution" };
-		private static readonly string[] DefaultContentRoots = new[] { AssetPath.ImmutableRootFolder, AssetPath.GlobalRootFolder, "ClassicTS", "Evolution" };
+		[SerializeField] private string[] contentRoots = Array.Empty<string>();
+		private static readonly string[] RequiredContentRoots = new[] { AssetPath.ImmutableRootFolder };
 		public static IReadOnlyList<string> ContentRoots => NormalizeContentRoots(instance?.contentRoots);
 
 #if UNITY_EDITOR
@@ -450,7 +450,7 @@ namespace ClassicTilestorm
 		private static IReadOnlyList<string> NormalizeContentRoots(IEnumerable<string> roots, bool includeDefaults)
 		{
 			var source = includeDefaults
-				? (DefaultContentRoots ?? Array.Empty<string>()).Concat(roots ?? Array.Empty<string>())
+				? (RequiredContentRoots ?? Array.Empty<string>()).Concat(roots ?? Array.Empty<string>())
 				: (roots ?? Array.Empty<string>());
 
 			var cleaned = source
@@ -459,7 +459,7 @@ namespace ClassicTilestorm
 				.Distinct(StringComparer.OrdinalIgnoreCase)
 				.ToArray();
 
-			return cleaned.Length > 0 ? cleaned : DefaultContentRoots;
+			return cleaned.Length > 0 ? cleaned : RequiredContentRoots;
 		}
 
 		private static string ReadPrivateMapRepositoryUploadKey()
