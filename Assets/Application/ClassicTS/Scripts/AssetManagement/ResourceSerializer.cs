@@ -502,7 +502,11 @@ namespace ClassicTilestorm
 
 			var map = crop ? CreateCroppedCopy(originalMap) : originalMap;
 			bool archiveRequired = ResourceDependencyHelpers.RequiresAtomicArchive(originalMap);
-			string fileName = $"{BuildAtomicExportBaseFileName(map)}{(archiveRequired ? ".zip" : ".json")}";
+			string fileName = ResourceFileNameBuilder.BuildFileName(
+				map?.HashID ?? 0,
+				archiveRequired ? ".zip" : ".json",
+				map?.name,
+				prefixReadableName: true);
 
 			if (archiveRequired)
 			{
@@ -512,13 +516,6 @@ namespace ClassicTilestorm
 
 			string json = BuildAtomicMapJson(originalMap, crop: crop, padded: padded, verbose: verbose);
 			return new AtomicMapExportData(false, fileName, "application/json;charset=utf-8", json, null);
-		}
-
-		private static string BuildAtomicExportBaseFileName(Map map)
-		{
-			var name = string.IsNullOrWhiteSpace(map?.name) ? "Untitled" : map.name;
-			var safeName = StringUtil.SanitizeFileName(name);
-			return $"{safeName}__{HTB50Settings.ToString(map?.HashID ?? 0)}";
 		}
 
 		internal static Map ImportAtomicMap(string filepath)
@@ -701,7 +698,9 @@ namespace ClassicTilestorm
 		private static void BuildAtomicMapArchiveStaging(Map originalMap, string stagingRoot, bool crop, bool padded, bool verbose)
 		{
 			string json = BuildAtomicMapJson(originalMap, crop: crop, padded: padded, verbose: verbose);
-			File.WriteAllText(Path.Combine(stagingRoot, BuildAtomicExportBaseFileName(originalMap) + ".json"), json);
+			File.WriteAllText(
+				Path.Combine(stagingRoot, ResourceFileNameBuilder.BuildJsonFileName(originalMap?.HashID ?? 0, originalMap?.name, prefixReadableName: true)),
+				json);
 
 			string contentRoot = Path.Combine(stagingRoot, "Content");
 			FileUtils.EnsureFolder(contentRoot);

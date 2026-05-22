@@ -772,7 +772,7 @@ namespace ClassicTilestorm
 			var list = ResourceManager.Maps.ToList();
 			list.Insert(insertIndex, newMap);
 			Map.EnsureUniqueHashIDs(list);
-			newMap.name = $"NEW_MAP_{HTB50Settings.ToString(newMap.HashID)}";
+			newMap.name = $"user_map_{HTB50Settings.ToString(newMap.HashID)}";
 			ResourceManager.database.maps = list.ToArray();
 			ResourceManager.SyncMapIds();
 
@@ -784,11 +784,26 @@ namespace ClassicTilestorm
 		{
 			if (lastSelectedMapIndex < 0 || IsReadOnlyInternalMap) return;
 
+			var map = CurrentMap;
+			if (map == null)
+				return;
+
 			var idx = lastSelectedMapIndex;
+			var hash = map.HashID;
+			if (!MapCatalog.DeleteMap(hash))
+			{
+				Debug.LogWarning($"DatabaseEditorPanel: failed to delete backing file for map '{map.name}' [{HTB50Settings.ToString(hash)}].");
+			}
+
 			var list = ResourceManager.Maps.ToList();
 			list.RemoveAt(idx);
 			ResourceManager.database.maps = list.ToArray();
 			ResourceManager.SyncMapIds();
+
+			if (ResourceManager.database != null)
+				ResourceSerializer.SaveDatabase(ResourceManager.database, verbose: true);
+
+			ResourceSerializer.Initialise();
 
 			lastSelectedMapIndex = Mathf.Clamp(idx - 1, 0, list.Count - 1);
 			RefreshMapList();

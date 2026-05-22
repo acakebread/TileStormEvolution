@@ -85,13 +85,6 @@ namespace ClassicTilestorm
 			// === ADD AUDIO MANAGER AUTOMATICALLY ===
 			gameObject.AddComponent<AudioManager>();
 			AssetConfiguration.Initialize();
-			AssetRegistry<GameObject>.NameRemapper = ApplicationSettings.RemapGeometry ? ClassicTileStormAssetRemapHelper.RemapName : null;
-			ApplicationSettings.OnRemapGeometryChanged += (value) =>
-			{
-				AssetRegistry<GameObject>.NameRemapper = value ? ClassicTileStormAssetRemapHelper.RemapName : null;
-				ModelAssets.ClearCache();
-				CurrentMap?.RefreshGeometry();
-			};
 
 			if (!FindAnyObjectByType<EventSystem>()) new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
 
@@ -357,7 +350,6 @@ namespace ClassicTilestorm
 				CurrentMap.OnEffectChanged += mainReflection.OnEffectChanged;
 			}
 
-			// Skybox - auto fixup legacy map data - will be removed soon
 			if (string.IsNullOrEmpty(CurrentMap.skybox))
 			{
 				var musicDisplayName = Assets.MusicResourceTable.GetDisplayName(CurrentMap.music) ?? CurrentMap.music;
@@ -366,8 +358,6 @@ namespace ClassicTilestorm
 
 			if (null == SkyboxAssets.Find(CurrentMap.skybox))
 				CurrentMap.skybox = null;
-			// Skybox - auto fixup legacy map data - ends here
-
 			CurrentMap.Initialise(MapRoot, !ApplicationSettings.Scrambled);
 
 			//LogTextureLeak("AFTER loading new map");
