@@ -82,6 +82,7 @@ namespace ClassicTilestorm
 					copy.mainTextureScale = source.mainTextureScale;
 
 					if (texture) copy.mainTexture = texture;
+					MaterialUtils.ForceMaterialRefresh(copy);
 					result[m] = copy;
 				}
 				return result;

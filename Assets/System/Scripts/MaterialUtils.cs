@@ -755,6 +755,7 @@ namespace MassiveHadronLtd
 				};
 				copy.mainTextureOffset = source.mainTextureOffset;
 				copy.mainTextureScale = source.mainTextureScale;
+				ForceMaterialRefresh(copy);
 				result[i] = copy;
 			}
 
