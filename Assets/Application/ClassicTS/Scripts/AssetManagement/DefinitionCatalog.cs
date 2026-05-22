@@ -57,7 +57,6 @@ namespace ClassicTilestorm
 		private static bool ExternalDefinitionsLoaded;
 
 		private const string FileHashSeparator = "__";
-		private const bool UseReadablePersistentFileNames = false;
 		public static string PersistentDefinitionsFolder => ApplicationSettings.SystemDefinitionsFolder;
 		private static string LegacyPersistentDefinitionsFolder => Path.Combine(Application.persistentDataPath, "Definitions");
 		public static string InternalDefinitionsFile => Path.Combine(Application.dataPath, "Resources", "AssetDatabase", "definitions.json");
@@ -290,11 +289,7 @@ namespace ClassicTilestorm
 		{
 			definition?.EnsureHashID();
 			var hash = HTB50Settings.ToString(definition?.HashID ?? 0);
-			if (!UseReadablePersistentFileNames)
-				return $"{hash}.json";
-
-			var safeName = SanitizeFileNameComponent(string.IsNullOrWhiteSpace(definition?.name) ? "Untitled" : definition.name);
-			return $"{safeName}{FileHashSeparator}{hash}.json";
+			return $"{hash}.json";
 		}
 
 		private static void EnsureInternalDefinitions(bool forceRefresh = false)
@@ -452,18 +447,6 @@ namespace ClassicTilestorm
 				return asset;
 
 			return Resources.Load<TextAsset>("AssetDatabase/definitions.json");
-		}
-
-		private static string SanitizeFileNameComponent(string value)
-		{
-			if (string.IsNullOrWhiteSpace(value))
-				return "Untitled";
-
-			var invalid = Path.GetInvalidFileNameChars();
-			var chars = value
-				.Select(ch => invalid.Contains(ch) || char.IsWhiteSpace(ch) ? '_' : ch)
-				.ToArray();
-			return new string(chars).Trim('_');
 		}
 
 		private static void WriteJsonIfChanged(string path, string json)

@@ -64,7 +64,6 @@ using UnityEditor;
 			private static string InternalResourcesRoot => $"{ApplicationSettings.JsonDataResourcePath}/Maps";
 			private const string InternalManifestPath = "AssetManifests/Maps";
 			private const string FileHashSeparator = "__";
-			private const bool UseReadablePersistentFileNames = false;
 			private const bool IncludeLiveContentInExternalMove = false;
 			private static string PersistentMapsFolder => ApplicationSettings.SystemMapsFolder;
 			private static string LegacyPersistentMapsFolder => Path.Combine(Application.persistentDataPath, "Maps");
@@ -548,23 +547,7 @@ using UnityEditor;
 		{
 			map?.EnsureHashID();
 			var hash = HTB50Settings.ToString(map?.HashID ?? 0);
-			if (!UseReadablePersistentFileNames)
-				return $"{hash}.json";
-
-			var safeName = SanitizeFileNameComponent(string.IsNullOrWhiteSpace(map?.name) ? "Untitled" : map.name);
-			return $"{safeName}{FileHashSeparator}{hash}.json";
-		}
-
-		public static string SanitizeFileNameComponent(string value)
-		{
-			if (string.IsNullOrWhiteSpace(value))
-				return "Untitled";
-
-			var invalid = Path.GetInvalidFileNameChars();
-			var chars = value
-				.Select(ch => invalid.Contains(ch) || char.IsWhiteSpace(ch) ? '_' : ch)
-				.ToArray();
-			return new string(chars).Trim('_');
+			return $"{hash}.json";
 		}
 
 		private static Map LoadCommunityMap(HashId hash)
