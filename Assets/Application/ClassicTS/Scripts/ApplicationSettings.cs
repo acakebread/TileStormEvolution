@@ -123,6 +123,10 @@ namespace ClassicTilestorm
 		private const string MapRepositoryUploadKeyPrefKey = "MapRepositoryUploadKey";
 		private const string MapRepositoryGitHubRepositoryPrefKey = "MapRepositoryGitHubRepository";
 		private const string MapRepositoryGitHubBranchPrefKey = "MapRepositoryGitHubBranch";
+		private const string ContentRootSettingsResourcePath = "ClassicTS/Config/ContentRootSettings";
+#if UNITY_EDITOR
+		private const string ContentRootSettingsAssetProjectPath = "Assets/Application/Resources/ClassicTS/Config/ContentRootSettings.asset";
+#endif
 
 		public static string MapRepositoryBaseUrl
 		{
@@ -196,11 +200,9 @@ namespace ClassicTilestorm
 			}
 		}
 
-		[Header("content roots")]
-		[SerializeField] private bool automaticallyAddRoots = true;
-		[SerializeField] private string[] contentRoots = Array.Empty<string>();
 		private static readonly string[] RequiredContentRoots = new[] { AssetPath.ImmutableRootFolder };
-		public static IReadOnlyList<string> ContentRoots => NormalizeContentRoots(instance?.contentRoots);
+		private static ContentRootSettingsAsset contentRootSettingsAsset;
+		public static IReadOnlyList<string> ContentRoots => NormalizeContentRoots(GetConfiguredContentRoots());
 
 #if UNITY_EDITOR
 		private const string ResourceFolderSeedFileName = ".massive-hadron-resource-folder";
@@ -224,6 +226,22 @@ namespace ClassicTilestorm
 
 		public static IEnumerable<string> GetContentPaths(string subfolder)
 			=> AssetPath.BuildPaths(ContentRoots, subfolder);
+
+		private static IEnumerable<string> GetConfiguredContentRoots()
+			=> GetContentRootSettingsAsset()?.ContentRoots ?? Array.Empty<string>();
+
+		private static ContentRootSettingsAsset GetContentRootSettingsAsset()
+		{
+			if (contentRootSettingsAsset != null)
+				return contentRootSettingsAsset;
+
+			contentRootSettingsAsset = Resources.Load<ContentRootSettingsAsset>(ContentRootSettingsResourcePath);
+#if UNITY_EDITOR
+			if (contentRootSettingsAsset == null)
+				contentRootSettingsAsset = Editor_GetOrCreateContentRootSettingsAsset();
+#endif
+			return contentRootSettingsAsset;
+		}
 
 		public static string MutableResourcesProjectPath
 			=> Path.Combine(Application.dataPath, AssetPath.ApplicationRootFolder, AssetPath.ResourcesFolder);
@@ -261,6 +279,7 @@ namespace ClassicTilestorm
 		private class PreviewSettingsEditor : Editor
 		{
 			private const string TokenPrompt = "<paste your access token here>";
+			private SerializedObject contentRootSettingsObject;
 
 			public override void OnInspectorGUI()
 			{
@@ -283,7 +302,7 @@ namespace ClassicTilestorm
 
 				serializedObject.ApplyModifiedProperties();
 				Editor_TryAutoAddContentRoots();
-				Editor_EnsureConfiguredContentRootFolders(((ApplicationSettings)target).contentRoots, includeDefaults: true);
+				Editor_EnsureConfiguredContentRootFolders(GetConfiguredContentRoots(), includeDefaults: true);
 				EditorGUILayout.Space(10);
 
 				if (GUILayout.Button("Locate Export Folder", GUILayout.Height(30)))
@@ -304,26 +323,42 @@ namespace ClassicTilestorm
 
 			private void DrawContentRootsInspector()
 			{
-				DrawProperty(nameof(automaticallyAddRoots));
-				bool autoAddRoots = serializedObject.FindProperty(nameof(automaticallyAddRoots))?.boolValue ?? true;
-
-				var property = serializedObject.FindProperty(nameof(contentRoots));
-				if (property == null)
+				var settingsAsset = Editor_GetOrCreateContentRootSettingsAsset();
+				if (settingsAsset == null)
+				{
+					EditorGUILayout.HelpBox("Content root settings asset could not be loaded.", MessageType.Warning);
 					return;
+				}
+
+				if (contentRootSettingsObject == null || contentRootSettingsObject.targetObject != settingsAsset)
+					contentRootSettingsObject = new SerializedObject(settingsAsset);
+
+				contentRootSettingsObject.Update();
+
+				var autoAddProperty = contentRootSettingsObject.FindProperty("automaticallyAddRoots");
+				var rootsProperty = contentRootSettingsObject.FindProperty("contentRoots");
+				if (autoAddProperty == null || rootsProperty == null)
+				{
+					EditorGUILayout.HelpBox("Content root settings asset is missing expected fields.", MessageType.Warning);
+					return;
+				}
+
+				EditorGUILayout.PropertyField(autoAddProperty);
+				bool autoAddRoots = autoAddProperty.boolValue;
 
 				EditorGUILayout.LabelField("content roots", EditorStyles.boldLabel);
 				EditorGUILayout.HelpBox(
 					"Direct child folders under Assets/Application/Resources can be added here. When Automatically Add Roots is enabled, newly created root folders are appended here automatically.",
 					MessageType.Info);
 
-				if (property.arraySize == 0)
+				if (rootsProperty.arraySize == 0)
 				{
 					EditorGUILayout.LabelField(autoAddRoots ? "No discovered roots yet." : "No configured roots.", EditorStyles.miniLabel);
 				}
 
-				for (int i = 0; i < property.arraySize; i++)
+				for (int i = 0; i < rootsProperty.arraySize; i++)
 				{
-					var element = property.GetArrayElementAtIndex(i);
+					var element = rootsProperty.GetArrayElementAtIndex(i);
 					EditorGUILayout.BeginHorizontal();
 					using (new EditorGUI.DisabledScope(true))
 						EditorGUILayout.TextField(element.stringValue);
@@ -334,7 +369,7 @@ namespace ClassicTilestorm
 						GUI.backgroundColor = new Color(0.85f, 0.35f, 0.35f);
 						if (GUILayout.Button("Delete", GUILayout.Width(70f)))
 						{
-							property.DeleteArrayElementAtIndex(i);
+							rootsProperty.DeleteArrayElementAtIndex(i);
 							GUI.backgroundColor = previousColor;
 							break;
 						}
@@ -351,13 +386,19 @@ namespace ClassicTilestorm
 					if (GUILayout.Button("Add Existing Root...", GUILayout.Width(160f)))
 					{
 						var selected = BrowseForContentRoot(null);
-						if (!string.IsNullOrWhiteSpace(selected) && !ContainsRoot(property, selected))
+						if (!string.IsNullOrWhiteSpace(selected) && !ContainsRoot(rootsProperty, selected))
 						{
-							property.arraySize += 1;
-							property.GetArrayElementAtIndex(property.arraySize - 1).stringValue = selected;
+							rootsProperty.arraySize += 1;
+							rootsProperty.GetArrayElementAtIndex(rootsProperty.arraySize - 1).stringValue = selected;
 						}
 					}
 					EditorGUILayout.EndHorizontal();
+				}
+
+				if (contentRootSettingsObject.ApplyModifiedProperties())
+				{
+					EditorUtility.SetDirty(settingsAsset);
+					AssetDatabase.SaveAssets();
 				}
 			}
 
@@ -582,10 +623,8 @@ namespace ClassicTilestorm
 
 		private static bool Editor_TryAutoAddContentRoots()
 		{
-			if (instance == null)
-				instance = UnityEngine.Object.FindAnyObjectByType<ApplicationSettings>(FindObjectsInactive.Include);
-
-			if (instance == null || !instance.automaticallyAddRoots)
+			var settingsAsset = Editor_GetOrCreateContentRootSettingsAsset();
+			if (settingsAsset == null || !settingsAsset.AutomaticallyAddRoots)
 				return false;
 
 			try
@@ -605,7 +644,7 @@ namespace ClassicTilestorm
 				if (discoveredRoots.Length == 0)
 					return false;
 
-				var existingRoots = (instance.contentRoots ?? Array.Empty<string>())
+				var existingRoots = (settingsAsset.ContentRoots ?? Array.Empty<string>())
 					.Select(AssetPath.NormalizePath)
 					.Where(root => !string.IsNullOrWhiteSpace(root))
 					.Distinct(StringComparer.OrdinalIgnoreCase)
@@ -624,8 +663,8 @@ namespace ClassicTilestorm
 				if (!addedAny)
 					return false;
 
-				instance.contentRoots = existingRoots.ToArray();
-				EditorUtility.SetDirty(instance);
+				settingsAsset.ContentRoots = existingRoots.ToArray();
+				EditorUtility.SetDirty(settingsAsset);
 				AssetDatabase.SaveAssets();
 				return true;
 			}
@@ -634,6 +673,42 @@ namespace ClassicTilestorm
 				Debug.LogWarning($"ApplicationSettings: failed to auto-add content roots: {ex.Message}");
 				return false;
 			}
+		}
+
+		[InitializeOnLoadMethod]
+		private static void Editor_EnsureContentRootSettingsAssetOnLoad()
+		{
+			EditorApplication.delayCall += () => Editor_GetOrCreateContentRootSettingsAsset();
+		}
+
+		private static ContentRootSettingsAsset Editor_GetOrCreateContentRootSettingsAsset()
+		{
+			if (contentRootSettingsAsset != null)
+				return contentRootSettingsAsset;
+
+			contentRootSettingsAsset = AssetDatabase.LoadAssetAtPath<ContentRootSettingsAsset>(ContentRootSettingsAssetProjectPath);
+			if (contentRootSettingsAsset != null)
+				return contentRootSettingsAsset;
+
+			try
+			{
+				var directory = Path.GetDirectoryName(ContentRootSettingsAssetProjectPath);
+				if (!string.IsNullOrWhiteSpace(directory) && !Directory.Exists(directory))
+					Directory.CreateDirectory(directory);
+
+				contentRootSettingsAsset = ScriptableObject.CreateInstance<ContentRootSettingsAsset>();
+				contentRootSettingsAsset.name = "ContentRootSettings";
+				AssetDatabase.CreateAsset(contentRootSettingsAsset, ContentRootSettingsAssetProjectPath);
+				AssetDatabase.SaveAssets();
+				AssetDatabase.Refresh();
+			}
+			catch (Exception ex)
+			{
+				Debug.LogWarning($"ApplicationSettings: failed to create content root settings asset: {ex.Message}");
+				contentRootSettingsAsset = null;
+			}
+
+			return contentRootSettingsAsset;
 		}
 
 		public static void Editor_EnsureConfiguredContentRootFolders(IEnumerable<string> roots, bool includeDefaults)
