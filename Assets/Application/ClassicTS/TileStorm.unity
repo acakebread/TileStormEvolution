@@ -383,6 +383,7 @@ MonoBehaviour:
   mapRepositoryUploadKey: 
   mapRepositoryGitHubRepository: acakebread/TileStormDataHosting
   mapRepositoryGitHubBranch: main
+  automaticallyAddRoots: 1
   contentRoots:
   - Global
   - ClassicTS

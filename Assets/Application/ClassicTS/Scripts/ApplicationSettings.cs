@@ -305,6 +305,7 @@ namespace ClassicTilestorm
 			private void DrawContentRootsInspector()
 			{
 				DrawProperty(nameof(automaticallyAddRoots));
+				bool autoAddRoots = serializedObject.FindProperty(nameof(automaticallyAddRoots))?.boolValue ?? true;
 
 				var property = serializedObject.FindProperty(nameof(contentRoots));
 				if (property == null)
@@ -315,38 +316,49 @@ namespace ClassicTilestorm
 					"Direct child folders under Assets/Application/Resources can be added here. When Automatically Add Roots is enabled, newly created root folders are appended here automatically.",
 					MessageType.Info);
 
+				if (property.arraySize == 0)
+				{
+					EditorGUILayout.LabelField(autoAddRoots ? "No discovered roots yet." : "No configured roots.", EditorStyles.miniLabel);
+				}
+
 				for (int i = 0; i < property.arraySize; i++)
 				{
 					var element = property.GetArrayElementAtIndex(i);
 					EditorGUILayout.BeginHorizontal();
 					using (new EditorGUI.DisabledScope(true))
-						EditorGUILayout.TextField($"Element {i}", element.stringValue);
+						EditorGUILayout.TextField(element.stringValue);
 
-					var previousColor = GUI.backgroundColor;
-					GUI.backgroundColor = new Color(0.85f, 0.35f, 0.35f);
-					if (GUILayout.Button("Delete", GUILayout.Width(70f)))
+					if (!autoAddRoots)
 					{
-						property.DeleteArrayElementAtIndex(i);
+						var previousColor = GUI.backgroundColor;
+						GUI.backgroundColor = new Color(0.85f, 0.35f, 0.35f);
+						if (GUILayout.Button("Delete", GUILayout.Width(70f)))
+						{
+							property.DeleteArrayElementAtIndex(i);
+							GUI.backgroundColor = previousColor;
+							break;
+						}
 						GUI.backgroundColor = previousColor;
-						break;
 					}
-					GUI.backgroundColor = previousColor;
 
 					EditorGUILayout.EndHorizontal();
 				}
 
-				EditorGUILayout.BeginHorizontal();
-				GUILayout.FlexibleSpace();
-				if (GUILayout.Button("Add Existing Root...", GUILayout.Width(160f)))
+				if (!autoAddRoots)
 				{
-					var selected = BrowseForContentRoot(null);
-					if (!string.IsNullOrWhiteSpace(selected) && !ContainsRoot(property, selected))
+					EditorGUILayout.BeginHorizontal();
+					GUILayout.FlexibleSpace();
+					if (GUILayout.Button("Add Existing Root...", GUILayout.Width(160f)))
 					{
-						property.arraySize += 1;
-						property.GetArrayElementAtIndex(property.arraySize - 1).stringValue = selected;
+						var selected = BrowseForContentRoot(null);
+						if (!string.IsNullOrWhiteSpace(selected) && !ContainsRoot(property, selected))
+						{
+							property.arraySize += 1;
+							property.GetArrayElementAtIndex(property.arraySize - 1).stringValue = selected;
+						}
 					}
+					EditorGUILayout.EndHorizontal();
 				}
-				EditorGUILayout.EndHorizontal();
 			}
 
 			private static bool ContainsRoot(SerializedProperty property, string candidate)
@@ -642,12 +654,16 @@ namespace ClassicTilestorm
 
 					var rootFolder = GetProjectRootFolderPath(normalizedRoot);
 					createdAny |= EnsureFolder(rootFolder);
+					createdAny |= EnsureGitKeep(rootFolder);
+					bool useSeedFiles = !string.Equals(normalizedRoot, AssetPath.ImmutableRootFolder, StringComparison.OrdinalIgnoreCase);
 
 					foreach (var subfolder in SeededContentSubfolders)
 					{
 						var contentFolder = Path.Combine(rootFolder, subfolder.Replace('/', Path.DirectorySeparatorChar));
 						createdAny |= EnsureFolder(contentFolder);
-						createdAny |= EnsureContentFolderSeed(contentFolder);
+						createdAny |= useSeedFiles
+							? EnsureContentFolderSeed(contentFolder)
+							: EnsureGitKeep(contentFolder);
 					}
 
 					foreach (var subfolder in UnseededContentSubfolders)
