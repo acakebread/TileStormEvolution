@@ -162,7 +162,7 @@ namespace ClassicTilestorm
 				return false;
 			}
 
-			var destinationRoot = Path.Combine(Application.dataPath, "Application", "Resources", AssetPath.ImmutableRootFolder, AssetPath.GeometryFolder);
+			var destinationRoot = Path.Combine(ApplicationSettings.ImmutableResourcesProjectPath, AssetPath.ImmutableRootFolder, AssetPath.GeometryFolder);
 			var importedPath = WavefrontAssetImporter.ImportWavefrontModel(
 				sourcePath,
 				WavefrontAssetImporter.ImportOption.HashIdFolder,
@@ -197,7 +197,7 @@ namespace ClassicTilestorm
 			if (string.IsNullOrWhiteSpace(sourcePath) || IsPathUnderRoot(sourcePath, ApplicationSettings.SystemModelsFolder))
 				return;
 
-			var immutableRoot = Path.Combine(Application.dataPath, "Application", "Resources", AssetPath.ImmutableRootFolder, AssetPath.GeometryFolder);
+			var immutableRoot = Path.Combine(ApplicationSettings.ImmutableResourcesProjectPath, AssetPath.ImmutableRootFolder, AssetPath.GeometryFolder);
 			if (IsPathUnderRoot(sourcePath, immutableRoot))
 			{
 				var sourceRoot = !string.IsNullOrWhiteSpace(modelHash)
@@ -234,7 +234,7 @@ namespace ClassicTilestorm
 			filePath = entry.FilePath;
 			return !string.IsNullOrWhiteSpace(filePath) &&
 				File.Exists(filePath) &&
-				!IsPathUnderRoot(filePath, Path.Combine(Application.dataPath, "Application", "Resources", AssetPath.ImmutableRootFolder));
+				!IsPathUnderRoot(filePath, Path.Combine(ApplicationSettings.ImmutableResourcesProjectPath, AssetPath.ImmutableRootFolder));
 		}
 
 		private static bool TryResolveImmutableModelSourcePath(string modelHash, out string filePath)
@@ -264,9 +264,7 @@ namespace ClassicTilestorm
 				return false;
 
 			var immutableRoot = Path.Combine(
-				Application.dataPath,
-				"Application",
-				"Resources",
+				ApplicationSettings.ImmutableResourcesProjectPath,
 				AssetPath.ImmutableRootFolder,
 				AssetPath.GeometryFolder,
 				modelHash);
@@ -388,7 +386,7 @@ namespace ClassicTilestorm
 			foreach (var resFolder in Directory.EnumerateDirectories(searchRoot, "Resources", SearchOption.AllDirectories))
 			{
 				var exactCandidate = Path.Combine(resFolder, normalized);
-				if (File.Exists(exactCandidate) && (includeImmutable || !IsPathUnderRoot(exactCandidate, Path.Combine(Application.dataPath, "Application", "Resources", AssetPath.ImmutableRootFolder))))
+				if (File.Exists(exactCandidate) && (includeImmutable || !IsPathUnderRoot(exactCandidate, Path.Combine(ApplicationSettings.ImmutableResourcesProjectPath, AssetPath.ImmutableRootFolder))))
 					return exactCandidate;
 
 				if (string.IsNullOrWhiteSpace(Path.GetExtension(exactCandidate)))
@@ -402,7 +400,7 @@ namespace ClassicTilestorm
 							if (string.Equals(Path.GetExtension(candidate), ".meta", StringComparison.OrdinalIgnoreCase))
 								continue;
 
-							if (includeImmutable || !IsPathUnderRoot(candidate, Path.Combine(Application.dataPath, "Application", "Resources", AssetPath.ImmutableRootFolder)))
+							if (includeImmutable || !IsPathUnderRoot(candidate, Path.Combine(ApplicationSettings.ImmutableResourcesProjectPath, AssetPath.ImmutableRootFolder)))
 								return candidate;
 						}
 					}
@@ -419,11 +417,11 @@ namespace ClassicTilestorm
 				var candidate = file.Replace('\\', '/');
 				var candidateStem = Path.GetFileNameWithoutExtension(candidate);
 				if (string.Equals(candidateStem, normalizedStem, StringComparison.OrdinalIgnoreCase) &&
-					(includeImmutable || !IsPathUnderRoot(file, Path.Combine(Application.dataPath, "Application", "Resources", AssetPath.ImmutableRootFolder))))
+					(includeImmutable || !IsPathUnderRoot(file, Path.Combine(ApplicationSettings.ImmutableResourcesProjectPath, AssetPath.ImmutableRootFolder))))
 					return file;
 
 				if (candidate.EndsWith(suffix, StringComparison.OrdinalIgnoreCase) &&
-					(includeImmutable || !IsPathUnderRoot(file, Path.Combine(Application.dataPath, "Application", "Resources", AssetPath.ImmutableRootFolder))))
+					(includeImmutable || !IsPathUnderRoot(file, Path.Combine(ApplicationSettings.ImmutableResourcesProjectPath, AssetPath.ImmutableRootFolder))))
 					return file;
 			}
 

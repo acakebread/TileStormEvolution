@@ -108,7 +108,7 @@ namespace ClassicTilestorm
 		[Header("json data root")]
 		[SerializeField, ResourcePath] private string jsonDataPath = "ClassicTS/Config";
 		public static string JsonDataPath => string.IsNullOrWhiteSpace(instance?.jsonDataPath) ? "ClassicTS/Config" : instance.jsonDataPath.Trim('/').Trim();
-		public static string JsonDataProjectPath => Path.Combine(Application.dataPath, "Application", "Resources", JsonDataPath.Replace('/', Path.DirectorySeparatorChar));
+		public static string JsonDataProjectPath => Path.Combine(MutableResourcesProjectPath, JsonDataPath.Replace('/', Path.DirectorySeparatorChar));
 		public static string JsonDataResourcePath => JsonDataPath;
 
 		[Header("online map repository")]
@@ -123,6 +123,10 @@ namespace ClassicTilestorm
 		private const string MapRepositoryUploadKeyPrefKey = "MapRepositoryUploadKey";
 		private const string MapRepositoryGitHubRepositoryPrefKey = "MapRepositoryGitHubRepository";
 		private const string MapRepositoryGitHubBranchPrefKey = "MapRepositoryGitHubBranch";
+		private const string ContentRootSettingsResourcePath = "ClassicTS/Config/ContentRootSettings";
+#if UNITY_EDITOR
+		private const string ContentRootSettingsAssetProjectPath = "Assets/Application/Resources/ClassicTS/Config/ContentRootSettings.asset";
+#endif
 
 		public static string MapRepositoryBaseUrl
 		{
@@ -196,10 +200,9 @@ namespace ClassicTilestorm
 			}
 		}
 
-		[Header("content roots")]
-		[SerializeField] private string[] contentRoots = Array.Empty<string>();
 		private static readonly string[] RequiredContentRoots = new[] { AssetPath.ImmutableRootFolder };
-		public static IReadOnlyList<string> ContentRoots => NormalizeContentRoots(instance?.contentRoots);
+		private static ContentRootSettingsAsset contentRootSettingsAsset;
+		public static IReadOnlyList<string> ContentRoots => NormalizeContentRoots(GetConfiguredContentRoots());
 
 #if UNITY_EDITOR
 		private const string ResourceFolderSeedFileName = ".massive-hadron-resource-folder";
@@ -223,6 +226,28 @@ namespace ClassicTilestorm
 
 		public static IEnumerable<string> GetContentPaths(string subfolder)
 			=> AssetPath.BuildPaths(ContentRoots, subfolder);
+
+		private static IEnumerable<string> GetConfiguredContentRoots()
+			=> GetContentRootSettingsAsset()?.ContentRoots ?? Array.Empty<string>();
+
+		private static ContentRootSettingsAsset GetContentRootSettingsAsset()
+		{
+			if (contentRootSettingsAsset != null)
+				return contentRootSettingsAsset;
+
+			contentRootSettingsAsset = Resources.Load<ContentRootSettingsAsset>(ContentRootSettingsResourcePath);
+#if UNITY_EDITOR
+			if (contentRootSettingsAsset == null)
+				contentRootSettingsAsset = Editor_GetOrCreateContentRootSettingsAsset();
+#endif
+			return contentRootSettingsAsset;
+		}
+
+		public static string MutableResourcesProjectPath
+			=> Path.Combine(Application.dataPath, AssetPath.ApplicationRootFolder, AssetPath.ResourcesFolder);
+
+		public static string ImmutableResourcesProjectPath
+			=> Path.Combine(Application.dataPath, AssetPath.ApplicationRootFolder, AssetPath.InternalRootParentFolder, AssetPath.ResourcesFolder);
 
 		public static IEnumerable<string> GetGeometryPaths() => GetContentPaths(AssetPath.GeometryFolder);
 		public static IEnumerable<string> GetTexturePaths() => GetContentPaths(AssetPath.TextureFolder);
@@ -254,6 +279,7 @@ namespace ClassicTilestorm
 		private class PreviewSettingsEditor : Editor
 		{
 			private const string TokenPrompt = "<paste your access token here>";
+			private SerializedObject contentRootSettingsObject;
 
 			public override void OnInspectorGUI()
 			{
@@ -275,7 +301,8 @@ namespace ClassicTilestorm
 				DrawProperty(nameof(previewMode));
 
 				serializedObject.ApplyModifiedProperties();
-				Editor_EnsureConfiguredContentRootFolders(((ApplicationSettings)target).contentRoots, includeDefaults: true);
+				Editor_TryAutoAddContentRoots();
+				Editor_EnsureConfiguredContentRootFolders(GetConfiguredContentRoots(), includeDefaults: true);
 				EditorGUILayout.Space(10);
 
 				if (GUILayout.Button("Locate Export Folder", GUILayout.Height(30)))
@@ -296,47 +323,83 @@ namespace ClassicTilestorm
 
 			private void DrawContentRootsInspector()
 			{
-				var property = serializedObject.FindProperty(nameof(contentRoots));
-				if (property == null)
+				var settingsAsset = Editor_GetOrCreateContentRootSettingsAsset();
+				if (settingsAsset == null)
+				{
+					EditorGUILayout.HelpBox("Content root settings asset could not be loaded.", MessageType.Warning);
 					return;
+				}
+
+				if (contentRootSettingsObject == null || contentRootSettingsObject.targetObject != settingsAsset)
+					contentRootSettingsObject = new SerializedObject(settingsAsset);
+
+				contentRootSettingsObject.Update();
+
+				var autoAddProperty = contentRootSettingsObject.FindProperty("automaticallyAddRoots");
+				var rootsProperty = contentRootSettingsObject.FindProperty("contentRoots");
+				if (autoAddProperty == null || rootsProperty == null)
+				{
+					EditorGUILayout.HelpBox("Content root settings asset is missing expected fields.", MessageType.Warning);
+					return;
+				}
+
+				EditorGUILayout.PropertyField(autoAddProperty);
+				bool autoAddRoots = autoAddProperty.boolValue;
 
 				EditorGUILayout.LabelField("content roots", EditorStyles.boldLabel);
 				EditorGUILayout.HelpBox(
-					"Create the root folder under Assets/Application/Resources first, then add it here via Browse. Selecting a root will ensure the standard subfolders and seed files exist.",
+					"Direct child folders under Assets/Application/Resources can be added here. When Automatically Add Roots is enabled, the list is rebuilt from the current folders on disk.",
 					MessageType.Info);
 
-				for (int i = 0; i < property.arraySize; i++)
+				if (rootsProperty.arraySize == 0)
 				{
-					var element = property.GetArrayElementAtIndex(i);
+					EditorGUILayout.LabelField(autoAddRoots ? "No discovered roots yet." : "No configured roots.", EditorStyles.miniLabel);
+				}
+
+				for (int i = 0; i < rootsProperty.arraySize; i++)
+				{
+					var element = rootsProperty.GetArrayElementAtIndex(i);
 					EditorGUILayout.BeginHorizontal();
 					using (new EditorGUI.DisabledScope(true))
-						EditorGUILayout.TextField($"Element {i}", element.stringValue);
+						EditorGUILayout.TextField(element.stringValue);
 
-					var previousColor = GUI.backgroundColor;
-					GUI.backgroundColor = new Color(0.85f, 0.35f, 0.35f);
-					if (GUILayout.Button("Delete", GUILayout.Width(70f)))
+					if (!autoAddRoots)
 					{
-						property.DeleteArrayElementAtIndex(i);
+						var previousColor = GUI.backgroundColor;
+						GUI.backgroundColor = new Color(0.85f, 0.35f, 0.35f);
+						if (GUILayout.Button("Delete", GUILayout.Width(70f)))
+						{
+							rootsProperty.DeleteArrayElementAtIndex(i);
+							GUI.backgroundColor = previousColor;
+							break;
+						}
 						GUI.backgroundColor = previousColor;
-						break;
 					}
-					GUI.backgroundColor = previousColor;
 
 					EditorGUILayout.EndHorizontal();
 				}
 
-				EditorGUILayout.BeginHorizontal();
-				GUILayout.FlexibleSpace();
-				if (GUILayout.Button("Add Existing Root...", GUILayout.Width(160f)))
+				if (!autoAddRoots)
 				{
-					var selected = BrowseForContentRoot(null);
-					if (!string.IsNullOrWhiteSpace(selected) && !ContainsRoot(property, selected))
+					EditorGUILayout.BeginHorizontal();
+					GUILayout.FlexibleSpace();
+					if (GUILayout.Button("Add Existing Root...", GUILayout.Width(160f)))
 					{
-						property.arraySize += 1;
-						property.GetArrayElementAtIndex(property.arraySize - 1).stringValue = selected;
+						var selected = BrowseForContentRoot(null);
+						if (!string.IsNullOrWhiteSpace(selected) && !ContainsRoot(rootsProperty, selected))
+						{
+							rootsProperty.arraySize += 1;
+							rootsProperty.GetArrayElementAtIndex(rootsProperty.arraySize - 1).stringValue = selected;
+						}
 					}
+					EditorGUILayout.EndHorizontal();
 				}
-				EditorGUILayout.EndHorizontal();
+
+				if (contentRootSettingsObject.ApplyModifiedProperties())
+				{
+					EditorUtility.SetDirty(settingsAsset);
+					AssetDatabase.SaveAssets();
+				}
 			}
 
 			private static bool ContainsRoot(SerializedProperty property, string candidate)
@@ -356,7 +419,7 @@ namespace ClassicTilestorm
 
 			private static string BrowseForContentRoot(string currentValue)
 			{
-				var resourcesRoot = GetResourcesRootPath();
+				var resourcesRoot = GetMutableResourcesRootPath();
 				Directory.CreateDirectory(resourcesRoot);
 
 				var initialFolder = string.IsNullOrWhiteSpace(currentValue)
@@ -414,25 +477,66 @@ namespace ClassicTilestorm
 		{
 			private static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets, string[] movedFromAssetPaths)
 			{
-				if (importedAssets == null || importedAssets.Length == 0)
+				bool hasRelevantChange =
+					HasRelevantResourceAssetChange(importedAssets) ||
+					HasRelevantResourceAssetChange(deletedAssets) ||
+					HasRelevantResourceAssetChange(movedAssets) ||
+					HasRelevantResourceAssetChange(movedFromAssetPaths);
+
+				if (!hasRelevantChange)
 					return;
 
-				const string resourcesRootAssetPath = "Assets/Application/Resources";
-				foreach (var assetPath in importedAssets)
+				Editor_TryAutoAddContentRoots();
+
+				foreach (var assetPath in EnumerateDirectMutableRootFolders(importedAssets).Concat(EnumerateDirectMutableRootFolders(movedAssets)).Distinct(StringComparer.OrdinalIgnoreCase))
 				{
-					if (string.IsNullOrWhiteSpace(assetPath) || !AssetDatabase.IsValidFolder(assetPath))
-						continue;
-
-					var normalized = assetPath.Replace('\\', '/').TrimEnd('/');
-					if (!normalized.StartsWith(resourcesRootAssetPath + "/", StringComparison.OrdinalIgnoreCase))
-						continue;
-
-					var relative = normalized.Substring(resourcesRootAssetPath.Length + 1);
-					if (string.IsNullOrWhiteSpace(relative) || relative.Contains("/"))
-						continue;
-
-					Editor_EnsureConfiguredContentRootFolders(new[] { relative }, includeDefaults: false);
+					Editor_EnsureConfiguredContentRootFolders(new[] { assetPath }, includeDefaults: false);
 				}
+
+				Editor_QueueManifestGeneration();
+			}
+
+			private static bool HasRelevantResourceAssetChange(IEnumerable<string> assetPaths)
+				=> (assetPaths ?? Array.Empty<string>()).Any(IsUnderMutableResourcesAssetPath);
+
+			private static IEnumerable<string> EnumerateDirectMutableRootFolders(IEnumerable<string> assetPaths)
+			{
+				foreach (var assetPath in assetPaths ?? Array.Empty<string>())
+				{
+					if (!TryGetDirectMutableRootFolderName(assetPath, out var root))
+						continue;
+
+					yield return root;
+				}
+			}
+
+			private static bool TryGetDirectMutableRootFolderName(string assetPath, out string root)
+			{
+				root = null;
+				if (string.IsNullOrWhiteSpace(assetPath) || !AssetDatabase.IsValidFolder(assetPath))
+					return false;
+
+				const string resourcesRootAssetPath = "Assets/Application/Resources";
+				var normalized = assetPath.Replace('\\', '/').TrimEnd('/');
+				if (!normalized.StartsWith(resourcesRootAssetPath + "/", StringComparison.OrdinalIgnoreCase))
+					return false;
+
+				var relative = normalized.Substring(resourcesRootAssetPath.Length + 1);
+				if (string.IsNullOrWhiteSpace(relative) || relative.Contains("/"))
+					return false;
+
+				root = relative;
+				return true;
+			}
+
+			private static bool IsUnderMutableResourcesAssetPath(string assetPath)
+			{
+				if (string.IsNullOrWhiteSpace(assetPath))
+					return false;
+
+				const string resourcesRootAssetPath = "Assets/Application/Resources";
+				var normalized = assetPath.Replace('\\', '/').TrimEnd('/');
+				return normalized.StartsWith(resourcesRootAssetPath + "/", StringComparison.OrdinalIgnoreCase);
 			}
 		}
 #endif
@@ -555,11 +659,90 @@ namespace ClassicTilestorm
 		}
 
 #if UNITY_EDITOR
+		private static bool manifestGenerationQueued;
+
+		private static bool Editor_TryAutoAddContentRoots()
+		{
+			var settingsAsset = Editor_GetOrCreateContentRootSettingsAsset();
+			if (settingsAsset == null || !settingsAsset.AutomaticallyAddRoots)
+				return false;
+
+			try
+			{
+				var resourcesRoot = GetMutableResourcesRootPath();
+				if (string.IsNullOrWhiteSpace(resourcesRoot) || !Directory.Exists(resourcesRoot))
+					return false;
+
+				var discoveredRoots = Directory.EnumerateDirectories(resourcesRoot, "*", SearchOption.TopDirectoryOnly)
+					.Select(Path.GetFileName)
+					.Select(AssetPath.NormalizePath)
+					.Where(root => !string.IsNullOrWhiteSpace(root))
+					.Distinct(StringComparer.OrdinalIgnoreCase)
+					.OrderBy(root => root, StringComparer.OrdinalIgnoreCase)
+					.ToArray();
+
+				var existingRoots = (settingsAsset.ContentRoots ?? Array.Empty<string>())
+					.Select(AssetPath.NormalizePath)
+					.Where(root => !string.IsNullOrWhiteSpace(root))
+					.Distinct(StringComparer.OrdinalIgnoreCase)
+					.OrderBy(root => root, StringComparer.OrdinalIgnoreCase)
+					.ToArray();
+
+				if (existingRoots.SequenceEqual(discoveredRoots, StringComparer.OrdinalIgnoreCase))
+					return false;
+
+				settingsAsset.ContentRoots = discoveredRoots;
+				EditorUtility.SetDirty(settingsAsset);
+				AssetDatabase.SaveAssets();
+				return true;
+			}
+			catch (Exception ex)
+			{
+				Debug.LogWarning($"ApplicationSettings: failed to auto-add content roots: {ex.Message}");
+				return false;
+			}
+		}
+
+		[InitializeOnLoadMethod]
+		private static void Editor_EnsureContentRootSettingsAssetOnLoad()
+		{
+			EditorApplication.delayCall += () => Editor_GetOrCreateContentRootSettingsAsset();
+		}
+
+		private static ContentRootSettingsAsset Editor_GetOrCreateContentRootSettingsAsset()
+		{
+			if (contentRootSettingsAsset != null)
+				return contentRootSettingsAsset;
+
+			contentRootSettingsAsset = AssetDatabase.LoadAssetAtPath<ContentRootSettingsAsset>(ContentRootSettingsAssetProjectPath);
+			if (contentRootSettingsAsset != null)
+				return contentRootSettingsAsset;
+
+			try
+			{
+				var directory = Path.GetDirectoryName(ContentRootSettingsAssetProjectPath);
+				if (!string.IsNullOrWhiteSpace(directory) && !Directory.Exists(directory))
+					Directory.CreateDirectory(directory);
+
+				contentRootSettingsAsset = ScriptableObject.CreateInstance<ContentRootSettingsAsset>();
+				contentRootSettingsAsset.name = "ContentRootSettings";
+				AssetDatabase.CreateAsset(contentRootSettingsAsset, ContentRootSettingsAssetProjectPath);
+				AssetDatabase.SaveAssets();
+				AssetDatabase.Refresh();
+			}
+			catch (Exception ex)
+			{
+				Debug.LogWarning($"ApplicationSettings: failed to create content root settings asset: {ex.Message}");
+				contentRootSettingsAsset = null;
+			}
+
+			return contentRootSettingsAsset;
+		}
+
 		public static void Editor_EnsureConfiguredContentRootFolders(IEnumerable<string> roots, bool includeDefaults)
 		{
 			try
 			{
-				var resourcesRoot = GetResourcesRootPath();
 				var normalizedRoots = NormalizeContentRoots(roots, includeDefaults);
 				var createdAny = false;
 
@@ -572,14 +755,18 @@ namespace ClassicTilestorm
 					if (string.IsNullOrWhiteSpace(normalizedRoot))
 						continue;
 
-					var rootFolder = Path.Combine(resourcesRoot, normalizedRoot.Replace('/', Path.DirectorySeparatorChar));
+					var rootFolder = GetProjectRootFolderPath(normalizedRoot);
 					createdAny |= EnsureFolder(rootFolder);
+					createdAny |= EnsureGitKeep(rootFolder);
+					bool useSeedFiles = !string.Equals(normalizedRoot, AssetPath.ImmutableRootFolder, StringComparison.OrdinalIgnoreCase);
 
 					foreach (var subfolder in SeededContentSubfolders)
 					{
 						var contentFolder = Path.Combine(rootFolder, subfolder.Replace('/', Path.DirectorySeparatorChar));
 						createdAny |= EnsureFolder(contentFolder);
-						createdAny |= EnsureContentFolderSeed(contentFolder);
+						createdAny |= useSeedFiles
+							? EnsureContentFolderSeed(contentFolder)
+							: EnsureGitKeep(contentFolder);
 					}
 
 					foreach (var subfolder in UnseededContentSubfolders)
@@ -591,11 +778,52 @@ namespace ClassicTilestorm
 				}
 
 				if (createdAny)
+				{
 					AssetDatabase.Refresh();
+					Editor_QueueManifestGeneration();
+				}
 			}
 			catch (Exception ex)
 			{
 				Debug.LogWarning($"ApplicationSettings: failed to ensure content root folders: {ex.Message}");
+			}
+		}
+
+		private static void Editor_QueueManifestGeneration()
+		{
+			if (manifestGenerationQueued)
+				return;
+
+			manifestGenerationQueued = true;
+			EditorApplication.delayCall += Editor_RunQueuedManifestGeneration;
+		}
+
+		private static void Editor_RunQueuedManifestGeneration()
+		{
+			manifestGenerationQueued = false;
+
+			try
+			{
+				AssetDatabase.Refresh();
+
+				var generatorType =
+					Type.GetType("AssetManifestGenerator, Assembly-CSharp-Editor") ??
+					AppDomain.CurrentDomain.GetAssemblies()
+						.Select(assembly => assembly.GetType("AssetManifestGenerator", throwOnError: false))
+						.FirstOrDefault(type => type != null);
+
+				var method = generatorType?.GetMethod("GenerateAllManifests", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+				if (method != null)
+				{
+					method.Invoke(null, null);
+					return;
+				}
+
+				EditorApplication.ExecuteMenuItem("Tools/Generate Asset Manifests");
+			}
+			catch (Exception ex)
+			{
+				Debug.LogWarning($"ApplicationSettings: failed to regenerate asset manifests after content root change: {ex.Message}");
 			}
 		}
 
@@ -636,8 +864,20 @@ namespace ClassicTilestorm
 			return true;
 		}
 
-		private static string GetResourcesRootPath()
-			=> Path.Combine(Application.dataPath, "Application", "Resources");
+		private static string GetMutableResourcesRootPath()
+			=> MutableResourcesProjectPath;
+
+		private static string GetImmutableResourcesRootPath()
+			=> ImmutableResourcesProjectPath;
+
+		private static string GetProjectRootFolderPath(string root)
+		{
+			var normalizedRoot = AssetPath.NormalizePath(root);
+			var basePath = string.Equals(normalizedRoot, AssetPath.ImmutableRootFolder, StringComparison.OrdinalIgnoreCase)
+				? GetImmutableResourcesRootPath()
+				: GetMutableResourcesRootPath();
+			return Path.Combine(basePath, normalizedRoot.Replace('/', Path.DirectorySeparatorChar));
+		}
 #endif
 
 		public static string DatabaseFolder => Path.Combine(Application.persistentDataPath, AssetPath.DataRootFolder);
@@ -664,7 +904,10 @@ namespace ClassicTilestorm
 			Editor_SyncPrivateMapRepositoryUploadKeyResource();
 
 			if (instance != null)
+			{
+				Editor_TryAutoAddContentRoots();
 				return;
+			}
 
 			// Use FindAnyObjectByType instead of the obsolete FindFirstObjectByType
 			instance = UnityEngine.Object.FindAnyObjectByType<ApplicationSettings>(FindObjectsInactive.Include);
@@ -676,6 +919,7 @@ namespace ClassicTilestorm
 			}
 			else
 			{
+				Editor_TryAutoAddContentRoots();
 				Debug.Log("<color=cyan>ApplicationSettings instance loaded for editor manifest generation.</color>");
 			}
 		}
