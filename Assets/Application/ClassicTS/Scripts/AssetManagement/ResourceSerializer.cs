@@ -113,12 +113,14 @@ namespace ClassicTilestorm
 			ProjectAssets.RefreshAllNameCaches();
 			ResourceManager.database = null;// important
 
-			var levelsAsset = LoadJsonAsset(ApplicationSettings.JsonDataResourcePath, "levels");
+			var levelsAsset = LoadJsonAsset(ApplicationSettings.JsonDataResourcePath, "levels")
+				?? LoadJsonAsset("Config", "levels")
+				?? LoadJsonAsset("ClassicTS/Config", "levels");
 			var definitionsAsset = LoadJsonAsset("AssetDatabase", "definitions");
 
 			if (levelsAsset == null)
 			{
-				Debug.LogError($"ResourceSerializer: missing levels.json at '{ApplicationSettings.JsonDataResourcePath}'");
+				Debug.LogError($"ResourceSerializer: missing levels.json at '{ApplicationSettings.JsonDataResourcePath}' (also tried 'Config' and 'ClassicTS/Config')");
 				return;
 			}
 
