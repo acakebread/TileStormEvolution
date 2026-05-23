@@ -111,6 +111,9 @@ namespace ClassicTilestorm
 		public static string JsonDataProjectPath => Path.Combine(MutableResourcesProjectPath, JsonDataPath.Replace('/', Path.DirectorySeparatorChar));
 		public static string JsonDataResourcePath => JsonDataPath;
 
+		[Header("content root settings")]
+		[SerializeField] private ContentRootSettingsAsset contentRootSettings;
+
 		[Header("online map repository")]
 		[SerializeField] private string mapRepositoryBaseUrl = "";
 		[SerializeField] private string mapRepositoryUploadKey = "";
@@ -121,9 +124,8 @@ namespace ClassicTilestorm
 		private const string MapRepositoryUploadKeyPrefKey = "MapRepositoryUploadKey";
 		private const string MapRepositoryGitHubRepositoryPrefKey = "MapRepositoryGitHubRepository";
 		private const string MapRepositoryGitHubBranchPrefKey = "MapRepositoryGitHubBranch";
-		private const string ContentRootSettingsResourcePath = "ClassicTS/Config/ContentRootSettings";
 #if UNITY_EDITOR
-		private const string ContentRootSettingsAssetProjectPath = "Assets/Application/Resources/ClassicTS/Config/ContentRootSettings.asset";
+		private const string ContentRootSettingsAssetProjectPath = "Assets/Application/Internal/Config/ContentRootSettings.asset";
 #endif
 
 		public static string MapRepositoryBaseUrl
@@ -199,7 +201,7 @@ namespace ClassicTilestorm
 		}
 
 		private static readonly string[] RequiredContentRoots = new[] { AssetPath.ImmutableRootFolder };
-		private static ContentRootSettingsAsset contentRootSettingsAsset;
+		private static ContentRootSettingsAsset cachedContentRootSettingsAsset;
 		public static IReadOnlyList<string> ContentRoots => NormalizeContentRoots(GetConfiguredContentRoots());
 
 #if UNITY_EDITOR
@@ -225,15 +227,19 @@ namespace ClassicTilestorm
 
 		private static ContentRootSettingsAsset GetContentRootSettingsAsset()
 		{
-			if (contentRootSettingsAsset != null)
-				return contentRootSettingsAsset;
+			if (cachedContentRootSettingsAsset != null)
+				return cachedContentRootSettingsAsset;
 
-			contentRootSettingsAsset = Resources.Load<ContentRootSettingsAsset>(ContentRootSettingsResourcePath);
+			if (instance != null && instance.contentRootSettings != null)
+			{
+				cachedContentRootSettingsAsset = instance.contentRootSettings;
+				return cachedContentRootSettingsAsset;
+			}
 #if UNITY_EDITOR
-			if (contentRootSettingsAsset == null)
-				contentRootSettingsAsset = Editor_GetOrCreateContentRootSettingsAsset();
+			if (cachedContentRootSettingsAsset == null)
+				cachedContentRootSettingsAsset = Editor_GetOrCreateContentRootSettingsAsset();
 #endif
-			return contentRootSettingsAsset;
+			return cachedContentRootSettingsAsset;
 		}
 
 		public static string MutableResourcesProjectPath
@@ -662,12 +668,20 @@ namespace ClassicTilestorm
 
 		private static ContentRootSettingsAsset Editor_GetOrCreateContentRootSettingsAsset()
 		{
-			if (contentRootSettingsAsset != null)
-				return contentRootSettingsAsset;
+			if (cachedContentRootSettingsAsset != null)
+				return cachedContentRootSettingsAsset;
 
-			contentRootSettingsAsset = AssetDatabase.LoadAssetAtPath<ContentRootSettingsAsset>(ContentRootSettingsAssetProjectPath);
-			if (contentRootSettingsAsset != null)
-				return contentRootSettingsAsset;
+			cachedContentRootSettingsAsset = AssetDatabase.LoadAssetAtPath<ContentRootSettingsAsset>(ContentRootSettingsAssetProjectPath);
+			if (cachedContentRootSettingsAsset != null)
+			{
+				if (instance != null && instance.contentRootSettings != cachedContentRootSettingsAsset)
+				{
+					instance.contentRootSettings = cachedContentRootSettingsAsset;
+					EditorUtility.SetDirty(instance);
+				}
+
+				return cachedContentRootSettingsAsset;
+			}
 
 			try
 			{
@@ -675,19 +689,24 @@ namespace ClassicTilestorm
 				if (!string.IsNullOrWhiteSpace(directory) && !Directory.Exists(directory))
 					Directory.CreateDirectory(directory);
 
-				contentRootSettingsAsset = ScriptableObject.CreateInstance<ContentRootSettingsAsset>();
-				contentRootSettingsAsset.name = "ContentRootSettings";
-				AssetDatabase.CreateAsset(contentRootSettingsAsset, ContentRootSettingsAssetProjectPath);
+				cachedContentRootSettingsAsset = ScriptableObject.CreateInstance<ContentRootSettingsAsset>();
+				cachedContentRootSettingsAsset.name = "ContentRootSettings";
+				AssetDatabase.CreateAsset(cachedContentRootSettingsAsset, ContentRootSettingsAssetProjectPath);
 				AssetDatabase.SaveAssets();
 				AssetDatabase.Refresh();
+				if (instance != null && instance.contentRootSettings != cachedContentRootSettingsAsset)
+				{
+					instance.contentRootSettings = cachedContentRootSettingsAsset;
+					EditorUtility.SetDirty(instance);
+				}
 			}
 			catch (Exception ex)
 			{
 				Debug.LogWarning($"ApplicationSettings: failed to create content root settings asset: {ex.Message}");
-				contentRootSettingsAsset = null;
+				cachedContentRootSettingsAsset = null;
 			}
 
-			return contentRootSettingsAsset;
+			return cachedContentRootSettingsAsset;
 		}
 
 		public static void Editor_EnsureConfiguredContentRootFolders(IEnumerable<string> roots, bool includeDefaults)
