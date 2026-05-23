@@ -117,8 +117,6 @@ namespace ClassicTilestorm
 		[SerializeField] private string mapRepositoryGitHubRepository = "";
 		[SerializeField] private string mapRepositoryGitHubBranch = "main";
 		private const string MapRepositoryPrivateTokenFile = "Assets/Private/TileStormMapRepositoryToken.txt";
-		private const string MapRepositoryPrivateTokenResourceFile = "Assets/Private/Resources/TileStormMapRepositoryToken.txt";
-		private const string MapRepositoryPrivateTokenResourceName = "TileStormMapRepositoryToken";
 		private const string MapRepositoryBaseUrlPrefKey = "MapRepositoryBaseUrl";
 		private const string MapRepositoryUploadKeyPrefKey = "MapRepositoryUploadKey";
 		private const string MapRepositoryGitHubRepositoryPrefKey = "MapRepositoryGitHubRepository";
@@ -573,20 +571,15 @@ namespace ClassicTilestorm
 		{
 			try
 			{
-#if !UNITY_EDITOR
-				var tokenAsset = Resources.Load<TextAsset>(MapRepositoryPrivateTokenResourceName);
-				if (tokenAsset != null && !string.IsNullOrWhiteSpace(tokenAsset.text))
-					return tokenAsset.text.Trim();
-#endif
 				var projectRoot = Directory.GetParent(Application.dataPath)?.FullName;
 				if (string.IsNullOrWhiteSpace(projectRoot))
 					return string.Empty;
 
 				string path = Path.Combine(projectRoot, MapRepositoryPrivateTokenFile);
-				if (!File.Exists(path))
-					return string.Empty;
+				if (File.Exists(path))
+					return File.ReadAllText(path).Trim();
 
-				return File.ReadAllText(path).Trim();
+				return string.Empty;
 			}
 			catch
 			{
@@ -605,13 +598,6 @@ namespace ClassicTilestorm
 				string path = Path.Combine(projectRoot, MapRepositoryPrivateTokenFile);
 				Directory.CreateDirectory(Path.GetDirectoryName(path));
 				File.WriteAllText(path, value ?? string.Empty);
-
-				string resourcePath = Path.Combine(projectRoot, MapRepositoryPrivateTokenResourceFile);
-				Directory.CreateDirectory(Path.GetDirectoryName(resourcePath));
-				File.WriteAllText(resourcePath, value ?? string.Empty);
-#if UNITY_EDITOR
-				AssetDatabase.Refresh();
-#endif
 				Debug.Log(string.IsNullOrWhiteSpace(value)
 					? $"Cleared private map repository token file: {path}"
 					: $"Updated private map repository token file: {path}");
@@ -621,39 +607,6 @@ namespace ClassicTilestorm
 				Debug.LogWarning($"Failed to write private map repository token file: {ex.Message}");
 			}
 		}
-
-#if UNITY_EDITOR
-		[InitializeOnLoadMethod]
-		private static void Editor_SyncPrivateMapRepositoryUploadKeyResourceOnLoad()
-		{
-			EditorApplication.delayCall += Editor_SyncPrivateMapRepositoryUploadKeyResource;
-		}
-
-		private static void Editor_SyncPrivateMapRepositoryUploadKeyResource()
-		{
-			try
-			{
-				var projectRoot = Directory.GetParent(Application.dataPath)?.FullName;
-				if (string.IsNullOrWhiteSpace(projectRoot))
-					return;
-
-				string tokenPath = Path.Combine(projectRoot, MapRepositoryPrivateTokenFile);
-				string resourcePath = Path.Combine(projectRoot, MapRepositoryPrivateTokenResourceFile);
-				string token = File.Exists(tokenPath) ? File.ReadAllText(tokenPath) : string.Empty;
-
-				Directory.CreateDirectory(Path.GetDirectoryName(resourcePath));
-				if (!File.Exists(resourcePath) || !string.Equals(File.ReadAllText(resourcePath), token, StringComparison.Ordinal))
-				{
-					File.WriteAllText(resourcePath, token);
-					AssetDatabase.ImportAsset(MapRepositoryPrivateTokenResourceFile);
-				}
-			}
-			catch (Exception ex)
-			{
-				Debug.LogWarning($"Failed to sync private map repository token resource: {ex.Message}");
-			}
-		}
-#endif
 
 		private void OnValidate()
 		{
@@ -904,8 +857,6 @@ namespace ClassicTilestorm
 		/// </summary>
 		public static void Editor_ForceLoadInstance()
 		{
-			Editor_SyncPrivateMapRepositoryUploadKeyResource();
-
 			if (instance != null)
 			{
 				Editor_TryAutoAddContentRoots();
