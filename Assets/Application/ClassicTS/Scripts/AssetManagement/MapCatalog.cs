@@ -85,6 +85,9 @@ using UnityEditor;
 			if (hash == 0)
 				return MapStorageLocation.External;
 
+			if (HasInternalMapFile(hash))
+				return MapStorageLocation.Internal;
+
 			if (LoadInternalMap(hash) != null)
 				return MapStorageLocation.Internal;
 
@@ -94,6 +97,22 @@ using UnityEditor;
 			return IsInternalMap(hash)
 				? MapStorageLocation.Internal
 				: MapStorageLocation.External;
+		}
+
+		internal static bool HasInternalMapFile(HashId hash)
+		{
+			if (hash == 0)
+				return false;
+
+			return File.Exists(Path.Combine(InternalMapsFolder, ResourceFileNameBuilder.BuildJsonFileName(hash)));
+		}
+
+		internal static bool HasCommunityMapFile(HashId hash)
+		{
+			if (hash == 0)
+				return false;
+
+			return File.Exists(Path.Combine(PersistentMapsFolder, ResourceFileNameBuilder.BuildJsonFileName(hash)));
 		}
 
 			public static IReadOnlyList<Map> LoadMaps(IEnumerable<string> mapIds)

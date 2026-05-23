@@ -308,7 +308,7 @@ namespace ClassicTilestorm
 
 			var internalMapIds = data.maps != null && data.maps.Length > 0
 				? data.maps
-					.Where(m => m != null && MapCatalog.GetStorageLocation(m.HashID) == MapCatalog.MapStorageLocation.Internal)
+					.Where(m => m != null && (MapCatalog.HasInternalMapFile(m.HashID) || MapCatalog.GetStorageLocation(m.HashID) == MapCatalog.MapStorageLocation.Internal))
 					.Select(m => HTB50Settings.ToString(m.HashID))
 					.ToArray()
 				: (data.mapIds ?? Array.Empty<string>());
@@ -317,7 +317,7 @@ namespace ClassicTilestorm
 			if (data.maps != null)
 			{
 				var externalMapIds = data.maps
-					.Where(m => m != null && MapCatalog.GetStorageLocation(m.HashID) == MapCatalog.MapStorageLocation.External)
+					.Where(m => m != null && (MapCatalog.HasCommunityMapFile(m.HashID) || MapCatalog.GetStorageLocation(m.HashID) == MapCatalog.MapStorageLocation.External))
 					.Select(m => HTB50Settings.ToString(m.HashID))
 					.ToHashSet(StringComparer.OrdinalIgnoreCase);
 
