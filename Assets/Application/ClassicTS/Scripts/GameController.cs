@@ -7,8 +7,10 @@ namespace ClassicTilestorm
 	{
 		private PlaceholderUI placeholderUI;
 		private MainController mainController => GetComponent<MainController>();
+#if UNITY_WEBGL && !UNITY_EDITOR
 		private bool pendingMusicPlayback;
 		private string pendingMusicClipName;
+#endif
 
 		public void Awake()
 		{
@@ -83,8 +85,10 @@ namespace ClassicTilestorm
 		{
 			if (!value)
 			{
+#if UNITY_WEBGL && !UNITY_EDITOR
 				pendingMusicPlayback = false;
 				pendingMusicClipName = null;
+#endif
 				AudioManager.StopMusic();
 				return;
 			}
@@ -130,8 +134,10 @@ namespace ClassicTilestorm
 
 		void OnDisable()
 		{
+#if UNITY_WEBGL && !UNITY_EDITOR
 			pendingMusicPlayback = false;
 			pendingMusicClipName = null;
+#endif
 			AudioManager.StopMusic();
 		}
 	}
