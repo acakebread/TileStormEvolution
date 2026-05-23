@@ -7,6 +7,8 @@ namespace ClassicTilestorm
 	{
 		private PlaceholderUI placeholderUI;
 		private MainController mainController => GetComponent<MainController>();
+		private bool pendingMusicPlayback;
+		private string pendingMusicClipName;
 
 		public void Awake()
 		{
@@ -32,7 +34,7 @@ namespace ClassicTilestorm
 
 		public void Initialise(IMapEdit iMap)
 		{
-			if (isActiveAndEnabled && ApplicationSettings.Music) AudioManager.PlayMusic(iMap.Music, loop: true);
+			RequestMusicPlayback(iMap?.Music, ApplicationSettings.Music);
 			if (!TryGetComponent<MainCameraController>(out var controller)) return;
 			controller.SetCameraSystem(CameraModeRegistry.Follow, true);
 			controller.SetCameraSystem(CameraModeRegistry.Path, true);
@@ -64,7 +66,7 @@ namespace ClassicTilestorm
 			//AudioManager.PlayMusic(MainController.CurrentMap?.Music, loop: true);
 			//AudioManager.PlayMusic(MusicAssets.Find(currentMap.music));
 
-			PlayMusic(ApplicationSettings.Music);
+			RequestMusicPlayback(MainController.CurrentMap?.Music, ApplicationSettings.Music);
 
 			//possibly move here
 			//if (null != eggbotController) DestroyImmediate(eggbotController.gameObject);
@@ -74,12 +76,63 @@ namespace ClassicTilestorm
 
 		private void PlayMusic(bool value)
 		{
-			if (value && isActiveAndEnabled)
-				AudioManager.PlayMusic(MainController.CurrentMap?.Music, loop: true);
-			else
-				AudioManager.StopMusic();
+			RequestMusicPlayback(MainController.CurrentMap?.Music, value);
 		}
 
-		void OnDisable() => AudioManager.StopMusic();
+		private void RequestMusicPlayback(string clipName, bool value)
+		{
+			if (!value)
+			{
+				pendingMusicPlayback = false;
+				pendingMusicClipName = null;
+				AudioManager.StopMusic();
+				return;
+			}
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+			pendingMusicPlayback = true;
+			pendingMusicClipName = clipName;
+			if (isActiveAndEnabled && HasUserGesture())
+			{
+				pendingMusicPlayback = false;
+				pendingMusicClipName = null;
+				AudioManager.PlayMusic(clipName, loop: true);
+			}
+#else
+			if (isActiveAndEnabled)
+				AudioManager.PlayMusic(clipName, loop: true);
+#endif
+		}
+
+		private void Update()
+		{
+#if UNITY_WEBGL && !UNITY_EDITOR
+			if (!pendingMusicPlayback)
+				return;
+
+			if (!HasUserGesture())
+				return;
+
+			pendingMusicPlayback = false;
+			var clipName = pendingMusicClipName ?? MainController.CurrentMap?.Music;
+			pendingMusicClipName = null;
+			AudioManager.PlayMusic(clipName, loop: true);
+#endif
+		}
+
+		private static bool HasUserGesture()
+		{
+			return Input.anyKeyDown ||
+				   Input.GetMouseButtonDown(0) ||
+				   Input.GetMouseButtonDown(1) ||
+				   Input.touchCount > 0;
+		}
+
+		void OnDisable()
+		{
+			pendingMusicPlayback = false;
+			pendingMusicClipName = null;
+			AudioManager.StopMusic();
+		}
 	}
 }
