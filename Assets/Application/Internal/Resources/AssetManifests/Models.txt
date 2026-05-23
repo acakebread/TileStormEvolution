@@ -79,6 +79,7 @@ DHiN58	ClassicTS/Geometry/jun_tile_straight_static
 E5wPC7	EvolutionMedieval/Geometry/med_cage
 CXrq5t	ClassicTS/Geometry/med_console
 CjMRK6	EvolutionMedieval/Geometry/med_console
+1Wj9V6	EvolutionMedieval/Geometry/med_corner_ne_hd
 6iPdnH	EvolutionMedieval/Geometry/med_float_straight_hd
 4wjfjE	EvolutionMedieval/Geometry/med_house_01
 DnFMTu	EvolutionMedieval/Geometry/med_house_02
