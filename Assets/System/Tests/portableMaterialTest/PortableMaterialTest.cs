@@ -9,7 +9,6 @@ namespace MassiveHadronLtd
 	{
 		[Header("Test Setup")]
 		public GameObject cubePrefab;           // Assign a cube in inspector
-		public Texture2D testTexture;           // Assign the texture in inspector
 		private GameObject testCube;
 		private Material currentMaterial;
 
@@ -17,6 +16,7 @@ namespace MassiveHadronLtd
 
 		private void Start()
 		{
+			ClassicTilestorm.Assets.AssetConfiguration.Initialize();
 			CreateSpinningCube();
 			Debug.Log($"PortableMaterial Test Ready!\nSave path: {SavePath}");
 		}
@@ -81,8 +81,8 @@ namespace MassiveHadronLtd
 			sourceMat.SetFloat("_Smoothness", 0.7f);
 			sourceMat.SetFloat("_Metallic", 0.1f);
 
-			// Use inspector-assigned texture
-			Texture2D testTex = testTexture;
+			// Load texture
+			Texture2D testTex = Resources.Load<Texture2D>("test");
 			if (testTex != null)
 			{
 				sourceMat.SetTexture("_BaseMap", testTex);
@@ -94,7 +94,7 @@ namespace MassiveHadronLtd
 			}
 			else
 			{
-				Debug.LogWarning("No testTexture assigned in the inspector.");
+				Debug.LogWarning("Could not find Resources/test.png");
 			}
 
 			// Enable emission with moderate intensity
@@ -201,5 +201,6 @@ namespace MassiveHadronLtd
 			rend.sharedMaterial = mat;
 			rend.SetPropertyBlock(null);
 		}
+
 	}
 }

@@ -202,6 +202,8 @@ namespace MassiveHadronLtd
 				if (!string.IsNullOrEmpty(texture))
 				{
 					var tex = ResourceResolvers.TextureResolver?.Find(texture);
+					if (tex == null)
+						tex = Resources.Load<Texture>(texture);
 					if (tex != null)
 					{
 						mat.SetTexture(name, tex);
