@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 73111a9bf1490432d8133548033c1b27, type: 3}
+  m_Name: ProjectSettings
+  m_EditorClassIdentifier: Assembly-CSharp-Editor::pigbrain.core.project.editor.ProjectSettings
+  buildButtons:
+  - name: Build / Run / Commit
+    code: 0
+    traits: 1
+    options: 4
+    paths:
+    - path: /Volumes/Develop/pigbrain.io/build/A
+      type: 0
+    - path: /Volumes/Develop/STCG/seantcooper.github.io/B
+      type: 1
+    - path: /Volumes/Develop/STCG/seantcooper.github.io
+      type: 3
+    color: {r: 0.5566038, g: 0.21976568, b: 0.21266466, a: 1}
+  - name: Build & Run
+    code: 0
+    traits: 1
+    options: 4
+    paths: []
+    color: {r: 0.21176468, g: 0.5568628, b: 0.23348197, a: 1}

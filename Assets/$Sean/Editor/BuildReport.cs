@@ -5,18 +5,17 @@ using System.IO;
 using System.Linq;
 using UnityEditor;
 // using UnityEditor.AddressableAssets;
-using UnityEditor.Build.Profile;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
+using static pigbrain.core.Project.BuildReport;
+using static pigbrain.core.Inspector;
 using static UnityEditor.EditorApplication;
+using pigbrain.core.project.editor;
 
 namespace pigbrain.core.Project
 {
-    using static pigbrain.core.Project.Core;
-    using static pigbrain.core.Project.BuildReport;
-
     #region Builder
-    public static class ProjectBuilder
+    public static class ProjectBuiilder
     {
         public const string TempAssetPath = "Assets/__BuildTemp";
         public static void CreateTempAssetPath()
@@ -29,39 +28,138 @@ namespace pigbrain.core.Project
             BuildPipeline.GetBuildTargetName(BuildTarget.WebGL), "CodeOptimization");
         static void SetCodeOptimisation(string v) => EditorUserBuildSettings.SetPlatformSettings(
             BuildPipeline.GetBuildTargetName(BuildTarget.WebGL), "CodeOptimization", v);
-        readonly static string[] CodeOptimisationNames = Enum.GetNames(typeof(BuildCodeOptimization))
+        readonly static string[] CodeOptimisationNames = Enum.GetNames(typeof(CodeOptimization))
             .Select(n => n == "ShorterBuildTime" ? "BuildTimes" : n).ToArray();
 
-        public enum BuildCodeOptimization
+        public enum CodeOptimization
         { ShorterBuildTime, RuntimeSpeed, RuntimeSpeedLTO, DiskSize, DiskSizeLTO }
 
         #region └Draw buttons
         internal static void DrawGUI()
         {
-            Core.DrawHeader("Build:");
-
-            var profile = BuildProfile.GetActiveBuildProfile();
-            var names = CodeOptimisationNames;
-            var index = Array.IndexOf(names, GetCodeOptimisation());
-
-            // Options
-            var selectedIndex = EditorGUILayout.Popup("Code Optimization", index, names);
-            if (selectedIndex != index)
-            {
-                SetCodeOptimisation(names[selectedIndex]);
-                EditorUtility.SetDirty(profile);
-            }
-
-            // Buttons
-            EditorGUILayout.BeginHorizontal();
-            if (GUILayout.Button("Build")) delayCall += ButtonBuild;
-            if (GUILayout.Button("Build & Run")) delayCall += ButtonBuildRun;
-            if (GUILayout.Button("Build & Run (Brotli)")) delayCall += ButtonBuildRunBrotli;
-            EditorGUILayout.EndHorizontal();
+            DrawHeader("Build:");
+            // using (var _ = new BackgroundColorScope(HeaderColor))
+            ProjectSettings.GetBuildButtons().ForGroup(4,
+                () => EditorGUILayout.BeginHorizontal(),
+                () => EditorGUILayout.EndHorizontal(),
+                (button) =>
+                {
+                    if (GUILayout.Button($"{button.name}", Styles.ColorButton(Color.white, button.color)))
+                        ButtonBuild(button);
+                });
 
             var report = GetReportObject();
             if (report) EditorGUILayout.ObjectField(report, report.GetType(), true);
         }
+
+        #region └BuildButton
+        [Serializable]
+        public class BuildButton
+        {
+            public string name;
+            public CodeOptimization code;
+            public Trait traits;
+            public BuildOptions options;
+            public BuildPath[] paths;
+            public Color color = Color.skyBlue;
+
+            [Serializable]
+            public class BuildPath
+            {
+                public string path;
+                public Type type;
+                public enum Type { BuildPath, CopyFull, CopyWasm, GitPath }
+            }
+            [Flags]
+            public enum Trait
+            {
+                None = 0,
+                Fallback = 1 << 0,
+                Other = 1 << 16,
+            }
+        }
+
+        static void ButtonBuild(BuildButton button)
+        {
+            delayCall += () =>
+            {
+                SetCodeOptimisation(CodeOptimisationNames[(int)button.code]);
+
+                var entry = !button.paths.IsNullOrEmpty()
+                    ? button.paths.FirstOrDefault(p => p.type == BuildButton.BuildPath.Type.BuildPath)
+                    : null;
+
+                Build(button.options, button.traits.HasFlag(BuildButton.Trait.Fallback), entry?.path, (path) =>
+                {
+                    foreach (var p in button.paths)
+                    {
+                        switch (p.type)
+                        {
+                            case BuildButton.BuildPath.Type.BuildPath: continue;
+                            case BuildButton.BuildPath.Type.CopyFull:
+                                Directory.CreateDirectory(p.path);
+                                Directory.GetFiles(path, "*", SearchOption.AllDirectories).ForEach(CopyFile);
+                                Debug.Log($"Full path copy from {path} to {p.path}".Message(Color.skyBlue));
+                                break;
+
+                            case BuildButton.BuildPath.Type.CopyWasm:
+                                Directory.CreateDirectory(p.path);
+                                foreach (var folder in new[] { "Build", "StreamingAssets" })
+                                {
+                                    var sourceFolder = Path.Combine(path, folder);
+                                    if (!Directory.Exists(sourceFolder)) continue;
+                                    Directory.GetFiles(sourceFolder, "*", SearchOption.AllDirectories).ForEach(CopyFile);
+                                }
+                                Debug.Log($"Wasm path copy from {path} to {p.path}".Message(Color.skyBlue));
+                                break;
+
+                            case BuildButton.BuildPath.Type.GitPath:
+                                string message = $"Build {Application.productName}-{Application.version}";
+                                Run(p.path, "git add .");
+                                Run(p.path, $"git commit -m \"{message}\"");
+                                Run(p.path, "git push");
+                                break;
+                        }
+
+                        void CopyFile(string file)
+                        {
+                            var relative = Path.GetRelativePath(path, file);
+                            var destination = Path.Combine(p.path, relative);
+                            Directory.CreateDirectory(Path.GetDirectoryName(destination));
+                            File.Copy(file, destination, true);
+                        }
+                    }
+                });
+            };
+        }
+
+        static void Run(string path, string cmd)
+        {
+            bool win = Application.platform == RuntimePlatform.WindowsEditor;
+            var p = new System.Diagnostics.Process();
+            string filename = win ? "cmd.exe" : "/bin/bash";
+            string command = win ? $"/c \"{cmd}\"" : $"-lc \"{cmd.Replace("\"", "\\\"")}\"";
+            p.StartInfo = new System.Diagnostics.ProcessStartInfo
+            {
+                WorkingDirectory = path,
+                FileName = filename,
+                Arguments = command,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+            };
+
+            p.Start();
+            string output = p.StandardOutput.ReadToEnd();
+            string error = p.StandardError.ReadToEnd();
+            p.WaitForExit();
+            Debug.Log($"{filename} {command} = {output}".Message(Color.skyBlue));
+            if (!string.IsNullOrWhiteSpace(error))
+                if (p.ExitCode == 0) Debug.Log(error.Message(Color.skyBlue));
+                else Debug.LogError(error);
+        }
+        #endregion
         #endregion
 
         #region └Build
@@ -69,7 +167,7 @@ namespace pigbrain.core.Project
         static void ButtonBuildRun() => Build(BuildOptions.AutoRunPlayer);
         static void ButtonBuildRunBrotli() => Build(BuildOptions.AutoRunPlayer, true);
 
-        static void Build(BuildOptions options = BuildOptions.None, bool useFallback = false)
+        static void Build(BuildOptions options = BuildOptions.None, bool useFallback = false, string fixedPath = null, Action<string> onComplete = null)
         {
             const string PrefKey = "ProjectController.LastBuildPath";
             var scenes = EditorBuildSettings.scenes.Where(s => s.enabled).Select(s => s.path).ToArray();
@@ -80,13 +178,22 @@ namespace pigbrain.core.Project
 
             // Override name
             BuildVersion.Increment();
-            fileName = $"{Application.productName}-{Application.version}" + (useFallback ? "-B" : "");
-
-            var path = EditorUtility.SaveFilePanel("Build Location", directory, fileName, "");
-            if (string.IsNullOrEmpty(path))
+            string path = null;
+            if (!string.IsNullOrEmpty(fixedPath))
             {
-                BuildVersion.Restore();
-                return;
+                path = fixedPath;
+                Directory.CreateDirectory(path);
+            }
+            else
+            {
+                fileName = $"{Application.productName}-{Application.version}" + (useFallback ? "-B" : "");
+
+                path = EditorUtility.SaveFilePanel("Build Location", directory, fileName, "");
+                if (string.IsNullOrEmpty(path))
+                {
+                    BuildVersion.Restore();
+                    return;
+                }
             }
 
             EditorPrefs.SetString(PrefKey, path);
@@ -95,32 +202,31 @@ namespace pigbrain.core.Project
             var buildOptions = options;
             try
             {
-                Debug.Log("#### START BUILD");
-                if (useFallback)
-                    PlayerSettings.WebGL.decompressionFallback = true;
+                Debug.Log("#### START BUILD".Message(Color.skyBlue));
+                if (useFallback) PlayerSettings.WebGL.decompressionFallback = true;
                 // BuildStripper.BackupAssets();
 
                 var report = BuildPipeline.BuildPlayer(scenes, path, EditorUserBuildSettings.activeBuildTarget, buildOptions);
                 if (report.summary.result == BuildResult.Cancelled) throw new Exception("Build cancelled!");
-
+                onComplete?.Invoke(path);
                 CreateReport(report);
             }
             catch
             {
-                Debug.Log("Build did not complete!");
+                Debug.Log("Build did not complete!".Message(Color.softRed));
                 BuildVersion.Restore();
             }
             finally
             {
                 // BuildStripper.RestoreAssets();
                 PlayerSettings.WebGL.decompressionFallback = oldFallback;
-                Debug.Log("#### FINISHED BUILD");
+                Debug.Log("#### COMPLETE BUILD".Message(Color.skyBlue));
             }
         }
         #endregion
 
         #region └Create Report
-        const string BuildReportAssetPath = "Assets/Build Report.asset";
+        const string BuildReportAssetPath = pigbrain.core.Generated.Constants.Path + "/Build Report.asset";
         static void CreateReport(UnityEditor.Build.Reporting.BuildReport report)
         {
             DependencyUtils.BuildCache();
@@ -139,15 +245,14 @@ namespace pigbrain.core.Project
                 .ToArray();
 
             // persist
-            var db = TryCreateReportObject();
+            var db = GetReportObject();
             db.entries = entries;
             db.buildPath = report.summary.outputPath;
             db.version = PlayerSettings.bundleVersion;
             db.applicationName = PlayerSettings.productName;
 
-            Debug.Log($"Build location: {Path.Combine(db.buildPath, "Build")}");
             db.buildSize = PathUtility.GetDirectorySize(Path.Combine(db.buildPath, "Build"));
-            // db.bundleSize = PathUtility.GetDirectorySize(Path.Combine(db.buildPath, "StreamingAssets"));
+            db.bundleSize = PathUtility.GetDirectorySize(Path.Combine(db.buildPath, "StreamingAssets"));
 
             EditorUtility.SetDirty(db);
             AssetDatabase.SaveAssets();
@@ -157,18 +262,10 @@ namespace pigbrain.core.Project
         static BuildReport GetReportObject()
         {
             if (LastReport) return LastReport;
-            return AssetDatabase.LoadAssetAtPath<BuildReport>(BuildReportAssetPath) is BuildReport db
-                ? LastReport = db
-                : null;
-        }
-
-        static BuildReport TryCreateReportObject()
-        {
-            if (LastReport) return LastReport;
+            Directory.CreateDirectory(Path.GetDirectoryName(BuildReportAssetPath));
             if (AssetDatabase.LoadAssetAtPath<BuildReport>(BuildReportAssetPath) is not BuildReport db)
             {
                 db = ScriptableObject.CreateInstance<BuildReport>();
-                Directory.CreateDirectory(Path.GetDirectoryName(BuildReportAssetPath));
                 AssetDatabase.CreateAsset(db, BuildReportAssetPath);
             }
             LastReport = db;
@@ -349,8 +446,8 @@ namespace pigbrain.game.Boxhead.Environment
     using UnityEditor;
     using UnityEngine;
     using pigbrain.core.Project;
-    using static pigbrain.core.Project.BuildReport;
-    using static pigbrain.core.Project.Core;
+    using static pigbrain.core.Inspector;
+    using pigbrain.core;
 
     [CustomEditor(typeof(BuildReport))]
     public class BuildReport_Editor : Editor
@@ -364,8 +461,8 @@ namespace pigbrain.game.Boxhead.Environment
         public override void OnInspectorGUI()
         {
             Right ??= new(EditorStyles.textField) { alignment = TextAnchor.MiddleRight };
-            SmallWidth ??= GUILayout.MaxWidth(50 * 1.3f);
-            DependencyWidth ??= GUILayout.MaxWidth(50 * 4);
+            SmallWidth ??= GUILayout.MaxWidth(MiniFieldWidth * 1.3f);
+            DependencyWidth ??= GUILayout.MaxWidth(MiniFieldWidth * 4);
 
             var buildPath = Path.GetFileName(report.buildPath);
 
@@ -377,7 +474,6 @@ namespace pigbrain.game.Boxhead.Environment
             report.view = (View)EditorGUILayout.EnumPopup("View", report.view);
 
             var entries = report.entries.Where(e => report.groupFilter.HasFlag(e.group)).ToArray();
-            DrawEntryHeader();
 
             switch (report.view)
             {
@@ -455,17 +551,6 @@ namespace pigbrain.game.Boxhead.Environment
             }
         }
 
-        void DrawEntryHeader()
-        {
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                GUILayout.Label("Asset:");
-                GUILayout.Label("Dependency:");
-                GUILayout.Label("Type:", SmallWidth);
-                GUILayout.Label("Size:", SmallWidth);
-            }
-        }
-
         void DrawEntry(Entry entry)
         {
             using (new EditorGUILayout.HorizontalScope())
@@ -519,60 +604,3 @@ namespace pigbrain.game.Boxhead.Environment
 //         Debug.Log($"Processing scene: {scene.path}");
 // }
 // #endregion
-
-#region CORE IMPORT
-namespace pigbrain.core.Project
-{
-    public static class Core
-    {
-        public static class MemoryProfiler
-        {
-            public static string FormatBytes(long b) => FormatBytes((ulong)b);
-            public static string FormatBytes(ulong b, ulong bSize = 1024)
-            {
-                ulong kb = bSize, mb = kb * bSize, gb = mb * bSize;
-                if (b >= gb) return $"{b / (double)gb:0.0} GB";
-                if (b >= mb) return $"{b / (double)mb:0.0} MB";
-                if (b >= kb) return $"{b / (double)kb:0.0} KB";
-                return $"{b} B";
-            }
-        }
-
-        public static void DrawHeader(string name) =>
-            DrawHeader(name, new Color(0.2f, 0.4f, 0.8f, 0.5f));
-
-        public static void DrawHeader(string name, Color color)
-        {
-            var rect = EditorGUILayout.GetControlRect(false, 20);
-            EditorGUI.DrawRect(rect, color);
-            EditorGUI.LabelField(rect, name, EditorStyles.boldLabel);
-            EditorGUILayout.Space(2);
-        }
-
-        public static void DrawHeader(Rect position, string label, Color color = default)
-        {
-            Rect p = new(position.x - 100, position.y, position.width + 200, position.height);
-            EditorGUI.DrawRect(p, color);
-            // EditorGUI.DrawRect(position.AddX(-100).AddW(200), color);
-            EditorGUI.LabelField(position, label, EditorStyles.boldLabel);
-        }
-
-        public static class PathUtility
-        {
-            public static ulong GetDirectorySize(string dir)
-            {
-                if (string.IsNullOrEmpty(dir) || !Directory.Exists(dir)) return 0;
-
-                ulong size = 0;
-                var files = Directory.GetFiles(dir, "*", SearchOption.AllDirectories);
-                foreach (var f in files)
-                {
-                    try { size += (ulong)new FileInfo(f).Length; }
-                    catch { }
-                }
-                return size;
-            }
-        }
-    }
-}
-#endregion
