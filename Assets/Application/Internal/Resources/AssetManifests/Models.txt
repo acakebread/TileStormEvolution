@@ -78,7 +78,7 @@ DHiN58	ClassicTS/Geometry/jun_tile_straight_static
 7KEEwJ	Evolution/Geometry/med_boundary_tile_01
 E5wPC7	Evolution/Geometry/med_cage
 CXrq5t	ClassicTS/Geometry/med_console
-8FKN5i	Evolution/Geometry/med_console_new
+CjMRK6	Evolution/Geometry/med_console
 6iPdnH	Evolution/Geometry/med_float_straight_hd
 4wjfjE	Evolution/Geometry/med_house_01
 DnFMTu	Evolution/Geometry/med_house_02
