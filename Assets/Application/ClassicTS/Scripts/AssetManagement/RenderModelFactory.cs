@@ -6,7 +6,7 @@ namespace ClassicTilestorm
 {
 	public static class RenderModelFactory
 	{
-		public static CommandRenderModelData Create(Definition definition, Vector3 position = default, Quaternion rotation = default, Vector3 scale = default)
+		public static CommandRenderModelData Create(Definition definition, Vector3 position = default, Quaternion rotation = default, Vector3 scale = default, bool refreshMaterials = true)
 		{
 			var prefab = ModelAssets.Find(definition?.model);
 			if (null == prefab)
@@ -21,10 +21,10 @@ namespace ClassicTilestorm
 				: AnimMaterialInfoManager.GetFrameZero(MaterialUtils.GetPrimaryTextureName(prefab));
 			var matrix = Matrix4x4.TRS(position, rotation, scale == default ? Vector3.one : scale);
 
-			return CollectMeshRenderers(prefab, replacementMaterial, texture, matrix);
+			return CollectMeshRenderers(prefab, replacementMaterial, texture, matrix, refreshMaterials);
 		}
 
-		private static CommandRenderModelData CollectMeshRenderers(GameObject prefab, Material replacementMaterial, Texture2D texture, Matrix4x4 matrix)
+		private static CommandRenderModelData CollectMeshRenderers(GameObject prefab, Material replacementMaterial, Texture2D texture, Matrix4x4 matrix, bool refreshMaterials)
 		{
 			// We need the mesh(es) and materials from the prefab
 			// This is the tricky part — we have to traverse the prefab hierarchy without instantiating
@@ -48,7 +48,7 @@ namespace ClassicTilestorm
 
 				var worldMatrix = matrix * filter.transform.localToWorldMatrix;
 				var mats = renderer.sharedMaterials;
-				target.AddMeshInstance(filter.sharedMesh, ReplacementMaterials(mats, replacementMaterial, texture), worldMatrix);
+				target.AddMeshInstance(filter.sharedMesh, ReplacementMaterials(mats, replacementMaterial, texture, refreshMaterials), worldMatrix);
 			}
 
 			// Process SkinnedMeshRenderers
@@ -58,12 +58,12 @@ namespace ClassicTilestorm
 
 				var worldMatrix = matrix * skinned.transform.localToWorldMatrix;
 				var mats = skinned.sharedMaterials;
-				target.AddMeshInstance(skinned.sharedMesh, ReplacementMaterials(mats, replacementMaterial, texture), worldMatrix);
+				target.AddMeshInstance(skinned.sharedMesh, ReplacementMaterials(mats, replacementMaterial, texture, refreshMaterials), worldMatrix);
 			}
 
 			return target;
 
-			static Material[] ReplacementMaterials(Material[] mats, Material replacementMaterial, Texture2D texture)
+			static Material[] ReplacementMaterials(Material[] mats, Material replacementMaterial, Texture2D texture, bool refreshMaterials)
 			{
 				if (mats == null || mats.Length == 0)
 					return System.Array.Empty<Material>();
@@ -82,7 +82,8 @@ namespace ClassicTilestorm
 					copy.mainTextureScale = source.mainTextureScale;
 
 					if (texture) copy.mainTexture = texture;
-					MaterialUtils.ForceMaterialRefresh(copy);
+					if (refreshMaterials)
+						MaterialUtils.ForceMaterialRefresh(copy);
 					result[m] = copy;
 				}
 				return result;
