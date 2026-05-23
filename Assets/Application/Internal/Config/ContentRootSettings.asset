@@ -15,5 +15,6 @@ MonoBehaviour:
   automaticallyAddRoots: 1
   contentRoots:
   - ClassicTS
-  - Evolution
+  - EvolutionMedieval
+  - EvolutionVictorian
   - Global
