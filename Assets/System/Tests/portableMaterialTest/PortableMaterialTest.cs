@@ -108,7 +108,7 @@ namespace MassiveHadronLtd
 			if (testCube != null)
 			{
 				if (currentMaterial != null) Destroy(currentMaterial);
-				currentMaterial = portable.ToUnityMaterial();
+				currentMaterial = portable.ToUnityMaterial(name => Resources.Load<Texture>(name));
 				ApplyMaterialToCube(currentMaterial);
 			}
 
@@ -137,7 +137,7 @@ namespace MassiveHadronLtd
 				{
 					if (currentMaterial != null) Destroy(currentMaterial);
 
-					currentMaterial = portable.ToUnityMaterial();
+					currentMaterial = portable.ToUnityMaterial(name => Resources.Load<Texture>(name));
 					ApplyMaterialToCube(currentMaterial);
 
 					Debug.Log($"Material loaded and applied: {portable.name}");
