@@ -123,6 +123,9 @@ namespace MassiveHadronLtd
 		}
 
 		public Material ToUnityMaterial()
+			=> ToUnityMaterial(null);
+
+		public Material ToUnityMaterial(Func<string, Texture> textureLookup)
 		{
 			var shaderObj = Shader.Find(shader) ?? Shader.Find("Universal Render Pipeline/Lit");
 			var mat = new Material(shaderObj)
@@ -131,18 +134,21 @@ namespace MassiveHadronLtd
 				renderQueue = renderQueue
 			};
 
-			ApplyTo(mat);
+			ApplyTo(mat, textureLookup);
 			MaterialUtils.ForceMaterialRefresh(mat);
 
 			return mat;
 		}
 
 		public void ApplyTo(Material target)
+			=> ApplyTo(target, null);
+
+		public void ApplyTo(Material target, Func<string, Texture> textureLookup)
 		{
 			if (target == null) return;
 
 			foreach (var p in properties.Where(p => !string.IsNullOrEmpty(p.texture)))
-				p.ApplyTo(target);
+				p.ApplyTo(target, textureLookup);
 
 			foreach (var p in properties.Where(p => string.IsNullOrEmpty(p.texture)))
 				p.ApplyTo(target);
@@ -194,6 +200,9 @@ namespace MassiveHadronLtd
 		public int intValue;
 
 		public void ApplyTo(Material mat)
+			=> ApplyTo(mat, null);
+
+		public void ApplyTo(Material mat, Func<string, Texture> textureLookup)
 		{
 			if (string.IsNullOrEmpty(name) || mat == null || !mat.HasProperty(name)) return;
 
@@ -201,7 +210,7 @@ namespace MassiveHadronLtd
 			{
 				if (!string.IsNullOrEmpty(texture))
 				{
-					var tex = ResourceResolvers.TextureResolver?.Find(texture);
+					var tex = textureLookup?.Invoke(texture);
 					if (tex != null)
 					{
 						mat.SetTexture(name, tex);

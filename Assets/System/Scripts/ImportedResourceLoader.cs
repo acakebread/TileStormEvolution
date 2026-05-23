@@ -65,7 +65,7 @@ namespace MassiveHadronLtd
 			{
 				var json = File.ReadAllText(normalized);
 				var portable = JsonConvert.DeserializeObject<PortableMaterial>(json);
-				material = portable?.ToUnityMaterial();
+				material = portable?.ToUnityMaterial(textureName => ResolveSiblingTexture(normalized, textureName));
 			}
 			catch (Exception ex)
 			{
@@ -165,6 +165,37 @@ namespace MassiveHadronLtd
 
 		private static string NormalizePath(string value)
 			=> string.IsNullOrWhiteSpace(value) ? null : value.Replace('\\', '/').Trim();
+
+		private static Texture ResolveSiblingTexture(string materialPath, string textureName)
+		{
+			if (string.IsNullOrWhiteSpace(materialPath) || string.IsNullOrWhiteSpace(textureName))
+				return null;
+
+			var directory = Path.GetDirectoryName(materialPath);
+			if (string.IsNullOrWhiteSpace(directory))
+				return null;
+
+			var stem = Path.GetFileNameWithoutExtension(textureName);
+			var candidates = new[]
+			{
+				Path.Combine(directory, textureName),
+				Path.Combine(directory, $"{stem}.png"),
+				Path.Combine(directory, $"{stem}.jpg"),
+				Path.Combine(directory, $"{stem}.jpeg"),
+				Path.Combine(directory, $"{stem}.tga")
+			};
+
+			foreach (var candidate in candidates)
+			{
+				if (!File.Exists(candidate))
+					continue;
+
+				if (TryLoadTexture(candidate, out var texture))
+					return texture;
+			}
+
+			return null;
+		}
 	}
 
 	public static class WavAudioUtility

@@ -128,6 +128,9 @@ namespace ClassicTilestorm
 			var dist = radius / Mathf.Tan(_cameraWrapper.fieldOfView * 0.5f * Mathf.Deg2Rad);
 			_cameraWrapper.position = center - _cameraWrapper.rotation * Vector3.forward * dist;
 
+			// URP/FBX materials can need one warm-up pass before the command-render
+			// output settles, especially in atlas generation.
+			_cameraWrapper.Render();
 			_cameraWrapper.Render();
 
 			// Readback (this is still the main WebGL cost, but we can't avoid it reliably)

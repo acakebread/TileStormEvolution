@@ -25,6 +25,7 @@ namespace ClassicTilestorm.Editor
 			if (assetImporter is not ModelImporter importer)
 				return;
 
+			// TODO: Remove the need for Readable Meshes
 			if (!importer.isReadable)
 				importer.isReadable = true;
 		}

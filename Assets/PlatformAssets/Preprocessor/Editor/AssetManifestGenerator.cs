@@ -36,7 +36,7 @@ public class AssetManifestGenerator : IPreprocessBuildWithReport
 
 		try
 		{
-			const string manifestFolder = "Assets/Resources/" + AssetManifestConfig.ManifestRootFolder;
+			string manifestFolder = Path.Combine(ApplicationSettings.InternalResourcesProjectPath, AssetManifestConfig.ManifestRootFolder);
 
 			if (!Directory.Exists(manifestFolder))
 				Directory.CreateDirectory(manifestFolder);
@@ -125,7 +125,7 @@ public class AssetManifestGenerator : IPreprocessBuildWithReport
 
 	private static int WriteHashedManifest(string manifestName, IEnumerable<ResourceManifestEntry> entries)
 	{
-		string path = $"Assets/Resources/{AssetManifestConfig.ManifestRootFolder}/{manifestName}.txt";
+		string path = Path.Combine(ApplicationSettings.InternalResourcesProjectPath, AssetManifestConfig.ManifestRootFolder, $"{manifestName}.txt");
 		var sorted = ValidateAndSortEntries(manifestName, entries);
 		var lines = sorted.Select(e => $"{e.HashId}\t{e.ResourceKey}").ToList();
 
@@ -271,7 +271,7 @@ public class AssetManifestGenerator : IPreprocessBuildWithReport
 	private static void WriteMapManifest()
 	{
 		const string manifestName = "Maps";
-		string path = $"Assets/Resources/{AssetManifestConfig.ManifestRootFolder}/{manifestName}.txt";
+		string path = Path.Combine(ApplicationSettings.InternalResourcesProjectPath, AssetManifestConfig.ManifestRootFolder, $"{manifestName}.txt");
 		var mapRoot = $"{ApplicationSettings.JsonDataPath}/Maps";
 		var names = ResourceUtils.GetAssetNamesFromResources<TextAsset>(new[] { mapRoot }, manifestName)
 			.Where(n => !string.IsNullOrWhiteSpace(n))

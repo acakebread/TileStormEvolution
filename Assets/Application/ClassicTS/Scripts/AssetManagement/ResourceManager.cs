@@ -97,6 +97,22 @@ namespace ClassicTilestorm
 				.Count(definition => definition != null && string.Equals(definition.model, modelHash, StringComparison.OrdinalIgnoreCase));
 		}
 
+		public static bool IsModelUsedByInternalMaps(string modelHash)
+		{
+			return InternalModelUsageCount(modelHash) > 0;
+		}
+
+		public static int InternalModelUsageCount(string modelHash)
+		{
+			if (string.IsNullOrWhiteSpace(modelHash))
+				return 0;
+
+			return MapCatalog.GetInternalMaps(forceRefresh: false)
+				.Where(entry => entry.Map != null)
+				.SelectMany(entry => GetUsedDefinitions(entry.Map))
+				.Count(definition => definition != null && string.Equals(definition.model, modelHash, StringComparison.OrdinalIgnoreCase));
+		}
+
 		//public static TextureInfo GetTextureInfo(string id)
 		//	=> string.IsNullOrEmpty(id) ? null : TextureInfos.FirstOrDefault(ts => ts.id == id);
 
@@ -369,6 +385,20 @@ namespace ClassicTilestorm
 
 			// Total usage across ALL maps
 			return Maps.Sum(m => m?.DefinitionUsageCount(hashId) ?? 0);
+		}
+
+		public static bool IsDefinitionUsedByInternalMaps(HashId hashId)
+		{
+			return InternalDefinitionUsageCount(hashId) > 0;
+		}
+
+		public static int InternalDefinitionUsageCount(HashId hashId)
+		{
+			if (hashId == 0)
+				return 0;
+
+			return MapCatalog.GetInternalMaps(forceRefresh: false)
+				.Sum(entry => entry.Map?.DefinitionUsageCount(hashId) ?? 0);
 		}
 
 		public static Definition ResolveDefinition(HashId hashId, out bool hadError)

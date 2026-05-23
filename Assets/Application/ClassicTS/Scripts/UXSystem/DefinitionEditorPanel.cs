@@ -82,9 +82,19 @@ namespace ClassicTilestorm
 		// Runtime state
 		private readonly List<Toggle> spawnedDefinitionToggles = new();
 		private readonly Dictionary<Transform, Definition> spawnedDefinitionItems = new();
+		private readonly Dictionary<Transform, TMP_Text> spawnedDefinitionLabels = new();
 		private readonly List<string> modelOptionHashes = new();
+		private readonly Dictionary<string, CommandRenderModelData> previewModelCache = new(StringComparer.OrdinalIgnoreCase);
+		private readonly Dictionary<HashId, int> definitionUsageCache = new();
+		private readonly Dictionary<HashId, int> internalDefinitionUsageCache = new();
+		private readonly Dictionary<string, int> modelUsageCache = new(StringComparer.OrdinalIgnoreCase);
+		private readonly Dictionary<string, int> internalModelUsageCache = new(StringComparer.OrdinalIgnoreCase);
 		private ToggleGroup toggleGroup;
 		private ScrollListReorderDragHelper definitionReorderHelper;
+		private bool usageCacheDirty = true;
+		private bool usageCacheReady;
+		private float usageCacheRefreshAt = -1f;
+		private const float UsageCacheDebounceSeconds = 0.2f;
 
 		private static int lastSelectedDefinitionIndex = 0;
 
@@ -148,6 +158,7 @@ namespace ClassicTilestorm
 		{
 			base.OnEnable();
 			EnsurePreviewInitialized();
+			ScheduleUsageCacheRefresh(immediate: true);
 			RefreshDefinitionList();
 			EnsureDefinitionReorderHelper();
 			PopulateAndSyncDropdowns();
@@ -162,6 +173,13 @@ namespace ClassicTilestorm
 			ClearDefinitionListItems();
 			definitionReorderHelper?.Dispose();
 			definitionReorderHelper = null;
+			definitionUsageCache.Clear();
+			internalDefinitionUsageCache.Clear();
+			modelUsageCache.Clear();
+			internalModelUsageCache.Clear();
+			usageCacheDirty = true;
+			usageCacheReady = false;
+			usageCacheRefreshAt = -1f;
 			base.OnDisable();
 		}
 
@@ -299,7 +317,7 @@ namespace ClassicTilestorm
 			modelOptionHashes.Clear();
 			modelOptionHashes.Add(null);
 
-			var entries = ModelAssets.GetModelEntries(forceRefresh: true);
+			var entries = ModelAssets.GetModelEntries(forceRefresh: false);
 			modelOptionHashes.AddRange(entries.Select(e => e.HashId));
 
 			PopulateDropdown(modelDropdown, entries.Select(e => e.DisplayName), noneModelOptionText);
@@ -411,6 +429,8 @@ namespace ClassicTilestorm
 		private void RefreshDefinitionList()
 		{
 			ClearDefinitionListItems();
+			previewModelCache.Clear();
+			spawnedDefinitionLabels.Clear();
 
 			var defs = ResourceManager.Definitions;
 			if (defs.Count == 0)
@@ -449,13 +469,8 @@ namespace ClassicTilestorm
 			var label = go.GetComponentInChildren<TMP_Text>();
 			if (label != null)
 			{
-				var usage = ResourceManager.DefinitionUsageCount(def.HashID);
-				var hashDisplay = 0 == def.HashID
-					? "(no hashid)"
-					: DefinitionCatalog.IsInternalDefinition(def.HashID)
-						? $"<color=#7CFF9A>{HTB50Settings.ToString(def.HashID)}</color>"
-						: $"<color=#FF6B6B>EX-{HTB50Settings.ToString(def.HashID)}</color>";
-				label.text = $"{def?.name ?? "???"}  [{usage}]  ({hashDisplay})";
+				spawnedDefinitionLabels[go.transform] = label;
+				UpdateDefinitionListItemLabel(go.transform, def);
 			}
 		}
 
@@ -466,6 +481,7 @@ namespace ClassicTilestorm
 
 			spawnedDefinitionToggles.Clear();
 			spawnedDefinitionItems.Clear();
+			spawnedDefinitionLabels.Clear();
 		}
 
 		private bool TryGetDefinitionItemUnderPointer(Vector2 screenPos, out Transform row)
@@ -589,6 +605,7 @@ namespace ClassicTilestorm
 			//SyncTextureDropdown();
 			SyncMaterialDropdown();
 			UpdateDeleteButtonState();
+			ScheduleUsageCacheRefresh();
 
 			if (index >= 0 && index < spawnedDefinitionToggles.Count)
 				spawnedDefinitionToggles[index].SetIsOnWithoutNotify(true);
@@ -613,29 +630,36 @@ namespace ClassicTilestorm
 
 			bool hasSelection = lastSelectedDefinitionIndex >= 0;
 			bool isDefault = hasSelection && CurrentDefinition != null && CurrentDefinition.HashID == 0;
-			bool isUsed = hasSelection && !isDefault && ResourceManager.IsDefinitionUsed(CurrentDefinition.HashID);
+			bool isUsed = usageCacheReady && CurrentDefinition != null && GetDefinitionUsageCount(CurrentDefinition.HashID) > 0;
+			bool isUsedByInternalMaps = usageCacheReady && CurrentDefinition != null && GetInternalDefinitionUsageCount(CurrentDefinition.HashID) > 0;
 
-			ButtonDelete.interactable = hasSelection && !isDefault && !isUsed;
+			ButtonDelete.interactable = hasSelection && !isDefault && (!usageCacheReady || !isUsed);
 
 			if (ButtonDelete.GetComponentInChildren<TMP_Text>() is TMP_Text btnText)
 			{
 				btnText.text = isDefault
 					? "Delete (default)"
-					: isUsed
+					: usageCacheReady && isUsed
 						? "Delete (used)"
-						: "Delete";
+					: "Delete";
 			}
 
 			if (ButtonMoveStore != null)
 			{
-				ButtonMoveStore.interactable = hasSelection && Application.isEditor && !isDefault;
+				bool isInternal = CurrentDefinition != null && DefinitionCatalog.IsInternalDefinition(CurrentDefinition.HashID);
+				bool canMove = hasSelection && Application.isEditor && !isDefault;
+				if (usageCacheReady && isInternal)
+					canMove &= !isUsedByInternalMaps;
+				ButtonMoveStore.interactable = canMove;
 
 				if (ButtonMoveStore.GetComponentInChildren<TMP_Text>() is TMP_Text moveText)
 				{
 					moveText.text = CurrentDefinition == null
 						? "Move Store"
-						: DefinitionCatalog.IsInternalDefinition(CurrentDefinition.HashID)
-							? "Move to External"
+						: isInternal
+							? usageCacheReady && isUsedByInternalMaps
+								? "Move to External (used)"
+								: "Move to External"
 							: "Move to Internal";
 				}
 			}
@@ -715,7 +739,13 @@ namespace ClassicTilestorm
 
 			if (def != null && !string.IsNullOrEmpty(def.model))
 			{
-				currentModelData = RenderModelFactory.Create(def, Vector3.zero, Quaternion.identity, Vector3.one);
+				var cacheKey = $"{def.model}|{def.material ?? string.Empty}";
+				if (!previewModelCache.TryGetValue(cacheKey, out currentModelData) || currentModelData == null)
+				{
+					currentModelData = RenderModelFactory.Create(def, Vector3.zero, Quaternion.identity, Vector3.one, refreshMaterials: false);
+					if (currentModelData != null)
+						previewModelCache[cacheKey] = currentModelData;
+				}
 
 				if (currentModelData != null)
 				{
@@ -836,10 +866,125 @@ namespace ClassicTilestorm
 		private void Update()
 		{
 			definitionReorderHelper?.Update();
+			TryRefreshUsageCache();
 
 			if (previewCtrl == null) return;
 			orbitController.Update();
 			previewCtrl.UpdateAndRender();
+		}
+
+		private void ScheduleUsageCacheRefresh(bool immediate = false)
+		{
+			usageCacheDirty = true;
+			usageCacheReady = false;
+			usageCacheRefreshAt = immediate ? Time.unscaledTime : Time.unscaledTime + UsageCacheDebounceSeconds;
+		}
+
+		private void TryRefreshUsageCache()
+		{
+			if (!usageCacheDirty)
+				return;
+
+			if (Time.unscaledTime < usageCacheRefreshAt)
+				return;
+
+			EnsureUsageCache(forceRefresh: false);
+		}
+
+		private void EnsureUsageCache(bool forceRefresh)
+		{
+			if (!forceRefresh && (!usageCacheDirty || Time.unscaledTime < usageCacheRefreshAt))
+				return;
+
+			definitionUsageCache.Clear();
+			internalDefinitionUsageCache.Clear();
+			modelUsageCache.Clear();
+			internalModelUsageCache.Clear();
+
+			AccumulateUsage(ResourceManager.Maps, definitionUsageCache, modelUsageCache);
+			AccumulateUsage(MapCatalog.GetInternalMaps(forceRefresh: false).Select(entry => entry.Map), internalDefinitionUsageCache, internalModelUsageCache);
+
+			usageCacheDirty = false;
+			usageCacheReady = true;
+
+			RefreshUsageDependentUI();
+		}
+
+		private static void AccumulateUsage(IEnumerable<Map> maps, Dictionary<HashId, int> definitionCounts, Dictionary<string, int> modelCounts)
+		{
+			if (maps == null)
+				return;
+
+			foreach (var map in maps)
+			{
+				if (map == null)
+					continue;
+
+				var variants = ((Map.IVariantAccess)map).Variants ?? Array.Empty<Variant>();
+				foreach (var variant in variants)
+				{
+					if (variant.hash == 0)
+						continue;
+
+					definitionCounts.TryGetValue(variant.hash, out var definitionCount);
+					definitionCounts[variant.hash] = definitionCount + 1;
+
+					var definition = ResourceManager.GetDefinition(variant.hash);
+					if (definition == null || string.IsNullOrWhiteSpace(definition.model))
+						continue;
+
+					modelCounts.TryGetValue(definition.model, out var modelCount);
+					modelCounts[definition.model] = modelCount + 1;
+				}
+			}
+		}
+
+		private int GetDefinitionUsageCount(HashId hashId)
+			=> hashId == 0 || !definitionUsageCache.TryGetValue(hashId, out var count) ? 0 : count;
+
+		private int GetInternalDefinitionUsageCount(HashId hashId)
+			=> hashId == 0 || !internalDefinitionUsageCache.TryGetValue(hashId, out var count) ? 0 : count;
+
+		private int GetModelUsageCount(string modelHash)
+			=> string.IsNullOrWhiteSpace(modelHash) || !modelUsageCache.TryGetValue(modelHash, out var count) ? 0 : count;
+
+		private int GetInternalModelUsageCount(string modelHash)
+			=> string.IsNullOrWhiteSpace(modelHash) || !internalModelUsageCache.TryGetValue(modelHash, out var count) ? 0 : count;
+
+		private void RefreshUsageDependentUI()
+		{
+			foreach (var (rowTransform, def) in spawnedDefinitionItems)
+			{
+				if (rowTransform == null || def == null)
+					continue;
+
+				UpdateDefinitionListItemLabel(rowTransform, def);
+			}
+
+			UpdateDeleteButtonState();
+		}
+
+		private void UpdateDefinitionListItemLabel(Transform rowTransform, Definition def)
+		{
+			if (rowTransform == null || def == null)
+				return;
+
+			if (!spawnedDefinitionLabels.TryGetValue(rowTransform, out var label) || label == null)
+				return;
+
+			var hashDisplay = 0 == def.HashID
+				? "(no hashid)"
+				: DefinitionCatalog.IsInternalDefinition(def.HashID)
+					? $"<color=#7CFF9A>{HTB50Settings.ToString(def.HashID)}</color>"
+					: $"<color=#FF6B6B>EX-{HTB50Settings.ToString(def.HashID)}</color>";
+
+			var usageSuffix = usageCacheReady
+				? GetDefinitionUsageCount(def.HashID) > 0
+					? $" <color=#A8D8FF>[{GetDefinitionUsageCount(def.HashID)}]</color>"
+					: string.Empty
+				: string.Empty;
+
+			label.text = $"{def?.name ?? "???"}  ({hashDisplay}){usageSuffix}";
 		}
 
 		// ── Flag Creation ───────────────────────────────────────────────────────────────────
@@ -904,6 +1049,15 @@ namespace ClassicTilestorm
 		{
 			if (ResourceManager.database == null || lastSelectedDefinitionIndex < 0) return;
 
+			EnsureUsageCache(forceRefresh: true);
+
+			var def = CurrentDefinition;
+			if (def != null && GetDefinitionUsageCount(def.HashID) > 0)
+			{
+				Debug.LogWarning($"Definition '{def.name}' is still used by maps and cannot be deleted.");
+				return;
+			}
+
 			int indexToDelete = lastSelectedDefinitionIndex;
 			ResourceManager.DeleteDefinitionAt(indexToDelete);
 
@@ -912,6 +1066,7 @@ namespace ClassicTilestorm
 				Mathf.Max(0, indexToDelete - 1);
 
 			RefreshDefinitionList();
+			ScheduleUsageCacheRefresh(immediate: true);
 		}
 
 		private void MoveDefinitionUp()
@@ -937,6 +1092,8 @@ namespace ClassicTilestorm
 			if (!Application.isEditor || CurrentDefinition == null || CurrentDefinition.HashID == 0)
 				return;
 
+			EnsureUsageCache(forceRefresh: true);
+
 			var def = CurrentDefinition;
 			var hash = def.HashID;
 			var currentLocation = DefinitionCatalog.GetStorageLocation(hash);
@@ -944,14 +1101,26 @@ namespace ClassicTilestorm
 			var list = ResourceManager.Definitions.ToList();
 			if (currentLocation == DefinitionCatalog.DefinitionStorageLocation.Internal)
 			{
+				if (GetInternalDefinitionUsageCount(hash) > 0)
+				{
+					Debug.LogWarning($"Definition '{def.name}' is still used by internal maps and cannot be moved to external.");
+					return;
+				}
+
 				list.RemoveAll(d => d != null && d.HashID == hash);
 				list.Add(def);
 				ResourceManager.database.definitions = list.ToArray();
 				DefinitionCatalog.SaveInternalDefinitions(ResourceManager.Definitions.Where(d => d != null && DefinitionCatalog.IsInternalDefinition(d.HashID)).Where(d => d.HashID != hash));
 				DefinitionCatalog.SaveExternalDefinition(def);
+
+				if (!string.IsNullOrWhiteSpace(def.model) && GetInternalModelUsageCount(def.model) == 0)
+					ResourceDependencyHelpers.TryExportModelToExternal(def.model);
 			}
 			else
 			{
+				if (!string.IsNullOrWhiteSpace(def.model))
+					ResourceDependencyHelpers.TryPromoteExternalModelToImmutable(def.model);
+
 				list.RemoveAll(d => d != null && d.HashID == hash);
 
 				int insertIndex = 0;
@@ -974,15 +1143,13 @@ namespace ClassicTilestorm
 				DefinitionCatalog.DeleteExternalDefinition(hash);
 			}
 
-#if UNITY_EDITOR
-			AssetDatabase.Refresh();
-#endif
-			DefinitionCatalog.ClearCache();
+			MapCatalog.RefreshStateAfterStorageMove();
 
 			if (ResourceManager.database != null)
 				ResourceSerializer.SaveDatabase(ResourceManager.database, verbose: true);
 
 			ResourceSerializer.Initialise();
+			ScheduleUsageCacheRefresh(immediate: true);
 
 			lastSelectedDefinitionIndex = -1;
 			for (var i = 0; i < ResourceManager.Definitions.Count; i++)

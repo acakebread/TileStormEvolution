@@ -1,0 +1,4 @@
+# hashId<TAB>resourceKey
+9J9yyK	ClassicTS/Prefabs/flame
+CkUrKA	ClassicTS/Prefabs/spark
+9QdNE7	ClassicTS/Prefabs/Test

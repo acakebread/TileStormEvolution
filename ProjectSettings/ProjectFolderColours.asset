@@ -15,4 +15,4 @@ MonoBehaviour:
   defaultFolderColour: {r: 0.83, g: 0.2, b: 0.2, a: 0.18}
   entries:
   - folderGuid: b8410c6f94158814680b422c3af527b3
-    colour: {r: 1, g: 0.2, b: 0.2, a: 1}
+    colour: {r: 0.83, g: 0.2, b: 0.2, a: 0.18}

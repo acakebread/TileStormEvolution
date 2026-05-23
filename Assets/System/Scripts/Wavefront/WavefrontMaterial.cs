@@ -420,17 +420,23 @@ namespace MassiveHadronLtd
 		}
 
 		public Material ToUnityMaterial()
+			=> ToUnityMaterial(textureName => ResourceResolvers.TextureResolver?.Find(textureName));
+
+		public Material ToUnityMaterial(Func<string, Texture> textureLookup)
 		{
 			var shaderObj = Shader.Find(shader) ?? Shader.Find("Universal Render Pipeline/Lit");
 			var mat = new Material(shaderObj) { name = name ?? "Material" };
 
-			ApplyTo(mat);
+			ApplyTo(mat, textureLookup);
 			MaterialUtils.ForceMaterialRefresh(mat);
 
 			return mat;
 		}
 
 		public void ApplyTo(Material target)
+			=> ApplyTo(target, textureName => ResourceResolvers.TextureResolver?.Find(textureName));
+
+		public void ApplyTo(Material target, Func<string, Texture> textureLookup)
 		{
 			if (target == null) return;
 
@@ -442,7 +448,7 @@ namespace MassiveHadronLtd
 				{
 					if (!string.IsNullOrEmpty(p.texture))
 					{
-						var tex = ResourceResolvers.TextureResolver?.Find(p.texture);
+						var tex = textureLookup?.Invoke(p.texture);
 						if (tex != null)
 						{
 							target.SetTexture(p.name, tex);

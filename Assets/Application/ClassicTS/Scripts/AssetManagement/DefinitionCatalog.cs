@@ -57,7 +57,7 @@ namespace ClassicTilestorm
 		private static bool ExternalDefinitionsLoaded;
 
 		public static string PersistentDefinitionsFolder => ApplicationSettings.SystemDefinitionsFolder;
-		public static string InternalDefinitionsFile => Path.Combine(Application.dataPath, "Resources", "AssetDatabase", "definitions.json");
+		public static string InternalDefinitionsFile => Path.Combine(ApplicationSettings.InternalResourcesProjectPath, "AssetDatabase", "definitions.json");
 
 		public static void ClearCache()
 		{

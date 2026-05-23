@@ -4,6 +4,8 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/Application/TileStorm.unity
+    guid: 6a75fae5cc4a9ba488bc5c21d8b1502c
   m_configObjects: {}
-  m_UseUCBPForAssetBundles: 0

@@ -18,6 +18,7 @@ namespace ClassicTilestorm
 		private static readonly Rect DefaultWindowRect = new Rect(40f, 80f, 840f, 600f);
 		private static GUIStyle windowStyle;
 		private static GUIStyle helpStyle;
+		private static GUIStyle keyStyle;
 		private static GUIStyle localBoxStyle;
 		private static GUIStyle remoteBoxStyle;
 		private static GUIStyle mixedBoxStyle;
@@ -194,8 +195,12 @@ namespace ClassicTilestorm
 			GUILayout.BeginVertical(GetRowStyle(row));
 			GUILayout.Label(row.DisplayName);
 			GUILayout.Label(row.SourceSummary, GetHelpStyle());
-			if (!string.IsNullOrWhiteSpace(row.DetailSummary))
-				GUILayout.Label(row.DetailSummary, GetHelpStyle());
+			if (!string.IsNullOrWhiteSpace(row.FileSummary))
+				GUILayout.Label(row.FileSummary, GetHelpStyle());
+			if (!string.IsNullOrWhiteSpace(row.RemoteSummary))
+				GUILayout.Label(row.RemoteSummary, GetHelpStyle());
+			if (!string.IsNullOrWhiteSpace(row.KeySummary))
+				GUILayout.Label(row.KeySummary, GetKeyStyle());
 
 			GUILayout.BeginHorizontal();
 			if (row.HasStoredLocal && GUILayout.Button("Load", GUILayout.Width(80f)))
@@ -648,20 +653,43 @@ namespace ClassicTilestorm
 				}
 			}
 
-			public string DetailSummary
+			public string FileSummary
 			{
 				get
 				{
-					var details = new List<string>();
-					if (HasLocal && LocalHash != 0)
-						details.Add($"Hash {HTB50Settings.ToString(LocalHash)}");
-					if (!string.IsNullOrWhiteSpace(PersistentEntry.FilePath))
-						details.Add(Path.GetFileName(PersistentEntry.FilePath));
-					if (HasRemote)
-						details.Add($"{RemoteEntry.fileName} | {FormatSize(RemoteEntry.sizeBytes)} | {FormatTimestamp(RemoteUpdatedUtc)}");
+					var files = new List<string>();
+					var localFile = string.IsNullOrWhiteSpace(PersistentEntry.FilePath)
+						? null
+						: Path.GetFileName(PersistentEntry.FilePath);
+					if (!string.IsNullOrWhiteSpace(localFile))
+						files.Add($"Local file {localFile}");
+					if (HasRemote && !string.IsNullOrWhiteSpace(RemoteEntry.fileName) && !files.Any(file => file.EndsWith(RemoteEntry.fileName, StringComparison.OrdinalIgnoreCase)))
+						files.Add($"Remote file {RemoteEntry.fileName}");
 
-					return string.Join(" | ", details.Where(detail => !string.IsNullOrWhiteSpace(detail)));
+					return string.Join(" | ", files);
 				}
+			}
+
+			public string RemoteSummary
+			{
+				get
+				{
+					if (!HasRemote)
+						return null;
+
+					return $"{FormatSize(RemoteEntry.sizeBytes)} | {FormatTimestamp(RemoteUpdatedUtc)}";
+				}
+			}
+
+			public string KeySummary => TryGetKeyHash(out var hash) ? $"Key {HTB50Settings.ToString(hash)}" : null;
+
+			private bool TryGetKeyHash(out HashId hash)
+			{
+				hash = LocalHash;
+				if (hash != 0)
+					return true;
+
+				return HasRemote && TryGetRemoteHash(RemoteEntry, out hash);
 			}
 
 			public void RefreshDerivedState()
@@ -731,6 +759,18 @@ namespace ClassicTilestorm
 			style.normal.textColor = new Color(0.88f, 0.92f, 0.98f, 1f);
 			helpStyle = style;
 			return helpStyle;
+		}
+
+		private static GUIStyle GetKeyStyle()
+		{
+			if (keyStyle != null)
+				return keyStyle;
+
+			var style = new GUIStyle(GetHelpStyle());
+			style.normal.textColor = new Color(1f, 0.80f, 0.34f, 1f);
+			style.fontStyle = FontStyle.Bold;
+			keyStyle = style;
+			return keyStyle;
 		}
 
 		private static GUIStyle GetRowStyle(CatalogRow row)

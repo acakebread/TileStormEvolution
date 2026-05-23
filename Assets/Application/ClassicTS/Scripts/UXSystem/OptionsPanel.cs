@@ -15,9 +15,11 @@ namespace ClassicTilestorm
 		[SerializeField] private Button DefinitionEditorButton;
 		[SerializeField] private Button LoadDatabaseButton;
 		[SerializeField] private Button SaveDatabaseButton;
+		[SerializeField] private Button CommunityButton;
 		[SerializeField] private Button ImportMapButton;
 		[SerializeField] private Button ExportMapButton;
 		[SerializeField] private Button ImportModelButton;
+		[SerializeField] private Button AdminButton;
 
 		[SerializeField] private Toggle difficultyToggle;
 		[SerializeField] private Toggle musicToggle;
@@ -47,6 +49,10 @@ namespace ClassicTilestorm
 				DatabaseEditorButton.onClick.AddListener(() => UIController.OpenPanel<DatabaseEditorPanel>());
 			if (null != DefinitionEditorButton)
 				DefinitionEditorButton.onClick.AddListener(() => UIController.OpenPanel<DefinitionEditorPanel>());
+			if (null != CommunityButton)
+				CommunityButton.onClick.AddListener(() => SharedMapExchangeOverlay.Toggle());
+			if (null != AdminButton)
+				AdminButton.onClick.AddListener(() => RuntimeLogOverlay.Toggle());
 
 			var mainController = FindAnyObjectByType<MainController>(FindObjectsInactive.Include);
 			if (null != mainController)

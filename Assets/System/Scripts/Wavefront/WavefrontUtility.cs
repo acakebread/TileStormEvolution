@@ -51,42 +51,8 @@ namespace MassiveHadronLtd
 			}
 
 			var wMat = new WavefrontMaterial(mtlPath);
-			Material mat = wMat.ToUnityMaterial();
-
-			PatchTexturesFromDisk(mat, wMat, Path.GetDirectoryName(mtlPath));
-			return mat;
-		}
-
-		private static void PatchTexturesFromDisk(Material mat, WavefrontMaterial wavefrontMaterial, string baseDirectory)
-		{
-			if (mat == null || wavefrontMaterial?.properties == null) return;
-
-			foreach (var prop in wavefrontMaterial.properties)
-			{
-				if (string.IsNullOrEmpty(prop?.name) || string.IsNullOrEmpty(prop.texture))
-					continue;
-
-				if (!mat.HasProperty(prop.name))
-					continue;
-
-				Texture2D diskTex = WavefrontMaterial.TryLoadTexture(baseDirectory, prop.texture);
-				if (diskTex != null)
-				{
-					mat.SetTexture(prop.name, diskTex);
-					mat.SetTextureScale(prop.name, new Vector2(prop.textureScaleX, prop.textureScaleY));
-					mat.SetTextureOffset(prop.name, new Vector2(prop.textureOffsetX, prop.textureOffsetY));
-
-					if (prop.name == "_BaseMap" || prop.name == "_MainTex")
-						mat.mainTexture = diskTex;
-
-					if (prop.name == "_BaseMap" && mat.HasProperty("_MainTex"))
-						mat.SetTexture("_MainTex", diskTex);
-					else if (prop.name == "_MainTex" && mat.HasProperty("_BaseMap"))
-						mat.SetTexture("_BaseMap", diskTex);
-
-					Debug.Log($"Patched texture '{prop.texture}' on property {prop.name}");
-				}
-			}
+			string textureDirectory = Path.GetDirectoryName(mtlPath);
+			return wMat.ToUnityMaterial(textureName => WavefrontMaterial.TryLoadTexture(textureDirectory, textureName));
 		}
 
 		private static string ResolveRelativePath(string baseDirectory, string relativePath)

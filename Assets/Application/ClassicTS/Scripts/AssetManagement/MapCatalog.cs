@@ -342,7 +342,7 @@ using UnityEditor;
 			return true;
 		}
 
-		private static void RefreshStateAfterStorageMove()
+		internal static void RefreshStateAfterStorageMove()
 		{
 #if UNITY_EDITOR
 			EditorApplication.ExecuteMenuItem("Tools/Generate Asset Manifests");

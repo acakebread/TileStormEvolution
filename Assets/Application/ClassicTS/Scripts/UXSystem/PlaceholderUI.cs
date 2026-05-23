@@ -42,6 +42,7 @@ namespace ClassicTilestorm
 		private readonly Color modeSelectedBg = new(0.4f, 0.4f, 0.15f);
 
 		private Texture2D panelTexture;
+		private GUIStyle mapNameStyle;
 
 		// === NEW: Queue for safe processing of map changes ===
 		private readonly Queue<int> mapChangeQueue = new Queue<int>();
@@ -139,7 +140,7 @@ namespace ClassicTilestorm
 			GUI.Label(new Rect(currentX, y, labelWidth, buttonHeight), "Map:");
 			currentX += labelWidth;
 
-			GUI.Label(new Rect(currentX, y, mapNameWidth, buttonHeight), MainController.CurrentMap?.name ?? ApplicationSettings.LoadMapName);
+			GUI.Label(new Rect(currentX, y, mapNameWidth, buttonHeight), MainController.CurrentMap?.name ?? ApplicationSettings.LoadMapName, GetMapNameStyle());
 			currentX += mapNameWidth + spacing;
 
 			DrawModeButton(currentX, y, "Editor", ApplicationMode.Editor);
@@ -163,14 +164,6 @@ namespace ClassicTilestorm
 			GuiUtils.ColoredButton(new Rect(currentX, y, buttonWidth, buttonHeight), "Reload",
 				new Color(0.6f, 0.6f, 0.2f), () => onChangeMapRequested(0));
 			currentX += buttonWidth + spacing;
-
-			GuiUtils.ColoredButton(new Rect(currentX, y, buttonWidth, buttonHeight), "Share",
-				new Color(0.35f, 0.55f, 0.95f), () => SharedMapExchangeOverlay.Toggle());
-			currentX += buttonWidth + spacing;
-
-			GuiUtils.ColoredButton(new Rect(currentX, y, compactButtonWidth, buttonHeight), "Log",
-				new Color(0.25f, 0.45f, 0.55f), () => RuntimeLogOverlay.Toggle());
-			currentX += compactButtonWidth + spacing;
 
 			GuiUtils.ColoredButton(new Rect(currentX, y, buttonWidth, buttonHeight), "Preset",
 				new Color(0.2f, 0.8f, 0.2f), () => OnPresetRequested?.Invoke());
@@ -203,6 +196,21 @@ namespace ClassicTilestorm
 
 				GUI.contentColor = prev;
 			}
+		}
+
+		private GUIStyle GetMapNameStyle()
+		{
+			if (mapNameStyle != null)
+				return mapNameStyle;
+
+			mapNameStyle = new GUIStyle(GUI.skin.label)
+			{
+				fontSize = Mathf.Max(8, Mathf.RoundToInt(GUI.skin.label.fontSize * 0.75f)),
+				clipping = TextClipping.Clip,
+				wordWrap = false,
+				alignment = TextAnchor.MiddleLeft
+			};
+			return mapNameStyle;
 		}
 	}
 }
