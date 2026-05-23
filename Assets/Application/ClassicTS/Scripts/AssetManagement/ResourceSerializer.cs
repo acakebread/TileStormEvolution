@@ -466,7 +466,7 @@ namespace ClassicTilestorm
 			root = string.IsNullOrWhiteSpace(root) ? ApplicationSettings.JsonDataResourcePath : root;
 			root = root?.Trim('/');
 			if (string.IsNullOrWhiteSpace(root))
-				root = "ClassicTS/Config";
+				root = "Config";
 
 			var asset = Resources.Load<TextAsset>($"{root}/{fileName}");
 			if (asset != null)
