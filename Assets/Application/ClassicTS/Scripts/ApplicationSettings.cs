@@ -215,11 +215,6 @@ namespace ClassicTilestorm
 			AssetPath.SoundFolder,
 			AssetPath.MusicFolder
 		};
-
-		private static readonly string[] UnseededContentSubfolders =
-		{
-			$"{AssetPath.GeometryFolder}/{AssetPath.MaterialFolder}"
-		};
 #endif
 
 		public static IEnumerable<string> GetContentPaths(string subfolder)
@@ -723,13 +718,6 @@ namespace ClassicTilestorm
 						createdAny |= useSeedFiles
 							? EnsureContentFolderSeed(contentFolder)
 							: EnsureGitKeep(contentFolder);
-					}
-
-					foreach (var subfolder in UnseededContentSubfolders)
-					{
-						var supportFolder = Path.Combine(rootFolder, subfolder.Replace('/', Path.DirectorySeparatorChar));
-						createdAny |= EnsureFolder(supportFolder);
-						createdAny |= EnsureGitKeep(supportFolder);
 					}
 				}
 
