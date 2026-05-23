@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 15003, guid: 0000000000000000e000000000000000, type: 0}
-  m_Name: Tilestorm Evolution
+  m_Name: TileStorm Evolution
   m_EditorClassIdentifier: UnityEditor.dll::UnityEditor.Build.Profile.BuildProfile
   m_AssetVersion: 1
   m_BuildTarget: 20
@@ -167,7 +167,7 @@ MonoBehaviour:
     - line: '|   loadStoreDebugModeEnabled: 0'
     - line: '|   visionOSBundleVersion: 1.0'
     - line: '|   tvOSBundleVersion: 1.0'
-    - line: '|   bundleVersion: 0.1.6'
+    - line: '|   bundleVersion: 0.1.10'
     - line: '|   preloadedAssets:'
     - line: '|   - {fileID: 11400000, guid: 16799f5021db3c14397cb63b67f518a5, type:
         2}'
@@ -190,8 +190,8 @@ MonoBehaviour:
     - line: '|   androidMaxAspectRatio: 2.1'
     - line: '|   androidMinAspectRatio: 1'
     - line: '|   applicationIdentifier:'
-    - line: '|     Standalone: com.MassiveHadron.TileStorm2025'
-    - line: '|     iPhone: com.MassiveHadron.TileStorm2025'
+    - line: '|     Standalone: com.MassiveHadron.TileStormEvolution'
+    - line: '|     iPhone: com.MassiveHadron.TileStormEvolution'
     - line: '|   buildNumber:'
     - line: '|     Standalone: 0'
     - line: '|     VisionOS: 0'

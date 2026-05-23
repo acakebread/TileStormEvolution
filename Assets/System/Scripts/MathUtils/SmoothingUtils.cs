@@ -23,10 +23,7 @@ namespace MassiveHadronLtd
 		public static float Smooth(float current, float target, float n, float deltaTime, float fps = 60f)
 		{
 			if (n <= 0f)
-			{
-				Debug.LogWarning($"SmoothingUtils.Smooth: Invalid smoothing factor N={n}. Must be greater than 0. Returning current value.");
 				return current;
-			}
 
 			// Calculate the smoothing rate (k) based on the frame-based EMA formula
 			float alpha = 1f / (n + 1f);

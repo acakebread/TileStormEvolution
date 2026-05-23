@@ -113,12 +113,14 @@ namespace ClassicTilestorm
 			ProjectAssets.RefreshAllNameCaches();
 			ResourceManager.database = null;// important
 
-			var levelsAsset = LoadJsonAsset(ApplicationSettings.JsonDataResourcePath, "levels");
+			var levelsAsset = LoadJsonAsset(ApplicationSettings.JsonDataResourcePath, "levels")
+				?? LoadJsonAsset("Config", "levels")
+				?? LoadJsonAsset("ClassicTS/Config", "levels");
 			var definitionsAsset = LoadJsonAsset("AssetDatabase", "definitions");
 
 			if (levelsAsset == null)
 			{
-				Debug.LogError($"ResourceSerializer: missing levels.json at '{ApplicationSettings.JsonDataResourcePath}'");
+				Debug.LogError($"ResourceSerializer: missing levels.json at '{ApplicationSettings.JsonDataResourcePath}' (also tried 'Config' and 'ClassicTS/Config')");
 				return;
 			}
 
@@ -306,7 +308,7 @@ namespace ClassicTilestorm
 
 			var internalMapIds = data.maps != null && data.maps.Length > 0
 				? data.maps
-					.Where(m => m != null && MapCatalog.GetStorageLocation(m.HashID) == MapCatalog.MapStorageLocation.Internal)
+					.Where(m => m != null && (MapCatalog.HasInternalMapFile(m.HashID) || MapCatalog.GetStorageLocation(m.HashID) == MapCatalog.MapStorageLocation.Internal))
 					.Select(m => HTB50Settings.ToString(m.HashID))
 					.ToArray()
 				: (data.mapIds ?? Array.Empty<string>());
@@ -315,7 +317,7 @@ namespace ClassicTilestorm
 			if (data.maps != null)
 			{
 				var externalMapIds = data.maps
-					.Where(m => m != null && MapCatalog.GetStorageLocation(m.HashID) == MapCatalog.MapStorageLocation.External)
+					.Where(m => m != null && (MapCatalog.HasCommunityMapFile(m.HashID) || MapCatalog.GetStorageLocation(m.HashID) == MapCatalog.MapStorageLocation.External))
 					.Select(m => HTB50Settings.ToString(m.HashID))
 					.ToHashSet(StringComparer.OrdinalIgnoreCase);
 
@@ -466,7 +468,7 @@ namespace ClassicTilestorm
 			root = string.IsNullOrWhiteSpace(root) ? ApplicationSettings.JsonDataResourcePath : root;
 			root = root?.Trim('/');
 			if (string.IsNullOrWhiteSpace(root))
-				root = "ClassicTS/Config";
+				root = "Config";
 
 			var asset = Resources.Load<TextAsset>($"{root}/{fileName}");
 			if (asset != null)

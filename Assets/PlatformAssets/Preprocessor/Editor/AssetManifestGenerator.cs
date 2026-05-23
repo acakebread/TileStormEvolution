@@ -52,8 +52,6 @@ public class AssetManifestGenerator : IPreprocessBuildWithReport
 				Debug.Log($"Generated {manifestName}: {written} assets");
 			}
 
-			WriteMapManifest();
-
 			AssetDatabase.Refresh();
 			AssetConfiguration.ClearAllCaches();
 			MapCatalog.ClearCache();
@@ -267,31 +265,6 @@ public class AssetManifestGenerator : IPreprocessBuildWithReport
 
 	private static int CountRemaps(IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> remaps)
 		=> remaps?.Values.Sum(map => map?.Count ?? 0) ?? 0;
-
-	private static void WriteMapManifest()
-	{
-		const string manifestName = "Maps";
-		string path = Path.Combine(ApplicationSettings.InternalResourcesProjectPath, AssetManifestConfig.ManifestRootFolder, $"{manifestName}.txt");
-		var mapRoot = $"{ApplicationSettings.JsonDataPath}/Maps";
-		var names = ResourceUtils.GetAssetNamesFromResources<TextAsset>(new[] { mapRoot }, manifestName)
-			.Where(n => !string.IsNullOrWhiteSpace(n))
-			.Select(n => n.Trim())
-			.Distinct(StringComparer.OrdinalIgnoreCase)
-			.OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
-			.ToList();
-
-		var lines = names.Select(n =>
-		{
-			if (!MapCatalog.TryGetMapHashFromFileStem(n, out var hash))
-				return null;
-			return $"{HTB50Settings.ToString(hash)}\t{n}";
-		}).ToList();
-
-		lines = lines.Where(line => !string.IsNullOrWhiteSpace(line)).ToList();
-		lines.Insert(0, "# hashId<TAB>resourceName");
-		File.WriteAllLines(path, lines);
-		Debug.Log($"Generated {manifestName}: {names.Count} assets");
-	}
 
 	private static IEnumerable<ResourceManifestEntry> GetResourceEntries(string manifestName, Type assetType, string[] roots)
 	{
