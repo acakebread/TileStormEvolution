@@ -107,7 +107,17 @@ namespace ClassicTilestorm
 
 		[Header("json data root")]
 		[SerializeField, ResourcePath] private string jsonDataPath = "Config";
-		public static string JsonDataPath => string.IsNullOrWhiteSpace(instance?.jsonDataPath) ? "Config" : instance.jsonDataPath.Trim('/').Trim();
+		public static string JsonDataPath
+		{
+			get
+			{
+				var value = string.IsNullOrWhiteSpace(instance?.jsonDataPath) ? "Config" : instance.jsonDataPath.Trim('/').Trim();
+				if (string.Equals(value, "ClassicTS/Config", StringComparison.OrdinalIgnoreCase))
+					return "Config";
+
+				return value;
+			}
+		}
 		public static string JsonDataProjectPath => Path.Combine(InternalResourcesProjectPath, JsonDataPath.Replace('/', Path.DirectorySeparatorChar));
 		public static string JsonDataResourcePath => JsonDataPath;
 
