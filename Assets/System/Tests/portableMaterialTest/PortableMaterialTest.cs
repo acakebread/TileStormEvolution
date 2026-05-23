@@ -9,6 +9,8 @@ namespace MassiveHadronLtd
 	{
 		[Header("Test Setup")]
 		public GameObject cubePrefab;           // Assign a cube in inspector
+		public Material testMaterial;           // Optional source material
+		public Texture2D testTexture;           // Optional texture override
 		private GameObject testCube;
 		private Material currentMaterial;
 
@@ -16,7 +18,6 @@ namespace MassiveHadronLtd
 
 		private void Start()
 		{
-			ClassicTilestorm.Assets.AssetConfiguration.Initialize();
 			CreateSpinningCube();
 			Debug.Log($"PortableMaterial Test Ready!\nSave path: {SavePath}");
 		}
@@ -73,34 +74,10 @@ namespace MassiveHadronLtd
 
 		private void CreateAndExportMaterial()
 		{
-			Material sourceMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-			sourceMat.name = "TestMaterial";
-
-			// Reasonable base color (not too bright)
-			sourceMat.color = new Color(0.1f, 0.1f, 0.1f, 1f);
-			sourceMat.SetFloat("_Smoothness", 0.7f);
-			sourceMat.SetFloat("_Metallic", 0.1f);
-
-			// Load texture
-			Texture2D testTex = Resources.Load<Texture2D>("test");
+			Material sourceMat = CreateSourceMaterial();
+			Texture2D testTex = ResolvePrimaryTestTexture(sourceMat);
 			if (testTex != null)
-			{
-				sourceMat.SetTexture("_BaseMap", testTex);
-				sourceMat.SetTexture("_MainTex", testTex);
-				sourceMat.mainTexture = testTex;
-
-				// Set same texture as emission map
-				sourceMat.SetTexture("_EmissionMap", testTex);
-			}
-			else
-			{
-				Debug.LogWarning("Could not find Resources/test.png");
-			}
-
-			// Enable emission with moderate intensity
-			sourceMat.EnableKeyword("_EMISSION");
-			sourceMat.SetColor("_EmissionColor", new Color(0.1f, 1f, 0.1f, 1f));
-			sourceMat.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
+				ApplyTexture(sourceMat, testTex);
 
 			var portable = new PortableMaterial(sourceMat, "TestMaterial");
 
@@ -108,7 +85,7 @@ namespace MassiveHadronLtd
 			if (testCube != null)
 			{
 				if (currentMaterial != null) Destroy(currentMaterial);
-				currentMaterial = portable.ToUnityMaterial(name => Resources.Load<Texture>(name));
+				currentMaterial = portable.ToUnityMaterial(ResolveTestTexture);
 				ApplyMaterialToCube(currentMaterial);
 			}
 
@@ -137,7 +114,7 @@ namespace MassiveHadronLtd
 				{
 					if (currentMaterial != null) Destroy(currentMaterial);
 
-					currentMaterial = portable.ToUnityMaterial(name => Resources.Load<Texture>(name));
+					currentMaterial = portable.ToUnityMaterial(ResolveTestTexture);
 					ApplyMaterialToCube(currentMaterial);
 
 					Debug.Log($"Material loaded and applied: {portable.name}");
@@ -200,6 +177,92 @@ namespace MassiveHadronLtd
 
 			rend.sharedMaterial = mat;
 			rend.SetPropertyBlock(null);
+		}
+
+		private Material CreateSourceMaterial()
+		{
+			var mat = testMaterial != null
+				? new Material(testMaterial)
+				: new Material(Shader.Find("Universal Render Pipeline/Lit"));
+
+			mat.name = "TestMaterial";
+
+			if (testMaterial == null)
+			{
+				mat.color = new Color(0.1f, 0.1f, 0.1f, 1f);
+				mat.SetFloat("_Smoothness", 0.7f);
+				mat.SetFloat("_Metallic", 0.1f);
+				mat.EnableKeyword("_EMISSION");
+				mat.SetColor("_EmissionColor", new Color(0.1f, 1f, 0.1f, 1f));
+				mat.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
+			}
+
+			return mat;
+		}
+
+		private Texture2D ResolvePrimaryTestTexture(Material sourceMat)
+		{
+			if (testTexture != null)
+				return testTexture;
+
+			return sourceMat != null ? sourceMat.mainTexture as Texture2D : null;
+		}
+
+		private Texture ResolveTestTexture(string textureName)
+		{
+			if (string.IsNullOrWhiteSpace(textureName))
+				return null;
+
+			if (TextureNameMatches(testTexture, textureName))
+				return testTexture;
+
+			if (testMaterial != null)
+				return FindTextureOnMaterial(testMaterial, textureName);
+
+			return null;
+		}
+
+		private static Texture FindTextureOnMaterial(Material material, string textureName)
+		{
+			if (material == null || material.shader == null)
+				return null;
+
+			var count = material.shader.GetPropertyCount();
+			for (var i = 0; i < count; i++)
+			{
+				if (material.shader.GetPropertyType(i) != UnityEngine.Rendering.ShaderPropertyType.Texture)
+					continue;
+
+				var texture = material.GetTexture(material.shader.GetPropertyName(i));
+				if (TextureNameMatches(texture, textureName))
+					return texture;
+			}
+
+			return null;
+		}
+
+		private static bool TextureNameMatches(Texture texture, string textureName)
+		{
+			if (texture == null || string.IsNullOrWhiteSpace(textureName))
+				return false;
+
+			var requested = Path.GetFileNameWithoutExtension(textureName.Trim());
+			return string.Equals(texture.name, requested, System.StringComparison.OrdinalIgnoreCase);
+		}
+
+		private static void ApplyTexture(Material material, Texture texture)
+		{
+			if (material == null || texture == null)
+				return;
+
+			if (material.HasProperty("_BaseMap"))
+				material.SetTexture("_BaseMap", texture);
+			if (material.HasProperty("_MainTex"))
+				material.SetTexture("_MainTex", texture);
+			if (material.HasProperty("_EmissionMap"))
+				material.SetTexture("_EmissionMap", texture);
+
+			material.mainTexture = texture;
 		}
 
 	}

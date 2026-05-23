@@ -8,11 +8,12 @@ namespace MassiveHadronLtd
 	{
 		[Header("Test Setup")]
 		public GameObject cubePrefab;
+		public Material testMaterial;
+		public Texture2D testTexture;
 		private GameObject testCube;
 		private Material currentMaterial;
 
 		private string SavePath => Path.Combine(Application.persistentDataPath, "TestMaterial.mtl");
-		private string TestTextureName = "test";   // Resources/test.png
 
 		private void Start()
 		{
@@ -71,29 +72,10 @@ namespace MassiveHadronLtd
 
 		private void CreateAndExportMaterial()
 		{
-			Material sourceMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-			sourceMat.name = "TestMaterial";
-
-			sourceMat.color = new Color(0.1f, 0.1f, 0.1f, 1f);
-			sourceMat.SetFloat("_Smoothness", 0.7f);
-			sourceMat.SetFloat("_Metallic", 0.1f);
-
-			Texture2D testTex = Resources.Load<Texture2D>(TestTextureName);
+			Material sourceMat = CreateSourceMaterial();
+			Texture2D testTex = ResolvePrimaryTestTexture(sourceMat);
 			if (testTex != null)
-			{
-				sourceMat.SetTexture("_BaseMap", testTex);
-				sourceMat.SetTexture("_MainTex", testTex);
-				sourceMat.mainTexture = testTex;
-				sourceMat.SetTexture("_EmissionMap", testTex);
-			}
-			else
-			{
-				Debug.LogWarning($"Could not find Resources/{TestTextureName}.png");
-			}
-
-			sourceMat.EnableKeyword("_EMISSION");
-			sourceMat.SetColor("_EmissionColor", new Color(0.1f, 1f, 0.1f, 1f));
-			sourceMat.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
+				ApplyTexture(sourceMat, testTex);
 
 			var wavefront = new WavefrontMaterial();
 			wavefront.FromUnityMaterial(sourceMat, "TestMaterial");
@@ -101,7 +83,7 @@ namespace MassiveHadronLtd
 			if (testCube != null)
 			{
 				if (currentMaterial != null) Destroy(currentMaterial);
-				currentMaterial = wavefront.ToUnityMaterial();
+				currentMaterial = wavefront.ToUnityMaterial(ResolveTestTexture);
 				ApplyMaterialToCube(currentMaterial);
 			}
 
@@ -124,7 +106,7 @@ namespace MassiveHadronLtd
 
 				if (currentMaterial != null) Destroy(currentMaterial);
 
-				currentMaterial = wavefront.ToUnityMaterial();
+				currentMaterial = wavefront.ToUnityMaterial(ResolveTestTexture);
 				ApplyMaterialToCube(currentMaterial);
 
 				Debug.Log($"✅ Loaded Wavefront material: {wavefront.name}");
@@ -176,6 +158,92 @@ namespace MassiveHadronLtd
 			if (rend == null || mat == null) yield break;
 			rend.sharedMaterial = mat;
 			rend.SetPropertyBlock(null);
+		}
+
+		private Material CreateSourceMaterial()
+		{
+			var mat = testMaterial != null
+				? new Material(testMaterial)
+				: new Material(Shader.Find("Universal Render Pipeline/Lit"));
+
+			mat.name = "TestMaterial";
+
+			if (testMaterial == null)
+			{
+				mat.color = new Color(0.1f, 0.1f, 0.1f, 1f);
+				mat.SetFloat("_Smoothness", 0.7f);
+				mat.SetFloat("_Metallic", 0.1f);
+				mat.EnableKeyword("_EMISSION");
+				mat.SetColor("_EmissionColor", new Color(0.1f, 1f, 0.1f, 1f));
+				mat.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
+			}
+
+			return mat;
+		}
+
+		private Texture2D ResolvePrimaryTestTexture(Material sourceMat)
+		{
+			if (testTexture != null)
+				return testTexture;
+
+			return sourceMat != null ? sourceMat.mainTexture as Texture2D : null;
+		}
+
+		private Texture ResolveTestTexture(string textureName)
+		{
+			if (string.IsNullOrWhiteSpace(textureName))
+				return null;
+
+			if (TextureNameMatches(testTexture, textureName))
+				return testTexture;
+
+			if (testMaterial != null)
+				return FindTextureOnMaterial(testMaterial, textureName);
+
+			return null;
+		}
+
+		private static Texture FindTextureOnMaterial(Material material, string textureName)
+		{
+			if (material == null || material.shader == null)
+				return null;
+
+			var count = material.shader.GetPropertyCount();
+			for (var i = 0; i < count; i++)
+			{
+				if (material.shader.GetPropertyType(i) != UnityEngine.Rendering.ShaderPropertyType.Texture)
+					continue;
+
+				var texture = material.GetTexture(material.shader.GetPropertyName(i));
+				if (TextureNameMatches(texture, textureName))
+					return texture;
+			}
+
+			return null;
+		}
+
+		private static bool TextureNameMatches(Texture texture, string textureName)
+		{
+			if (texture == null || string.IsNullOrWhiteSpace(textureName))
+				return false;
+
+			var requested = Path.GetFileNameWithoutExtension(textureName.Trim());
+			return string.Equals(texture.name, requested, System.StringComparison.OrdinalIgnoreCase);
+		}
+
+		private static void ApplyTexture(Material material, Texture texture)
+		{
+			if (material == null || texture == null)
+				return;
+
+			if (material.HasProperty("_BaseMap"))
+				material.SetTexture("_BaseMap", texture);
+			if (material.HasProperty("_MainTex"))
+				material.SetTexture("_MainTex", texture);
+			if (material.HasProperty("_EmissionMap"))
+				material.SetTexture("_EmissionMap", texture);
+
+			material.mainTexture = texture;
 		}
 	}
 }

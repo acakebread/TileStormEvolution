@@ -415,6 +415,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MassiveHadronLtd.WavefrontUtilityTest
   cubePrefab: {fileID: 0}
+  testMaterial: {fileID: 0}
+  testTexture: {fileID: 2800000, guid: cab594856d64ae4489dcbdce39cc0b0f, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
