@@ -1,0 +1,10 @@
+# hashId<TAB>resourceKey
+6nC0hT	ClassicTS/Music/Egypt
+EHaPC6	ClassicTS/Music/Egyptian2
+EEaQ1Y	ClassicTS/Music/Industrial
+3K23an	ClassicTS/Music/Jungle
+9iKjad	ClassicTS/Music/Medieval
+6efdii	ClassicTS/Music/Medieval2
+3jRK1T	ClassicTS/Music/TileStormTheme
+6tUrjW	ClassicTS/Music/Victorian
+2ve9UX	ClassicTS/Music/Victorian2

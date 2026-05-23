@@ -246,8 +246,11 @@ namespace ClassicTilestorm
 		public static string MutableResourcesProjectPath
 			=> Path.Combine(Application.dataPath, AssetPath.ApplicationRootFolder, AssetPath.ResourcesFolder);
 
-		public static string ImmutableResourcesProjectPath
+		public static string InternalResourcesProjectPath
 			=> Path.Combine(Application.dataPath, AssetPath.ApplicationRootFolder, AssetPath.InternalRootParentFolder, AssetPath.ResourcesFolder);
+
+		public static string ImmutableResourcesProjectPath
+			=> InternalResourcesProjectPath;
 
 		public static IEnumerable<string> GetGeometryPaths() => GetContentPaths(AssetPath.GeometryFolder);
 		public static IEnumerable<string> GetTexturePaths() => GetContentPaths(AssetPath.TextureFolder);

@@ -1,0 +1,7 @@
+# hashId<TAB>resourceKey
+7qUVGy	Global/Materials/chalk
+Ch02DE	ClassicTS/Materials/flame
+2dEVj6	Global/Materials/marker
+1n5i4n	Global/Materials/rainbow
+85Tifa	ClassicTS/Materials/spark
+2PU0QJ	ClassicTS/Materials/toxic

@@ -1,0 +1,6 @@
+# hashId<TAB>resourceKey
+0m4XK0	Global/Textures/AlphaTest
+A6tuPW	Global/Textures/Chalk
+7mpcp5	ClassicTS/Textures/Flag
+3wimEy	Global/Textures/Marker
+AXXyA9	Global/Textures/Rainbow

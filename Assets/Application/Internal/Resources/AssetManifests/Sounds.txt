@@ -1,0 +1,5 @@
+# hashId<TAB>resourceKey
+60HPM2	ClassicTS/Sounds/ChimeUp
+9tACDa	ClassicTS/Sounds/Click
+8R3aDM	ClassicTS/Sounds/Coin
+DC1YDC	Global/Sounds/Stone
