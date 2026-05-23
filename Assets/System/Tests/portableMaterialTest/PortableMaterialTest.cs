@@ -9,11 +9,11 @@ namespace MassiveHadronLtd
 	{
 		[Header("Test Setup")]
 		public GameObject cubePrefab;           // Assign a cube in inspector
+		public Texture2D testTexture;           // Assign the texture in inspector
 		private GameObject testCube;
 		private Material currentMaterial;
 
 		private string SavePath => Path.Combine(Application.persistentDataPath, "TestMaterial.json");
-		private string TestTextureName = "test";   // Resources/test.png (without extension)
 
 		private void Start()
 		{
@@ -81,8 +81,8 @@ namespace MassiveHadronLtd
 			sourceMat.SetFloat("_Smoothness", 0.7f);
 			sourceMat.SetFloat("_Metallic", 0.1f);
 
-			// Load texture
-			Texture2D testTex = Resources.Load<Texture2D>(TestTextureName);
+			// Use inspector-assigned texture
+			Texture2D testTex = testTexture;
 			if (testTex != null)
 			{
 				sourceMat.SetTexture("_BaseMap", testTex);
@@ -94,7 +94,7 @@ namespace MassiveHadronLtd
 			}
 			else
 			{
-				Debug.LogWarning($"Could not find Resources/{TestTextureName}.png");
+				Debug.LogWarning("No testTexture assigned in the inspector.");
 			}
 
 			// Enable emission with moderate intensity
