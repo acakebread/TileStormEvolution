@@ -48,8 +48,7 @@ namespace pigbrain.core.Project
                         ButtonBuild(button);
                 });
 
-            var report = GetReportObject();
-            if (report) EditorGUILayout.ObjectField(report, report.GetType(), true);
+            EditorGUILayout.ObjectField(GetReportObject(), typeof(BuildReport), true);
         }
 
         #region └BuildButton
@@ -163,9 +162,9 @@ namespace pigbrain.core.Project
         #endregion
 
         #region └Build
-        static void ButtonBuild() => Build();
-        static void ButtonBuildRun() => Build(BuildOptions.AutoRunPlayer);
-        static void ButtonBuildRunBrotli() => Build(BuildOptions.AutoRunPlayer, true);
+        // static void ButtonBuild() => Build();
+        // static void ButtonBuildRun() => Build(BuildOptions.AutoRunPlayer);
+        // static void ButtonBuildRunBrotli() => Build(BuildOptions.AutoRunPlayer, true);
 
         static void Build(BuildOptions options = BuildOptions.None, bool useFallback = false, string fixedPath = null, Action<string> onComplete = null)
         {
@@ -245,7 +244,7 @@ namespace pigbrain.core.Project
                 .ToArray();
 
             // persist
-            var db = GetReportObject();
+            var db = TryCreateReportObject();
             db.entries = entries;
             db.buildPath = report.summary.outputPath;
             db.version = PlayerSettings.bundleVersion;
@@ -259,7 +258,10 @@ namespace pigbrain.core.Project
         }
 
         static BuildReport LastReport;
-        static BuildReport GetReportObject()
+        static BuildReport GetReportObject() =>
+            AssetDatabase.LoadAssetAtPath<BuildReport>(BuildReportAssetPath) is BuildReport db ? db : LastReport;
+
+        static BuildReport TryCreateReportObject()
         {
             if (LastReport) return LastReport;
             Directory.CreateDirectory(Path.GetDirectoryName(BuildReportAssetPath));
