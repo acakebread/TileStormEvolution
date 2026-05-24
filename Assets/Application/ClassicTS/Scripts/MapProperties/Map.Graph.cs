@@ -199,20 +199,6 @@ namespace ClassicTilestorm
 			UpdateGraph();
 		}
 
-		public void Solve()
-		{
-			if (solve != null && solve.Length >= width * height)
-			{
-				state = Enumerable.Range(0, width * height).Select(n => n + (solve?[n] ?? 0)).ToArray();
-			}
-			else
-			{
-				Debug.LogWarning($"Map '{name ?? id ?? "<unnamed>"}' has no solve data; falling back to preset layout.");
-				state = Enumerable.Range(0, width * height).ToArray();
-			}
-			UpdateGraph();
-		}
-
 		public bool ApplyState(int[] newState)
 		{
 			if (newState == null || newState.Length != width * height)

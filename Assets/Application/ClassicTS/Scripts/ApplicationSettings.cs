@@ -33,10 +33,6 @@ namespace ClassicTilestorm
 			}
 		}
 
-		[Header("load map scrambled or solved")]
-		[SerializeField] private bool scrambled = true;
-		public static bool Scrambled => instance.scrambled;
-
 		[Header("enable or disable easy mode")]
 		[SerializeField] private bool difficulty = true;
 		public static bool Difficulty
@@ -298,7 +294,6 @@ namespace ClassicTilestorm
 				serializedObject.Update();
 
 				DrawProperty(nameof(loadMapName));
-				DrawProperty(nameof(scrambled));
 				DrawProperty(nameof(difficulty));
 				DrawProperty(nameof(music));
 				DrawProperty(nameof(showEditorGrid));

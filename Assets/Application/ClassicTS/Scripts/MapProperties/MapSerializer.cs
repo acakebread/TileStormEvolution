@@ -320,12 +320,6 @@ namespace ClassicTilestorm
 				map.tiles = DecodeTilesSafely(jo["tiles"]?.ToObject<int[]>(serializer));
 			}
 
-			if (jo["solve"]?.Type == JTokenType.Array)
-			{
-				var data = jo["solve"].ToObject<int[]>(serializer);
-				map.solve = data?.SmartRleDecode() ?? Array.Empty<int>();
-			}
-
 			if (tableArray != null)
 			{
 				((Map.IVariantAccess)map).Variants = ParseTableToVariants(tableArray);
@@ -480,14 +474,6 @@ namespace ClassicTilestorm
 				{
 					writer.WritePropertyName("tiles");
 					var encoded = map.tiles.SmartRleEncode();
-					serializer.Serialize(writer, encoded);
-					continue;
-				}
-
-				if (name == "solve" && map.solve != null && map.solve.Length > 0)
-				{
-					writer.WritePropertyName("solve");
-					var encoded = map.solve.SmartRleEncode();
 					serializer.Serialize(writer, encoded);
 					continue;
 				}

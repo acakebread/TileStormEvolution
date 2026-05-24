@@ -358,7 +358,7 @@ namespace ClassicTilestorm
 
 			if (null == SkyboxAssets.Find(CurrentMap.skybox))
 				CurrentMap.skybox = null;
-			CurrentMap.Initialise(MapRoot, !ApplicationSettings.Scrambled);
+			CurrentMap.Initialise(MapRoot);
 
 			//LogTextureLeak("AFTER loading new map");
 			LeakDetector.LogSnapshot("AFTER loading new map");
@@ -414,7 +414,7 @@ namespace ClassicTilestorm
 
 			if (eggbotController == null)
 			{
-				CurrentMap.Solve();
+				Debug.LogWarning("Solve step skipped: no active eggbot controller.");
 			}
 			else
 			{
