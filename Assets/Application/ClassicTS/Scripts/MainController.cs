@@ -358,7 +358,7 @@ namespace ClassicTilestorm
 
 			if (null == SkyboxAssets.Find(CurrentMap.skybox))
 				CurrentMap.skybox = null;
-			CurrentMap.Initialise(MapRoot, !ApplicationSettings.Scrambled);
+			CurrentMap.Initialise(MapRoot);
 
 			//LogTextureLeak("AFTER loading new map");
 			LeakDetector.LogSnapshot("AFTER loading new map");
@@ -409,8 +409,46 @@ namespace ClassicTilestorm
 
 		public void Solve()
 		{
-			CurrentMap?.Solve();
-			if (null != cameraController) cameraController.OnMapSolved();
+			if (CurrentMap == null)
+				return;
+
+			if (eggbotController == null)
+			{
+				Debug.LogWarning("Solve step skipped: no active eggbot controller.");
+			}
+			else
+			{
+				var destinationTile = eggbotController.DestinationTile(CurrentMap);
+				if (destinationTile < 0)
+				{
+					Debug.LogWarning("Solve step skipped: no active destination waypoint.");
+					return;
+				}
+
+				if (TileDebugVisualizer.Enabled)
+				{
+					Debug.Log(TileDebugVisualizer.Visualize(CurrentMap, eggbotController.CurrentTile, destinationTile));
+				}
+
+				if (eggbotController.NavDirection(CurrentMap) != 0)
+				{
+					Debug.Log("Solve step skipped: the current path is already complete.");
+					return;
+				}
+
+				if (TileRouteAssembler.TryAssemble(CurrentMap, eggbotController.CurrentTile, destinationTile, out var assembled))
+				{
+					if (CurrentMap.ApplyState(assembled.State))
+						Debug.Log($"Solve assembled candidate state: {assembled.Summary}");
+					else
+						Debug.LogWarning("Solve assembly found a state but failed to apply it.");
+					return;
+				}
+
+				Debug.Log($"Solve assembly skipped: {assembled?.Summary ?? "no candidate route state found."}");
+				return;
+			}
+
 		}
 
 		public void LoadDatabase()

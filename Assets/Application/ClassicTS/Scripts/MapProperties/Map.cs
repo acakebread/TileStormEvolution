@@ -105,7 +105,6 @@ namespace ClassicTilestorm
 		[JsonProperty(Order = 10)] public int width;
 		[JsonProperty(Order = 11)] public int height;
 		[JsonProperty(Order = 12)] public int[] tiles;
-		[JsonProperty(Order = 13)] public int[] solve;
 		public const int TableJsonOrder = 20;
 
 		// ─────────────────────────────────────────────
@@ -123,7 +122,6 @@ namespace ClassicTilestorm
 
 		// Conditional serialization
 		public bool ShouldSerializeeffect() => !string.IsNullOrEmpty(effect);
-		public bool ShouldSerializesolve() => solve != null && solve.Length > 0;
 		public bool ShouldSerializewaypoints() => waypoints != null && waypoints.Length > 0;
 		public bool ShouldSerializeattachments() => attachments != null && attachments.Length > 0;
 		public bool ShouldSerializeambient() => !string.IsNullOrEmpty(ambient);
@@ -339,7 +337,6 @@ namespace ClassicTilestorm
 			tiles = new int[tileCount];
 			Array.Fill(tiles, 0);
 
-			solve = new int[tileCount];
 			state = Enumerable.Range(0, tileCount).ToArray();
 
 			attachments = null;
@@ -417,13 +414,12 @@ namespace ClassicTilestorm
 
 			waypoints = waypoints != null ? (int[])waypoints.Clone() : null,
 			tiles = tiles != null ? (int[])tiles.Clone() : null,
-			solve = solve != null ? (int[])solve.Clone() : null,
 
 			attachments = attachments != null ? attachments.Select(a => a.ShallowClone()).ToArray() : Array.Empty<MapAttachment>(),
 			variants = variants != null ? variants.Select(v => new Variant(v.hash, v.delta, v.angle)).ToArray() : Array.Empty<Variant>(),
 		};
 
-		public bool Initialise(Transform parent = null, bool solved = false)
+		public bool Initialise(Transform parent = null)
 		{
 			this.parent = parent;
 			EnsureMapRootComponent();
@@ -435,8 +431,7 @@ namespace ClassicTilestorm
 			}
 			UpdateLighting();
 
-			if (solved) Solve();
-			else Preset();
+			Preset();
 			RefreshAttachments(GetAttachments());
 
 			PreviewRenderLayers.RemovePreviewLayersFromChildLights(parent);

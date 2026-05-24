@@ -199,10 +199,14 @@ namespace ClassicTilestorm
 			UpdateGraph();
 		}
 
-		public void Solve()
+		public bool ApplyState(int[] newState)
 		{
-			state = Enumerable.Range(0, width * height).Select(n => n + (solve?[n] ?? 0)).ToArray();
+			if (newState == null || newState.Length != width * height)
+				return false;
+
+			state = (int[])newState.Clone();
 			UpdateGraph();
+			return true;
 		}
 
 		public Tile GetTile(Vector3 pos, bool logicalIndex = true) => GetTile(VectorToIndex(pos), logicalIndex);

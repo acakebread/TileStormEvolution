@@ -113,29 +113,12 @@ namespace ClassicTilestorm
 			var newTiles = new int[newSize];
 			Array.Fill(newTiles, defaultIndex);
 
-			var newSolve = new int[newSize];
-
 			for (var oldIdx = 0; oldIdx < width * height && oldIdx < tiles.Length; oldIdx++)
 			{
 				var newPos = Remap(oldIdx);
 				if (newPos < 0) continue;
 
 				newTiles[newPos] = tiles[oldIdx];
-
-				if (solve != null && oldIdx < solve.Length)
-				{
-					var delta = solve[oldIdx];
-					if (delta != 0)
-					{
-						var oldSrcIdx = oldIdx + delta;
-						if ((uint)oldSrcIdx < solve.Length)
-						{
-							var newSrcPos = Remap(oldSrcIdx);
-							if (newSrcPos >= 0)
-								newSolve[newPos] = newSrcPos - newPos;
-						}
-					}
-				}
 			}
 
 			if (waypoints != null)
@@ -149,7 +132,6 @@ namespace ClassicTilestorm
 			width = extents.width;
 			height = extents.height;
 			tiles = newTiles;
-			solve = newSolve;
 			state = Enumerable.Range(0, width * height).ToArray();
 			SyncDoorWaypoints();
 

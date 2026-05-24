@@ -12,33 +12,51 @@ namespace ClassicTilestorm
 			if (null == strip.Indices) return;
 
 			foreach (var tileIndex in strip.Indices)
-				HighlightTile(map.GetTile(tileIndex).gameObject, highlight);
+			{
+				if (highlight) TintTile(map.GetTile(tileIndex).gameObject, Color.cyan);
+				else ClearTileTint(map.GetTile(tileIndex).gameObject);
+			}
 
 			if (null != TileStripHelper.SpareTile)
-				HighlightTile(TileStripHelper.SpareTile, highlight);
+			{
+				if (highlight) TintTile(TileStripHelper.SpareTile, Color.cyan);
+				else ClearTileTint(TileStripHelper.SpareTile);
+			}
 		}
 
-		private static void HighlightTile(GameObject tile, bool enable)
+		public static void TintTile(GameObject tile, Color tint)
 		{
 			if (null == tile) return;
 
 			var meshRenderer = tile.GetComponentInChildren<MeshRenderer>();
 			if (null == meshRenderer) return;
 
-			if (enable)
+			if (!tile.TryGetComponent<OriginalMaterialHolder>(out var holder))
 			{
-				if (!tile.TryGetComponent<OriginalMaterialHolder>(out var holder))
-				{
-					holder = tile.AddComponent<OriginalMaterialHolder>();
-					holder.originalMaterial = meshRenderer.material;
-				}
-				meshRenderer.material = new Material(meshRenderer.material) { color = Color.cyan };
+				holder = tile.AddComponent<OriginalMaterialHolder>();
+				holder.originalMaterial = meshRenderer.material;
 			}
-			else
-			{
-				if (tile.TryGetComponent<OriginalMaterialHolder>(out var holder) && null != holder.originalMaterial)
-					meshRenderer.material = holder.originalMaterial;
-			}
+
+			meshRenderer.material = new Material(holder.originalMaterial ?? meshRenderer.material) { color = tint };
+		}
+
+		public static void ClearTileTint(GameObject tile)
+		{
+			if (null == tile) return;
+
+			var meshRenderer = tile.GetComponentInChildren<MeshRenderer>();
+			if (null == meshRenderer) return;
+
+			if (tile.TryGetComponent<OriginalMaterialHolder>(out var holder) && null != holder.originalMaterial)
+				meshRenderer.material = holder.originalMaterial;
+		}
+
+		public static void ClearMapTints(IMapPlay map)
+		{
+			if (map == null) return;
+
+			for (var i = 0; i < map.Count; i++)
+				ClearTileTint(map.GetTile(i).gameObject);
 		}
 	}
 }
