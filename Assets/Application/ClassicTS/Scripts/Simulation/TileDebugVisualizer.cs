@@ -13,6 +13,8 @@ namespace ClassicTilestorm
 
 		private static readonly Color PlayableTint = new(0.15f, 0.8f, 0.2f, 1f);
 		private static readonly Color EndpointTint = new(0.2f, 0.35f, 1f, 1f);
+		private static readonly Color ExitCandidateTint = new(0.7f, 0.2f, 1f, 1f);
+		private static readonly Color SelectedExitTint = new(0.1f, 1f, 1f, 1f);
 		private static readonly Color NavPlayableTint = new(1f, 0.9f, 0.2f, 1f);
 		private static readonly Color EliminatedTint = new(0.9f, 0.15f, 0.1f, 1f);
 		private const int RouteNodeBudget = 50000;
@@ -56,12 +58,13 @@ namespace ClassicTilestorm
 			var sourceProbes = ResolveSourceConnections(map, sourceTile);
 			var sourceProbe = new ConnectionProbe(-1, -1, 0, false);
 			var destinationProbe = new ConnectionProbe(-1, -1, 0, false);
+			var exitProbes = new List<ConnectionProbe>();
 			var playableArea = new bool[map.Count];
 
 			foreach (var candidateSourceProbe in sourceProbes)
 			{
 				var candidateDestinationProbes = new List<ConnectionProbe>();
-				var candidatePlayableArea = BuildPlayableArea(map, candidateSourceProbe.PlayableTile, candidateSourceProbe.StaticTile, candidateDestinationProbes);
+				var candidatePlayableArea = BuildPlayableArea(map, candidateSourceProbe.PlayableTile, candidateSourceProbe, candidateDestinationProbes);
 				FilterReachableExits(map, candidatePlayableArea, candidateDestinationProbes, destinationTile);
 				var candidateDestinationProbe = candidateDestinationProbes.Count > 0
 					? candidateDestinationProbes[0]
@@ -72,6 +75,7 @@ namespace ClassicTilestorm
 					sourceProbe = candidateSourceProbe;
 					playableArea = candidatePlayableArea;
 					destinationProbe = candidateDestinationProbe;
+					exitProbes = new List<ConnectionProbe>(candidateDestinationProbes);
 				}
 
 				if (candidateDestinationProbes.Count == 0)
@@ -80,6 +84,7 @@ namespace ClassicTilestorm
 				sourceProbe = candidateSourceProbe;
 				playableArea = candidatePlayableArea;
 				destinationProbe = candidateDestinationProbe;
+				exitProbes = new List<ConnectionProbe>(candidateDestinationProbes);
 				break;
 			}
 
@@ -123,7 +128,10 @@ namespace ClassicTilestorm
 
 			playableArea = solutionArea;
 			var sourceResolved = TintEndpoint(map, sourceConnection);
-			var destinationResolved = TintEndpoint(map, destinationConnection);
+			foreach (var exitProbe in exitProbes)
+				TintEndpoint(map, exitProbe.StaticTile, ExitCandidateTint);
+
+			var destinationResolved = TintEndpoint(map, destinationConnection, SelectedExitTint);
 
 			var routeFound = TryFindSpatialRoute(
 				map,
@@ -139,7 +147,7 @@ namespace ClassicTilestorm
 			var sourceText = sourceProbe.Found ? $"{DescribeTile(map, sourceResolved)} -> {sourceProbe.PlayableTile}" : "<not found>";
 			var destinationText = destinationProbe.Found ? $"{DescribeTile(map, destinationResolved)} <- {destinationProbe.PlayableTile}" : "<not found>";
 
-			return $"Debug visualize applied: playable area {rawPlayableCount}->{playableCount} tile(s), culled {culledTiles}, nav-capable {rawNavPlayableCount}->{navPlayableCount}/{navTileBudget}, source candidates {sourceProbes.Count}, source {sourceText}, destination {destinationText}, {routeText}.";
+			return $"Debug visualize applied: playable area {rawPlayableCount}->{playableCount} tile(s), culled {culledTiles}, nav-capable {rawNavPlayableCount}->{navPlayableCount}/{navTileBudget}, source candidates {sourceProbes.Count}, exit candidates {exitProbes.Count}, source {sourceText}, destination {destinationText}, {routeText}.";
 		}
 
 		private static bool TryFindSpatialRoute(
@@ -358,9 +366,7 @@ namespace ClassicTilestorm
 		{
 			foreach (var existing in probes)
 			{
-				if (existing.StaticTile == probe.StaticTile &&
-					existing.PlayableTile == probe.PlayableTile &&
-					existing.Direction == probe.Direction)
+				if (IsSameProbe(existing, probe))
 				{
 					return;
 				}
@@ -368,6 +374,11 @@ namespace ClassicTilestorm
 
 			probes.Add(probe);
 		}
+
+		private static bool IsSameProbe(ConnectionProbe a, ConnectionProbe b)
+			=> a.StaticTile == b.StaticTile &&
+				a.PlayableTile == b.PlayableTile &&
+				a.Direction == b.Direction;
 
 		private static bool HasStaticNavConnection(Map map, int current, int next, int direction)
 		{
@@ -664,6 +675,9 @@ namespace ClassicTilestorm
 		}
 
 		private static int TintEndpoint(Map map, int tileIndex)
+			=> TintEndpoint(map, tileIndex, EndpointTint);
+
+		private static int TintEndpoint(Map map, int tileIndex, Color tint)
 		{
 			if (map == null || tileIndex < 0 || tileIndex >= map.Count)
 				return -1;
@@ -672,7 +686,7 @@ namespace ClassicTilestorm
 			if (tile.gameObject == null)
 				return -1;
 
-			DebugVisualizationHelper.TintTile(tile.gameObject, EndpointTint);
+			DebugVisualizationHelper.TintTile(tile.gameObject, tint);
 			return tileIndex;
 		}
 
@@ -686,7 +700,7 @@ namespace ClassicTilestorm
 			return $"{index} ({tileName})";
 		}
 
-		private static bool[] BuildPlayableArea(Map map, int sourceTile, int ignoredStaticExit, List<ConnectionProbe> exits)
+		private static bool[] BuildPlayableArea(Map map, int sourceTile, ConnectionProbe ignoredEntrance, List<ConnectionProbe> exits)
 		{
 			var area = new bool[map.Count];
 			var queue = new Queue<int>();
@@ -709,12 +723,18 @@ namespace ClassicTilestorm
 						continue;
 					}
 
-					if (next == ignoredStaticExit || !IsStaticNav(map, next))
+					if (!IsStaticNav(map, next))
 						continue;
 
 					var staticToPlayableDirection = Navigation.GetOppositeDirection(direction);
-					if ((map.GetTile(next).Nav & staticToPlayableDirection) != 0)
-						AddUniqueProbe(exits, new ConnectionProbe(next, current, staticToPlayableDirection, true));
+					if ((map.GetTile(next).Nav & staticToPlayableDirection) == 0)
+						continue;
+
+					var probe = new ConnectionProbe(next, current, staticToPlayableDirection, true);
+					if (IsSameProbe(probe, ignoredEntrance))
+						continue;
+
+					AddUniqueProbe(exits, probe);
 				}
 			}
 

@@ -7,6 +7,7 @@ namespace ClassicTilestorm
 	internal static class TileRouteAssembler
 	{
 		private const int NodeBudget = 100000;
+		private const int IslandDepthBudget = 8;
 
 		public sealed class Result
 		{
@@ -68,6 +69,18 @@ namespace ClassicTilestorm
 			}
 		}
 
+		private readonly struct IslandRouteConstraint
+		{
+			public readonly Anchor Source;
+			public readonly Anchor Destination;
+
+			public IslandRouteConstraint(Anchor source, Anchor destination)
+			{
+				Source = source;
+				Destination = destination;
+			}
+		}
+
 		public static bool TryAssemble(Map map, int sourceTile, int destinationTile, out Result result)
 		{
 			result = null;
@@ -80,89 +93,36 @@ namespace ClassicTilestorm
 
 			var state = (int[])map.State.Clone();
 			var rules = BuildRules(map);
-			var baseGrid = BuildScratchGrid(state, rules);
-			var sourceAnchors = FindAnchors(baseGrid, sourceTile, null, map.Width, map.Height);
+			var sourceAnchors = FindAnchors(BuildScratchGrid(state, rules), sourceTile, null, map.Width, map.Height);
 			var attempts = 0;
 			var lastSummary = "no source anchors.";
 
 			foreach (var sourceAnchor in sourceAnchors)
 			{
-				var destinationAnchors = new List<Anchor>();
-				var rawPlayable = FloodPlayableArea(baseGrid, sourceAnchor.PlayableCell, sourceAnchor.StaticCell, destinationAnchors, map.Width, map.Height);
-				FilterReachableExits(baseGrid, rawPlayable, destinationAnchors, destinationTile, map.Width, map.Height);
-				var navTiles = CollectMovableNavTiles(state, rawPlayable, rules);
-				var navBudget = CountNavTiles(navTiles);
-				var reusableCrossroads = CountReusableCrossroads(navTiles);
-				var rawCount = Count(rawPlayable);
-
-				foreach (var destinationAnchor in destinationAnchors)
+				if (TrySolveIslandChain(
+					state,
+					sourceAnchor,
+					sourceTile,
+					destinationTile,
+					rules,
+					map.Width,
+					map.Height,
+					new Dictionary<string, HashSet<string>>(),
+					new Dictionary<string, List<IslandRouteConstraint>>(),
+					0,
+					ref attempts,
+					out var assembledState,
+					out var summary))
 				{
-					attempts++;
-					var solutionArea = CullSolutionArea(
-						baseGrid,
-						rawPlayable,
-						sourceAnchor.PlayableCell,
-						destinationAnchor.PlayableCell,
-						navBudget,
-						reusableCrossroads,
-						map.Width,
-						map.Height);
-
-					var searchGrid = (CellBits[])baseGrid.Clone();
-					var route = new List<RouteCell>();
-					var counts = CloneCounts(navTiles);
-					var visited = new bool[state.Length];
-					var navVisits = new HashSet<int>();
-					var nodes = 0;
-					lastSummary = $"source {sourceAnchor.StaticCell}->{sourceAnchor.PlayableCell}, destination {destinationAnchor.StaticCell}<-{destinationAnchor.PlayableCell}, area {rawCount}->{Count(solutionArea)}, pool {DescribeNavTiles(navTiles)}, nodes {nodes}.";
-
-					if (!solutionArea[sourceAnchor.PlayableCell] || !solutionArea[destinationAnchor.PlayableCell])
-					{
-						lastSummary += " endpoint was culled.";
-						continue;
-					}
-
-					if (!TryExtendRoute(
-						searchGrid,
-						sourceAnchor.PlayableCell,
-						sourceAnchor.Direction,
-						destinationAnchor.PlayableCell,
-						Navigation.GetOppositeDirection(destinationAnchor.Direction),
-						solutionArea,
-						counts,
-						visited,
-						navVisits,
-						route,
-						map.Width,
-						map.Height,
-						ref nodes))
-					{
-						lastSummary = $"source {sourceAnchor.StaticCell}->{sourceAnchor.PlayableCell}, destination {destinationAnchor.StaticCell}<-{destinationAnchor.PlayableCell}, area {rawCount}->{Count(solutionArea)}, pool {DescribeNavTiles(navTiles)}, nodes {nodes}, no compatible chain.";
-						continue;
-					}
-
-					if (!TryBuildState(state, rawPlayable, route, navTiles, out var assembledState))
-					{
-						lastSummary = $"found route of {route.Count} tile(s), but failed to build state.";
-						continue;
-					}
-
-					if (!HasFlexibleRouteToDest(assembledState, sourceTile, destinationTile, rules, map.Width, map.Height))
-					{
-						lastSummary = $"built state from route of {route.Count} tile(s), but final route did not validate.";
-						continue;
-					}
-
 					result = new Result
 					{
 						State = assembledState,
-						Summary = $"assembled route with {route.Count} movable tile(s), area {rawCount}->{Count(solutionArea)}, pool {DescribeNavTiles(navTiles)}, anchors {sourceAnchor.StaticCell}->{sourceAnchor.PlayableCell} and {destinationAnchor.StaticCell}<-{destinationAnchor.PlayableCell}, nodes {nodes}."
+						Summary = summary
 					};
 					return true;
 				}
 
-				if (destinationAnchors.Count == 0)
-					lastSummary = $"source {sourceAnchor.StaticCell}->{sourceAnchor.PlayableCell}, area {rawCount}, pool {DescribeNavTiles(navTiles)}, no static-nav exit in raw flood.";
+				lastSummary = summary;
 			}
 
 			result = new Result
@@ -171,6 +131,210 @@ namespace ClassicTilestorm
 				Summary = $"no route assembled after {attempts} anchor attempt(s); last attempt: {lastSummary}"
 			};
 			return false;
+		}
+
+		private static bool TrySolveIslandChain(
+			int[] state,
+			Anchor sourceAnchor,
+			int originalSourceTile,
+			int destinationTile,
+			TileRule[] rules,
+			int width,
+			int height,
+			Dictionary<string, HashSet<string>> consumedIslandAnchors,
+			Dictionary<string, List<IslandRouteConstraint>> islandConstraints,
+			int depth,
+			ref int attempts,
+			out int[] assembledState,
+			out string summary)
+		{
+			assembledState = null;
+			summary = null;
+
+			if (depth > IslandDepthBudget)
+			{
+				summary = $"island chain exceeded depth budget {IslandDepthBudget}.";
+				return false;
+			}
+
+			var baseGrid = BuildScratchGrid(state, rules);
+			var destinationAnchors = new List<Anchor>();
+			var rawPlayable = FloodPlayableArea(baseGrid, sourceAnchor.PlayableCell, sourceAnchor, destinationAnchors, width, height);
+			var islandKey = BuildIslandKey(rawPlayable);
+			if (IsAnchorConsumed(consumedIslandAnchors, islandKey, sourceAnchor))
+			{
+				summary = $"island {islandKey} source anchor {DescribeAnchor(sourceAnchor)} was already consumed in this chain.";
+				return false;
+			}
+
+			FilterReachableExits(baseGrid, rawPlayable, destinationAnchors, destinationTile, width, height);
+			RemoveConsumedAnchors(destinationAnchors, consumedIslandAnchors, islandKey);
+			var navTiles = CollectMovableNavTiles(state, rawPlayable, rules);
+			var navBudget = CountNavTiles(navTiles);
+			var reusableCrossroads = CountReusableCrossroads(navTiles);
+			var rawCount = Count(rawPlayable);
+			var existingConstraints = GetIslandConstraints(islandConstraints, islandKey);
+
+			foreach (var destinationAnchor in destinationAnchors)
+			{
+				attempts++;
+				if (!TrySolveSingleIsland(
+					state,
+					baseGrid,
+					sourceAnchor,
+					destinationAnchor,
+					rawPlayable,
+					navTiles,
+					navBudget,
+					reusableCrossroads,
+					existingConstraints,
+					rules,
+					width,
+					height,
+					out var islandState,
+					out var islandSummary))
+				{
+					summary = islandSummary;
+					continue;
+				}
+
+				if (HasFlexibleRouteToDest(islandState, originalSourceTile, destinationTile, rules, width, height))
+				{
+					assembledState = islandState;
+					summary = $"assembled {depth + 1} island(s); {islandSummary}";
+					return true;
+				}
+
+				var islandGrid = BuildScratchGrid(islandState, rules);
+				if (!TryTraceExitContinuation(islandGrid, rawPlayable, destinationAnchor, destinationTile, width, height, out var continuation))
+				{
+					summary = $"{islandSummary}; exit did not reach destination or another island.";
+					continue;
+				}
+
+				if (continuation.ReachedDestination)
+				{
+					assembledState = islandState;
+					summary = $"assembled {depth + 1} island(s); {islandSummary}";
+					return true;
+				}
+
+				var nextConsumedIslandAnchors = CloneConsumedAnchors(consumedIslandAnchors);
+				AddConsumedAnchor(nextConsumedIslandAnchors, islandKey, sourceAnchor);
+				AddConsumedAnchor(nextConsumedIslandAnchors, islandKey, destinationAnchor);
+				var nextIslandConstraints = CloneIslandConstraints(islandConstraints);
+				AddIslandConstraint(nextIslandConstraints, islandKey, new IslandRouteConstraint(sourceAnchor, destinationAnchor));
+
+				if (TrySolveIslandChain(
+					islandState,
+					continuation.NextIslandAnchor,
+					originalSourceTile,
+					destinationTile,
+					rules,
+					width,
+					height,
+					nextConsumedIslandAnchors,
+					nextIslandConstraints,
+					depth + 1,
+					ref attempts,
+					out assembledState,
+					out var chainSummary))
+				{
+					summary = $"{islandSummary}; {chainSummary}";
+					return true;
+				}
+
+				summary = chainSummary;
+			}
+
+			if (destinationAnchors.Count == 0)
+				summary = $"source {sourceAnchor.StaticCell}->{sourceAnchor.PlayableCell}, area {rawCount}, pool {DescribeNavTiles(navTiles)}, no static-nav exit in raw flood.";
+
+			return false;
+		}
+
+		private static bool TrySolveSingleIsland(
+			int[] state,
+			CellBits[] baseGrid,
+			Anchor sourceAnchor,
+			Anchor destinationAnchor,
+			bool[] rawPlayable,
+			Dictionary<int, Queue<int>> navTiles,
+			int navBudget,
+			int reusableCrossroads,
+			List<IslandRouteConstraint> existingConstraints,
+			TileRule[] rules,
+			int width,
+			int height,
+			out int[] assembledState,
+			out string summary)
+		{
+			assembledState = null;
+			var rawCount = Count(rawPlayable);
+			var solutionArea = CullSolutionArea(
+				baseGrid,
+				rawPlayable,
+				sourceAnchor.PlayableCell,
+				destinationAnchor.PlayableCell,
+				navBudget,
+				reusableCrossroads,
+				width,
+				height);
+
+			var searchGrid = (CellBits[])baseGrid.Clone();
+			var route = new List<RouteCell>();
+			var counts = CloneCounts(navTiles);
+			var visited = new bool[state.Length];
+			var navVisits = new HashSet<int>();
+			var nodes = 0;
+			summary = $"source {sourceAnchor.StaticCell}->{sourceAnchor.PlayableCell}, destination {destinationAnchor.StaticCell}<-{destinationAnchor.PlayableCell}, area {rawCount}->{Count(solutionArea)}, pool {DescribeNavTiles(navTiles)}, nodes {nodes}.";
+
+			if (!solutionArea[sourceAnchor.PlayableCell] || !solutionArea[destinationAnchor.PlayableCell])
+			{
+				summary += " endpoint was culled.";
+				return false;
+			}
+
+			if (!TryExtendRoute(
+				searchGrid,
+				sourceAnchor.PlayableCell,
+				sourceAnchor.Direction,
+				destinationAnchor.PlayableCell,
+				Navigation.GetOppositeDirection(destinationAnchor.Direction),
+				solutionArea,
+				counts,
+				visited,
+				navVisits,
+				route,
+				width,
+				height,
+				ref nodes))
+			{
+				summary = $"source {sourceAnchor.StaticCell}->{sourceAnchor.PlayableCell}, destination {destinationAnchor.StaticCell}<-{destinationAnchor.PlayableCell}, area {rawCount}->{Count(solutionArea)}, pool {DescribeNavTiles(navTiles)}, nodes {nodes}, no compatible chain.";
+				return false;
+			}
+
+			if (!TryBuildState(state, rawPlayable, route, navTiles, out assembledState))
+			{
+				summary = $"found route of {route.Count} tile(s), but failed to build state.";
+				return false;
+			}
+
+			var constraints = BuildConstraintsWithCurrent(existingConstraints, sourceAnchor, destinationAnchor);
+			if (!ValidateIslandConstraints(assembledState, constraints, rules, width, height))
+			{
+				if (!TryRepairIslandBySwapping(assembledState, rawPlayable, constraints, rules, width, height, out assembledState))
+				{
+					summary = $"assembled route with {route.Count} tile(s), but existing island constraints could not be preserved.";
+					return false;
+				}
+
+				summary = $"assembled route with {route.Count} movable tile(s), repaired locked island constraints by swapping, area {rawCount}->{Count(solutionArea)}, pool {DescribeNavTiles(navTiles)}, anchors {sourceAnchor.StaticCell}->{sourceAnchor.PlayableCell} and {destinationAnchor.StaticCell}<-{destinationAnchor.PlayableCell}, nodes {nodes}.";
+				return true;
+			}
+
+			summary = $"assembled route with {route.Count} movable tile(s), area {rawCount}->{Count(solutionArea)}, pool {DescribeNavTiles(navTiles)}, anchors {sourceAnchor.StaticCell}->{sourceAnchor.PlayableCell} and {destinationAnchor.StaticCell}<-{destinationAnchor.PlayableCell}, nodes {nodes}.";
+			return true;
 		}
 
 		private static TileRule[] BuildRules(Map map)
@@ -267,9 +431,7 @@ namespace ClassicTilestorm
 		{
 			foreach (var existing in anchors)
 			{
-				if (existing.StaticCell == anchor.StaticCell &&
-					existing.PlayableCell == anchor.PlayableCell &&
-					existing.Direction == anchor.Direction)
+				if (IsSameAnchor(existing, anchor))
 				{
 					return;
 				}
@@ -278,7 +440,12 @@ namespace ClassicTilestorm
 			anchors.Add(anchor);
 		}
 
-		private static bool[] FloodPlayableArea(CellBits[] grid, int source, int ignoredStaticExit, List<Anchor> exits, int width, int height)
+		private static bool IsSameAnchor(Anchor a, Anchor b)
+			=> a.StaticCell == b.StaticCell &&
+				a.PlayableCell == b.PlayableCell &&
+				a.Direction == b.Direction;
+
+		private static bool[] FloodPlayableArea(CellBits[] grid, int source, Anchor ignoredEntrance, List<Anchor> exits, int width, int height)
 		{
 			var area = new bool[grid.Length];
 			if (source < 0 || source >= grid.Length || !IsPlayableAt(grid, source))
@@ -304,12 +471,18 @@ namespace ClassicTilestorm
 						continue;
 					}
 
-					if (next == ignoredStaticExit || !IsStaticNavAt(grid, next))
+					if (!IsStaticNavAt(grid, next))
 						continue;
 
 					var staticToPlayableDirection = Navigation.GetOppositeDirection(direction);
-					if ((grid[next].Nav & staticToPlayableDirection) != 0)
-						AddAnchor(exits, new Anchor(next, current, staticToPlayableDirection));
+					if ((grid[next].Nav & staticToPlayableDirection) == 0)
+						continue;
+
+					var exit = new Anchor(next, current, staticToPlayableDirection);
+					if (IsSameAnchor(exit, ignoredEntrance))
+						continue;
+
+					AddAnchor(exits, exit);
 				}
 			}
 
@@ -328,6 +501,18 @@ namespace ClassicTilestorm
 			}
 		}
 
+		private readonly struct ExitContinuation
+		{
+			public readonly bool ReachedDestination;
+			public readonly Anchor NextIslandAnchor;
+
+			public ExitContinuation(bool reachedDestination, Anchor nextIslandAnchor)
+			{
+				ReachedDestination = reachedDestination;
+				NextIslandAnchor = nextIslandAnchor;
+			}
+		}
+
 		private readonly struct TraceDirectionState
 		{
 			public readonly int Cell;
@@ -341,9 +526,16 @@ namespace ClassicTilestorm
 		}
 
 		private static bool ExitCanReachDestinationOrNewIsland(CellBits[] grid, bool[] playableArea, Anchor exit, int destinationTile, int width, int height)
+			=> TryTraceExitContinuation(grid, playableArea, exit, destinationTile, width, height, out _);
+
+		private static bool TryTraceExitContinuation(CellBits[] grid, bool[] playableArea, Anchor exit, int destinationTile, int width, int height, out ExitContinuation continuation)
 		{
+			continuation = default;
 			if (exit.StaticCell == destinationTile)
+			{
+				continuation = new ExitContinuation(true, default);
 				return true;
+			}
 
 			var queue = new Queue<TraceDirectionState>();
 			var visited = new HashSet<int>();
@@ -368,12 +560,18 @@ namespace ClassicTilestorm
 					continue;
 
 				if (next == destinationTile)
+				{
+					continuation = new ExitContinuation(true, default);
 					return true;
+				}
 
 				if (IsPlayableAt(grid, next))
 				{
 					if (!playableArea[next])
+					{
+						continuation = new ExitContinuation(false, new Anchor(current, next, outgoing));
 						return true;
+					}
 
 					continue;
 				}
@@ -382,6 +580,207 @@ namespace ClassicTilestorm
 					continue;
 
 				queue.Enqueue(new TraceDirectionState(next, outgoing));
+			}
+
+			return false;
+		}
+
+		private static string BuildIslandKey(bool[] playableArea)
+		{
+			if (playableArea == null)
+				return "<null>";
+
+			var cells = new List<int>();
+			for (var i = 0; i < playableArea.Length; i++)
+			{
+				if (playableArea[i])
+					cells.Add(i);
+			}
+
+			return string.Join(",", cells);
+		}
+
+		private static Dictionary<string, HashSet<string>> CloneConsumedAnchors(Dictionary<string, HashSet<string>> consumedAnchors)
+		{
+			var clone = new Dictionary<string, HashSet<string>>();
+			if (consumedAnchors == null)
+				return clone;
+
+			foreach (var pair in consumedAnchors)
+				clone[pair.Key] = new HashSet<string>(pair.Value);
+
+			return clone;
+		}
+
+		private static void AddConsumedAnchor(Dictionary<string, HashSet<string>> consumedAnchors, string islandKey, Anchor anchor)
+		{
+			if (consumedAnchors == null || string.IsNullOrEmpty(islandKey))
+				return;
+
+			if (!consumedAnchors.TryGetValue(islandKey, out var anchors))
+			{
+				anchors = new HashSet<string>();
+				consumedAnchors[islandKey] = anchors;
+			}
+
+			anchors.Add(BuildAnchorKey(anchor));
+		}
+
+		private static bool IsAnchorConsumed(Dictionary<string, HashSet<string>> consumedAnchors, string islandKey, Anchor anchor)
+			=> consumedAnchors != null &&
+				consumedAnchors.TryGetValue(islandKey, out var anchors) &&
+				anchors.Contains(BuildAnchorKey(anchor));
+
+		private static void RemoveConsumedAnchors(List<Anchor> anchors, Dictionary<string, HashSet<string>> consumedAnchors, string islandKey)
+		{
+			if (anchors == null || consumedAnchors == null || !consumedAnchors.TryGetValue(islandKey, out var consumed))
+				return;
+
+			for (var i = anchors.Count - 1; i >= 0; i--)
+			{
+				if (consumed.Contains(BuildAnchorKey(anchors[i])))
+					anchors.RemoveAt(i);
+			}
+		}
+
+		private static string BuildAnchorKey(Anchor anchor)
+			=> $"{anchor.StaticCell}:{anchor.PlayableCell}:{anchor.Direction}";
+
+		private static string DescribeAnchor(Anchor anchor)
+			=> $"{anchor.StaticCell}->{anchor.PlayableCell}/{DescribeNav(anchor.Direction)}";
+
+		private static Dictionary<string, List<IslandRouteConstraint>> CloneIslandConstraints(Dictionary<string, List<IslandRouteConstraint>> constraints)
+		{
+			var clone = new Dictionary<string, List<IslandRouteConstraint>>();
+			if (constraints == null)
+				return clone;
+
+			foreach (var pair in constraints)
+				clone[pair.Key] = new List<IslandRouteConstraint>(pair.Value);
+
+			return clone;
+		}
+
+		private static List<IslandRouteConstraint> GetIslandConstraints(Dictionary<string, List<IslandRouteConstraint>> constraints, string islandKey)
+		{
+			if (constraints == null || !constraints.TryGetValue(islandKey, out var result))
+				return new List<IslandRouteConstraint>();
+
+			return result;
+		}
+
+		private static void AddIslandConstraint(Dictionary<string, List<IslandRouteConstraint>> constraints, string islandKey, IslandRouteConstraint constraint)
+		{
+			if (constraints == null || string.IsNullOrEmpty(islandKey))
+				return;
+
+			if (!constraints.TryGetValue(islandKey, out var islandConstraints))
+			{
+				islandConstraints = new List<IslandRouteConstraint>();
+				constraints[islandKey] = islandConstraints;
+			}
+
+			islandConstraints.Add(constraint);
+		}
+
+		private static List<IslandRouteConstraint> BuildConstraintsWithCurrent(List<IslandRouteConstraint> existingConstraints, Anchor sourceAnchor, Anchor destinationAnchor)
+		{
+			var constraints = existingConstraints != null
+				? new List<IslandRouteConstraint>(existingConstraints)
+				: new List<IslandRouteConstraint>();
+
+			constraints.Add(new IslandRouteConstraint(sourceAnchor, destinationAnchor));
+			return constraints;
+		}
+
+		private static bool TryRepairIslandBySwapping(
+			int[] state,
+			bool[] islandCells,
+			List<IslandRouteConstraint> constraints,
+			TileRule[] rules,
+			int width,
+			int height,
+			out int[] repairedState)
+		{
+			repairedState = null;
+			if (state == null || islandCells == null || constraints == null)
+				return false;
+
+			var cells = new List<int>();
+			for (var i = 0; i < islandCells.Length; i++)
+			{
+				if (islandCells[i])
+					cells.Add(i);
+			}
+
+			for (var a = 0; a < cells.Count; a++)
+			{
+				for (var b = a + 1; b < cells.Count; b++)
+				{
+					var first = cells[a];
+					var second = cells[b];
+					var firstNav = GetRuleAt(state, first, rules).Nav;
+					var secondNav = GetRuleAt(state, second, rules).Nav;
+					if (firstNav == secondNav)
+						continue;
+
+					var candidate = (int[])state.Clone();
+					(candidate[first], candidate[second]) = (candidate[second], candidate[first]);
+
+					if (!ValidateIslandConstraints(candidate, constraints, rules, width, height))
+						continue;
+
+					repairedState = candidate;
+					return true;
+				}
+			}
+
+			return false;
+		}
+
+		private static bool ValidateIslandConstraints(int[] state, List<IslandRouteConstraint> constraints, TileRule[] rules, int width, int height)
+		{
+			if (constraints == null)
+				return true;
+
+			foreach (var constraint in constraints)
+			{
+				if (!HasRouteBetweenAnchors(state, constraint.Source, constraint.Destination, rules, width, height))
+					return false;
+			}
+
+			return true;
+		}
+
+		private static bool HasRouteBetweenAnchors(int[] state, Anchor source, Anchor destination, TileRule[] rules, int width, int height)
+		{
+			if (state == null || rules == null)
+				return false;
+
+			var destinationEntryDirection = Navigation.GetOppositeDirection(destination.Direction);
+			var current = source.StaticCell;
+			var direction = source.Direction;
+			var visited = new HashSet<int>();
+
+			while (direction != 0)
+			{
+				var next = GetAdjacentTile(current, direction, width, height);
+				if (next < 0)
+					return false;
+
+				if (next == destination.StaticCell)
+					return direction == destinationEntryDirection;
+
+				var visitKey = next * 16 + direction;
+				if (!visited.Add(visitKey))
+					return false;
+
+				var nextNav = GetRuleAt(state, next, rules).Nav;
+				if (nextNav == 0)
+					return false;
+
+				direction = Navigation.CalculateNav(direction, nextNav);
+				current = next;
 			}
 
 			return false;
