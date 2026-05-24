@@ -6,7 +6,7 @@ namespace ClassicTilestorm
 {
 	internal static class TileRouteAssembler
 	{
-		private const int RouteNodeBudget = 50000;
+		private const int NodeBudget = 100000;
 
 		public sealed class Result
 		{
@@ -16,25 +16,43 @@ namespace ClassicTilestorm
 
 		private readonly struct TileRule
 		{
-			public readonly bool Bake;
+			public readonly bool Static;
 			public readonly int Nav;
 
-			public TileRule(bool bake, int nav)
+			public TileRule(bool isStatic, int nav)
 			{
-				Bake = bake;
+				Static = isStatic;
 				Nav = nav;
 			}
 		}
 
+		private struct CellBits
+		{
+			public bool Static;
+			public int Nav;
+		}
+
 		private readonly struct Anchor
 		{
-			public readonly int Cell;
+			public readonly int StaticCell;
+			public readonly int PlayableCell;
 			public readonly int Direction;
 
-			public Anchor(int cell, int direction)
+			public Anchor(int staticCell, int playableCell, int direction)
+			{
+				StaticCell = staticCell;
+				PlayableCell = playableCell;
+				Direction = direction;
+			}
+		}
+
+		private readonly struct TraceState
+		{
+			public readonly int Cell;
+
+			public TraceState(int cell)
 			{
 				Cell = cell;
-				Direction = direction;
 			}
 		}
 
@@ -50,18 +68,6 @@ namespace ClassicTilestorm
 			}
 		}
 
-		private readonly struct TraceState
-		{
-			public readonly int Index;
-			public readonly int Direction;
-
-			public TraceState(int index, int direction)
-			{
-				Index = index;
-				Direction = direction;
-			}
-		}
-
 		public static bool TryAssemble(Map map, int sourceTile, int destinationTile, out Result result)
 		{
 			result = null;
@@ -74,78 +80,94 @@ namespace ClassicTilestorm
 
 			var state = (int[])map.State.Clone();
 			var rules = BuildRules(map);
-			var rawPlayableArea = BuildPlayableArea(state, sourceTile, destinationTile, rules, map.Width, map.Height);
-			var sourceAnchors = FindAnchors(state, sourceTile, rawPlayableArea, rules, map.Width, map.Height, fromSource: true);
-			var destinationAnchors = FindAnchors(state, destinationTile, rawPlayableArea, rules, map.Width, map.Height, fromSource: false);
-			var attemptedRoutes = 0;
+			var baseGrid = BuildScratchGrid(state, rules);
+			var sourceAnchors = FindAnchors(baseGrid, sourceTile, null, map.Width, map.Height);
+			var attempts = 0;
+			var lastSummary = "no source anchors.";
 
 			foreach (var sourceAnchor in sourceAnchors)
 			{
+				var rawPlayable = FloodPlayableArea(baseGrid, sourceAnchor.PlayableCell, map.Width, map.Height);
+				var navTiles = CollectMovableNavTiles(state, rawPlayable, rules);
+				var navBudget = CountNavTiles(navTiles);
+				var reusableCrossroads = CountReusableCrossroads(navTiles);
+				var rawCount = Count(rawPlayable);
+				var destinationAnchors = FindAnchors(baseGrid, destinationTile, rawPlayable, map.Width, map.Height);
+
 				foreach (var destinationAnchor in destinationAnchors)
 				{
-					var rawAnchorPlayableArea = BuildPlayableArea(state, sourceAnchor.Cell, destinationAnchor.Cell, rules, map.Width, map.Height);
-					var rawPlayableCount = Count(rawAnchorPlayableArea);
-					var navTiles = CollectPlayableTilesByNav(state, rawAnchorPlayableArea, rules);
-					var solutionArea = CullToReachableSolutionArea(
-						state,
-						rawAnchorPlayableArea,
-						sourceAnchor.Cell,
-						destinationAnchor.Cell,
-						rules,
+					attempts++;
+					var solutionArea = CullSolutionArea(
+						baseGrid,
+						rawPlayable,
+						sourceAnchor.PlayableCell,
+						destinationAnchor.PlayableCell,
+						navBudget,
+						reusableCrossroads,
 						map.Width,
-						map.Height,
-						out var navTileBudget);
-					var solutionAreaCount = Count(solutionArea);
+						map.Height);
 
-					var counts = CloneCounts(navTiles);
+					var searchGrid = (CellBits[])baseGrid.Clone();
 					var route = new List<RouteCell>();
+					var counts = CloneCounts(navTiles);
 					var visited = new bool[state.Length];
+					var navVisits = new HashSet<int>();
 					var nodes = 0;
+					lastSummary = $"source {sourceAnchor.StaticCell}->{sourceAnchor.PlayableCell}, destination {destinationAnchor.StaticCell}<-{destinationAnchor.PlayableCell}, area {rawCount}->{Count(solutionArea)}, pool {DescribeNavTiles(navTiles)}, nodes {nodes}.";
 
-					if (!TryFindRouteIncludingStatic(
-						state,
-						sourceAnchor.Cell,
+					if (!solutionArea[sourceAnchor.PlayableCell] || !solutionArea[destinationAnchor.PlayableCell])
+					{
+						lastSummary += " endpoint was culled.";
+						continue;
+					}
+
+					if (!TryExtendRoute(
+						searchGrid,
+						sourceAnchor.PlayableCell,
 						sourceAnchor.Direction,
-						destinationAnchor.Cell,
-						destinationAnchor.Direction,
+						destinationAnchor.PlayableCell,
+						Navigation.GetOppositeDirection(destinationAnchor.Direction),
 						solutionArea,
 						counts,
 						visited,
+						navVisits,
 						route,
-						rules,
 						map.Width,
 						map.Height,
 						ref nodes))
 					{
+						lastSummary = $"source {sourceAnchor.StaticCell}->{sourceAnchor.PlayableCell}, destination {destinationAnchor.StaticCell}<-{destinationAnchor.PlayableCell}, area {rawCount}->{Count(solutionArea)}, pool {DescribeNavTiles(navTiles)}, nodes {nodes}, no compatible chain.";
 						continue;
 					}
 
-					attemptedRoutes++;
-					if (!TryBuildState(state, rawAnchorPlayableArea, route, navTiles, rules, out var assembledState))
-						continue;
-
-					if (!IsPermutationOf(state, assembledState, out var permutationError))
+					if (!TryBuildState(state, rawPlayable, route, navTiles, out var assembledState))
 					{
-						Debug.LogWarning($"Route assembly rejected: {permutationError}");
+						lastSummary = $"found route of {route.Count} tile(s), but failed to build state.";
 						continue;
 					}
 
-					if (NavToDest(assembledState, sourceTile, destinationTile, rules, map.Width, map.Height) == 0)
+					if (!HasFlexibleRouteToDest(assembledState, sourceTile, destinationTile, rules, map.Width, map.Height))
+					{
+						lastSummary = $"built state from route of {route.Count} tile(s), but final route did not validate.";
 						continue;
+					}
 
 					result = new Result
 					{
 						State = assembledState,
-						Summary = $"assembled unordered route with {route.Count} movable tile(s) from {navTileBudget} raw candidate nav tile(s), playable area {rawPlayableCount}->{solutionAreaCount} tile(s), using {sourceAnchors.Count} source anchor(s) and {destinationAnchors.Count} destination anchor(s)."
+						Summary = $"assembled route with {route.Count} movable tile(s), area {rawCount}->{Count(solutionArea)}, pool {DescribeNavTiles(navTiles)}, anchors {sourceAnchor.StaticCell}->{sourceAnchor.PlayableCell} and {destinationAnchor.StaticCell}<-{destinationAnchor.PlayableCell}, nodes {nodes}."
 					};
 					return true;
 				}
+
+				if (destinationAnchors.Count == 0)
+					lastSummary = $"source {sourceAnchor.StaticCell}->{sourceAnchor.PlayableCell}, area {rawCount}, pool {DescribeNavTiles(navTiles)}, no destination anchor in raw flood.";
 			}
 
 			result = new Result
 			{
 				State = null,
-				Summary = $"no validated unordered route found with {sourceAnchors.Count} source anchor(s), {destinationAnchors.Count} destination anchor(s), and {attemptedRoutes} candidate route(s)."
+				Summary = $"no route assembled after {attempts} anchor attempt(s); last attempt: {lastSummary}"
 			};
 			return false;
 		}
@@ -167,166 +189,130 @@ namespace ClassicTilestorm
 					baseFlags & (int)DefinitionFlags.DirMask,
 					Mathf.RoundToInt(variant.angle));
 
-				rules[i] = new TileRule(definition?.Bake ?? false, rotatedNav);
+				rules[i] = new TileRule(definition?.Bake ?? true, rotatedNav);
 			}
 
 			return rules;
 		}
 
-		private static bool[] BuildPlayableArea(int[] state, int sourceTile, int destinationTile, TileRule[] rules, int width, int height)
+		private static CellBits[] BuildScratchGrid(int[] state, TileRule[] rules)
 		{
-			var area = new bool[state.Length];
-			var queue = new Queue<int>();
-
-			AddPlayableSeedsAround(state, sourceTile, rules, width, height, area, queue);
-			FloodPlayableArea(state, rules, width, height, area, queue);
-
-			AddPlayableSeedsAround(state, destinationTile, rules, width, height, area, queue);
-			FloodPlayableArea(state, rules, width, height, area, queue);
-
-			if (Count(area) > 0)
-				return area;
-
+			var grid = new CellBits[state.Length];
 			for (var i = 0; i < state.Length; i++)
-				area[i] = IsPlayableAt(state, i, rules);
-
-			return area;
-		}
-
-		private static void AddPlayableSeedsAround(int[] state, int index, TileRule[] rules, int width, int height, bool[] area, Queue<int> queue)
-		{
-			TryAddPlayableSeed(state, index, rules, area, queue);
-
-			foreach (var direction in Navigation.Directions)
 			{
-				var next = GetAdjacentTile(index, direction, width, height);
-				if (next >= 0)
-					TryAddPlayableSeed(state, next, rules, area, queue);
-			}
-		}
+				if (!TryGetRule(state, i, rules, out var rule))
+					continue;
 
-		private static bool TryAddPlayableSeed(int[] state, int index, TileRule[] rules, bool[] area, Queue<int> queue)
-		{
-			if (index < 0 || index >= area.Length || area[index] || !IsPlayableAt(state, index, rules))
-				return false;
-
-			area[index] = true;
-			queue.Enqueue(index);
-			return true;
-		}
-
-		private static void FloodPlayableArea(int[] state, TileRule[] rules, int width, int height, bool[] area, Queue<int> queue)
-		{
-			while (queue.Count > 0)
-			{
-				var current = queue.Dequeue();
-				foreach (var direction in Navigation.Directions)
+				grid[i] = new CellBits
 				{
-					var next = GetAdjacentTile(current, direction, width, height);
-					if (next < 0 || area[next] || !IsPlayableAt(state, next, rules))
-						continue;
-
-					area[next] = true;
-					queue.Enqueue(next);
-				}
+					Static = rule.Static,
+					Nav = rule.Static ? rule.Nav : 0
+				};
 			}
+
+			return grid;
 		}
 
-		private static bool IsPlayableAt(int[] state, int index, TileRule[] rules)
-			=> TryGetRule(state, index, rules, out var rule) && !rule.Bake;
-
-		private static List<Anchor> FindAnchors(int[] state, int endpoint, bool[] playableArea, TileRule[] rules, int width, int height, bool fromSource)
+		private static List<Anchor> FindAnchors(
+			CellBits[] grid,
+			int origin,
+			bool[] targetPlayableArea,
+			int width,
+			int height)
 		{
 			var anchors = new List<Anchor>();
+			if (origin < 0 || origin >= grid.Length)
+				return anchors;
 
-			if (endpoint >= 0 && endpoint < playableArea.Length && playableArea[endpoint])
-			{
-				foreach (var direction in Navigation.Directions)
-					anchors.Add(new Anchor(endpoint, direction));
-			}
+			if (!IsStaticNavAt(grid, origin))
+				return anchors;
 
-			var endpointRule = GetRuleAt(state, endpoint, rules);
 			var queue = new Queue<TraceState>();
 			var visited = new HashSet<int>();
+			queue.Enqueue(new TraceState(origin));
 
-			foreach (var direction in Navigation.Directions)
+			while (queue.Count > 0 && visited.Count < NodeBudget)
 			{
-				if ((endpointRule.Nav & direction) != 0)
-					queue.Enqueue(new TraceState(endpoint, direction));
-			}
-
-			while (queue.Count > 0 && visited.Count < RouteNodeBudget)
-			{
-				var current = queue.Dequeue();
-				var visitKey = current.Index * 16 + current.Direction;
-				if (!visited.Add(visitKey))
+				var current = queue.Dequeue().Cell;
+				if (!visited.Add(current))
 					continue;
 
-				var next = GetAdjacentTile(current.Index, current.Direction, width, height);
-				if (next < 0)
-					continue;
-
-				if (playableArea[next])
-				{
-					var routeDirection = fromSource
-						? current.Direction
-						: Navigation.GetOppositeDirection(current.Direction);
-					AddAnchor(anchors, new Anchor(next, routeDirection));
-					continue;
-				}
-
-				var nextRule = GetRuleAt(state, next, rules);
-				var nextDirections = Navigation.CalculateNav(current.Direction, nextRule.Nav);
+				var currentNav = grid[current].Nav;
 				foreach (var direction in Navigation.Directions)
 				{
-					if ((nextDirections & direction) != 0)
-						queue.Enqueue(new TraceState(next, direction));
+					if ((currentNav & direction) == 0)
+						continue;
+
+					var next = GetAdjacentTile(current, direction, width, height);
+					if (next < 0)
+						continue;
+
+					if (IsPlayableAt(grid, next))
+					{
+						if (targetPlayableArea == null || targetPlayableArea[next])
+							AddAnchor(anchors, new Anchor(current, next, direction));
+						continue;
+					}
+
+					if (HasStaticConnection(grid, current, next, direction))
+						queue.Enqueue(new TraceState(next));
 				}
 			}
 
 			return anchors;
 		}
 
-		private static void AddBoundaryAnchors(List<Anchor> anchors, bool[] playableArea, int width, int height, bool fromSource)
-		{
-			for (var index = 0; index < playableArea.Length; index++)
-			{
-				if (!playableArea[index])
-					continue;
-
-				foreach (var direction in Navigation.Directions)
-				{
-					var outside = fromSource
-						? GetAdjacentTile(index, Navigation.GetOppositeDirection(direction), width, height)
-						: GetAdjacentTile(index, direction, width, height);
-
-					if (outside >= 0 && playableArea[outside])
-						continue;
-
-					AddAnchor(anchors, new Anchor(index, direction));
-				}
-			}
-		}
-
 		private static void AddAnchor(List<Anchor> anchors, Anchor anchor)
 		{
 			foreach (var existing in anchors)
-				if (existing.Cell == anchor.Cell && existing.Direction == anchor.Direction)
+			{
+				if (existing.StaticCell == anchor.StaticCell &&
+					existing.PlayableCell == anchor.PlayableCell &&
+					existing.Direction == anchor.Direction)
+				{
 					return;
+				}
+			}
 
 			anchors.Add(anchor);
 		}
 
-		private static Dictionary<int, Queue<int>> CollectPlayableTilesByNav(int[] state, bool[] playableArea, TileRule[] rules)
+		private static bool[] FloodPlayableArea(CellBits[] grid, int source, int width, int height)
+		{
+			var area = new bool[grid.Length];
+			if (source < 0 || source >= grid.Length || !IsPlayableAt(grid, source))
+				return area;
+
+			var queue = new Queue<int>();
+			area[source] = true;
+			queue.Enqueue(source);
+
+			while (queue.Count > 0)
+			{
+				var current = queue.Dequeue();
+				foreach (var direction in Navigation.Directions)
+				{
+					var next = GetAdjacentTile(current, direction, width, height);
+					if (next < 0 || area[next] || !IsPlayableAt(grid, next))
+						continue;
+
+					area[next] = true;
+					queue.Enqueue(next);
+				}
+			}
+
+			return area;
+		}
+
+		private static Dictionary<int, Queue<int>> CollectMovableNavTiles(int[] state, bool[] rawPlayable, TileRule[] rules)
 		{
 			var result = new Dictionary<int, Queue<int>>();
-
-			for (var index = 0; index < playableArea.Length; index++)
+			for (var i = 0; i < rawPlayable.Length; i++)
 			{
-				if (!playableArea[index])
+				if (!rawPlayable[i])
 					continue;
 
-				var logicalIndex = state[index];
+				var logicalIndex = state[i];
 				if (logicalIndex < 0 || logicalIndex >= rules.Length)
 					continue;
 
@@ -346,55 +332,37 @@ namespace ClassicTilestorm
 			return result;
 		}
 
-		private static Dictionary<int, int> CloneCounts(Dictionary<int, Queue<int>> navTiles)
-		{
-			var counts = new Dictionary<int, int>();
-			foreach (var pair in navTiles)
-				counts[pair.Key] = pair.Value.Count;
-			return counts;
-		}
-
-		private static bool[] CullToReachableSolutionArea(
-			int[] state,
-			bool[] playableArea,
+		private static bool[] CullSolutionArea(
+			CellBits[] grid,
+			bool[] rawPlayable,
 			int sourceEntry,
 			int destinationEntry,
-			TileRule[] rules,
+			int navBudget,
+			int reusableCrossroads,
 			int width,
-			int height,
-			out int navTileBudget)
+			int height)
 		{
-			navTileBudget = CountNavTiles(state, playableArea, rules);
-			if (playableArea == null || sourceEntry < 0 || destinationEntry < 0 ||
-				sourceEntry >= playableArea.Length || destinationEntry >= playableArea.Length)
-			{
-				return playableArea ?? Array.Empty<bool>();
-			}
-
-			var solutionArea = (bool[])playableArea.Clone();
-			if (navTileBudget <= 0)
+			var solutionArea = (bool[])rawPlayable.Clone();
+			if (navBudget <= 0)
 				return solutionArea;
 
 			var previousCount = -1;
-
 			while (previousCount != Count(solutionArea))
 			{
 				previousCount = Count(solutionArea);
-
-				var sourceDistance = BuildDistanceMap(state, solutionArea, sourceEntry, rules, width, height);
-				var destinationDistance = BuildDistanceMap(state, solutionArea, destinationEntry, rules, width, height);
+				var sourceDistance = BuildDistanceMap(grid, solutionArea, sourceEntry, width, height);
+				var destinationDistance = BuildDistanceMap(grid, solutionArea, destinationEntry, width, height);
 
 				for (var i = 0; i < solutionArea.Length; i++)
 				{
 					if (!solutionArea[i])
 						continue;
 
-					var canReachBothEnds = sourceDistance[i] >= 0 && destinationDistance[i] >= 0;
-					var fillValue = canReachBothEnds
-						? sourceDistance[i] + destinationDistance[i] + 1
+					var reachable = sourceDistance[i] >= 0 && destinationDistance[i] >= 0;
+					var routeLength = reachable
+						? AdjustRouteLengthForReusableCrossroads(sourceDistance[i], destinationDistance[i], reusableCrossroads)
 						: int.MaxValue;
-
-					if (canReachBothEnds && fillValue <= navTileBudget)
+					if (reachable && routeLength <= navBudget)
 						continue;
 
 					solutionArea[i] = false;
@@ -404,12 +372,22 @@ namespace ClassicTilestorm
 			return solutionArea;
 		}
 
-		private static int[] BuildDistanceMap(int[] state, bool[] playableArea, int source, TileRule[] rules, int width, int height)
+		private static int AdjustRouteLengthForReusableCrossroads(int sourceDistance, int destinationDistance, int reusableCrossroads)
 		{
-			var distance = new int[playableArea.Length];
+			var routeLength = sourceDistance + destinationDistance + 1;
+			if (reusableCrossroads <= 0 || sourceDistance <= 0 || destinationDistance <= 0)
+				return routeLength;
+
+			var doubleChargeCredit = Math.Min(reusableCrossroads, Math.Min(sourceDistance, destinationDistance));
+			return routeLength - doubleChargeCredit;
+		}
+
+		private static int[] BuildDistanceMap(CellBits[] grid, bool[] solutionArea, int source, int width, int height)
+		{
+			var distance = new int[solutionArea.Length];
 			Array.Fill(distance, -1);
 
-			if (source < 0 || source >= playableArea.Length || !playableArea[source])
+			if (source < 0 || source >= solutionArea.Length || !solutionArea[source])
 				return distance;
 
 			var queue = new LinkedList<int>();
@@ -424,15 +402,15 @@ namespace ClassicTilestorm
 				foreach (var direction in Navigation.Directions)
 				{
 					var next = GetAdjacentTile(current, direction, width, height);
-					if (next < 0 || !TryGetFillStepCost(state, playableArea, current, next, direction, rules, out var stepCost))
+					if (next < 0 || !TryGetFillStepCost(grid, solutionArea, current, next, direction, out var cost))
 						continue;
 
-					var nextDistance = distance[current] + stepCost;
+					var nextDistance = distance[current] + cost;
 					if (distance[next] >= 0 && distance[next] <= nextDistance)
 						continue;
 
 					distance[next] = nextDistance;
-					if (stepCost == 0)
+					if (cost == 0)
 						queue.AddFirst(next);
 					else
 						queue.AddLast(next);
@@ -442,33 +420,25 @@ namespace ClassicTilestorm
 			return distance;
 		}
 
-		private static bool TryGetFillStepCost(
-			int[] state,
-			bool[] playableArea,
-			int current,
-			int next,
-			int direction,
-			TileRule[] rules,
-			out int stepCost)
+		private static bool TryGetFillStepCost(CellBits[] grid, bool[] solutionArea, int current, int next, int direction, out int cost)
 		{
-			stepCost = 0;
-
-			var currentPlayable = current >= 0 && current < playableArea.Length && playableArea[current];
-			var nextPlayable = next >= 0 && next < playableArea.Length && playableArea[next];
-			var currentStatic = IsStaticNavAt(state, current, rules);
-			var nextStatic = IsStaticNavAt(state, next, rules);
+			cost = 0;
+			var currentPlayable = current >= 0 && current < solutionArea.Length && solutionArea[current];
+			var nextPlayable = next >= 0 && next < solutionArea.Length && solutionArea[next];
+			var currentStatic = IsStaticNavAt(grid, current);
+			var nextStatic = IsStaticNavAt(grid, next);
 
 			if (nextPlayable)
 			{
 				if (currentPlayable)
 				{
-					stepCost = 1;
+					cost = 1;
 					return true;
 				}
 
-				if (currentStatic && (GetRuleAt(state, current, rules).Nav & direction) != 0)
+				if (currentStatic && (grid[current].Nav & direction) != 0)
 				{
-					stepCost = 1;
+					cost = 1;
 					return true;
 				}
 			}
@@ -476,162 +446,208 @@ namespace ClassicTilestorm
 			if (!nextStatic)
 				return false;
 
-			if (currentPlayable && (GetRuleAt(state, next, rules).Nav & Navigation.GetOppositeDirection(direction)) != 0)
+			if (currentPlayable && (grid[next].Nav & Navigation.GetOppositeDirection(direction)) != 0)
 				return true;
 
-			return currentStatic && HasStaticNavConnection(state, current, next, direction, rules);
+			return currentStatic && HasStaticConnection(grid, current, next, direction);
 		}
 
-		private static bool TryFindRouteIncludingStatic(
-			int[] state,
-			int index,
+		private static bool TryExtendRoute(
+			CellBits[] grid,
+			int current,
 			int incomingDirection,
 			int destinationCell,
 			int exitDirection,
-			bool[] playableArea,
+			bool[] solutionArea,
 			Dictionary<int, int> navCounts,
 			bool[] visited,
+			HashSet<int> navVisits,
 			List<RouteCell> route,
-			TileRule[] rules,
 			int width,
 			int height,
 			ref int nodes)
 		{
-			if (index < 0 || index >= playableArea.Length || visited[index])
+			if (current < 0 || current >= solutionArea.Length)
 				return false;
 
-			var isPlayable = playableArea[index];
-			var isStatic = IsStaticNavAt(state, index, rules);
-			if (!isPlayable && !isStatic)
-				return false;
-
-			if (++nodes > RouteNodeBudget)
-				return false;
-
-			visited[index] = true;
-
-			if (isStatic)
+			if (grid[current].Nav != 0)
 			{
-				var nextDirections = Navigation.CalculateNav(incomingDirection, GetRuleAt(state, index, rules).Nav);
-				if (index == destinationCell && (nextDirections & exitDirection) != 0)
+				var visitKey = current * 16 + incomingDirection;
+				if (!navVisits.Add(visitKey))
+					return false;
+
+				var outgoing = GetOutgoingDirections(incomingDirection, grid[current].Nav);
+				if (outgoing == 0)
+				{
+					navVisits.Remove(visitKey);
+					return false;
+				}
+
+				if (++nodes > NodeBudget)
+				{
+					navVisits.Remove(visitKey);
+					return false;
+				}
+
+				if (current == destinationCell && (outgoing & exitDirection) != 0)
 					return true;
 
-				foreach (var nextDirection in OrderedOutputDirections(nextDirections, index, destinationCell, width, height))
+				foreach (var direction in OrderedOutputDirections(outgoing, current, destinationCell, width, height))
 				{
-					var next = GetAdjacentTile(index, nextDirection, width, height);
-					if (TryFindRouteIncludingStatic(state, next, nextDirection, destinationCell, exitDirection, playableArea, navCounts, visited, route, rules, width, height, ref nodes))
+					if (TryExtendRoute(grid, GetAdjacentTile(current, direction, width, height), direction, destinationCell, exitDirection, solutionArea, navCounts, visited, navVisits, route, width, height, ref nodes))
 						return true;
 				}
 
-				visited[index] = false;
+				navVisits.Remove(visitKey);
 				return false;
 			}
 
-			foreach (var nav in OrderedNavMasks(navCounts, incomingDirection, index, destinationCell, width, height))
+			if (!solutionArea[current] || visited[current])
+				return false;
+
+			foreach (var nav in OrderedAvailableNavMasks(navCounts, incomingDirection, current, destinationCell, width, height))
 			{
-				var nextDirections = Navigation.CalculateNav(incomingDirection, nav);
-				if (nextDirections == 0)
+				var outgoing = GetOutgoingDirections(incomingDirection, nav);
+				if (outgoing == 0)
 					continue;
 
 				navCounts[nav]--;
-				route.Add(new RouteCell(index, nav));
+				var previousNav = grid[current].Nav;
+				grid[current].Nav = nav;
+				visited[current] = true;
+				route.Add(new RouteCell(current, nav));
 
-				if (index == destinationCell)
+				if (current == destinationCell)
 				{
-					if ((nextDirections & exitDirection) != 0)
+					if ((outgoing & exitDirection) != 0)
 						return true;
 				}
 				else
 				{
-					foreach (var nextDirection in OrderedOutputDirections(nextDirections, index, destinationCell, width, height))
+					foreach (var direction in OrderedOutputDirections(outgoing, current, destinationCell, width, height))
 					{
-						var next = GetAdjacentTile(index, nextDirection, width, height);
-						if (TryFindRouteIncludingStatic(state, next, nextDirection, destinationCell, exitDirection, playableArea, navCounts, visited, route, rules, width, height, ref nodes))
+						var next = GetAdjacentTile(current, direction, width, height);
+						if (!CanAcceptIncoming(grid, next, direction, destinationCell, exitDirection, solutionArea, navCounts))
+							continue;
+
+						if (TryExtendRoute(grid, next, direction, destinationCell, exitDirection, solutionArea, navCounts, visited, navVisits, route, width, height, ref nodes))
 							return true;
 					}
 				}
 
 				route.RemoveAt(route.Count - 1);
+				visited[current] = false;
+				grid[current].Nav = previousNav;
 				navCounts[nav]++;
 			}
-
-			visited[index] = false;
 			return false;
 		}
 
-		private static bool TryFindRoute(
-			int index,
+		private static bool CanAcceptIncoming(
+			CellBits[] grid,
+			int cell,
 			int incomingDirection,
 			int destinationCell,
 			int exitDirection,
-			bool[] playableArea,
-			Dictionary<int, int> navCounts,
-			bool[] visited,
-			List<RouteCell> route,
-			int width,
-			int height,
-			ref int nodes)
+			bool[] solutionArea,
+			Dictionary<int, int> navCounts)
 		{
-			if (index < 0 || index >= playableArea.Length || !playableArea[index] || visited[index])
+			if (cell < 0 || cell >= solutionArea.Length)
 				return false;
 
-			if (++nodes > RouteNodeBudget)
-				return false;
-
-			visited[index] = true;
-
-			foreach (var nav in OrderedNavMasks(navCounts, incomingDirection, index, destinationCell, width, height))
+			if (grid[cell].Nav != 0)
 			{
-				var nextDirections = Navigation.CalculateNav(incomingDirection, nav);
-				if (nextDirections == 0)
-					continue;
-
-				navCounts[nav]--;
-				route.Add(new RouteCell(index, nav));
-
-				if (index == destinationCell)
-				{
-					if ((nextDirections & exitDirection) != 0)
-						return true;
-				}
-				else
-				{
-					foreach (var nextDirection in OrderedOutputDirections(nextDirections, index, destinationCell, width, height))
-					{
-						var next = GetAdjacentTile(index, nextDirection, width, height);
-						if (TryFindRoute(next, nextDirection, destinationCell, exitDirection, playableArea, navCounts, visited, route, width, height, ref nodes))
-							return true;
-					}
-				}
-
-				route.RemoveAt(route.Count - 1);
-				navCounts[nav]++;
+				var outgoing = GetOutgoingDirections(incomingDirection, grid[cell].Nav);
+				return cell == destinationCell ? (outgoing & exitDirection) != 0 : outgoing != 0;
 			}
 
-			visited[index] = false;
+			if (!solutionArea[cell])
+				return false;
+
+			foreach (var pair in navCounts)
+			{
+				if (pair.Value <= 0)
+					continue;
+
+				var outgoing = GetOutgoingDirections(incomingDirection, pair.Key);
+				if (outgoing == 0)
+					continue;
+
+				if (cell != destinationCell || (outgoing & exitDirection) != 0)
+					return true;
+			}
+
 			return false;
 		}
 
-		private static List<int> OrderedNavMasks(Dictionary<int, int> navCounts, int incomingDirection, int index, int destinationCell, int width, int height)
+		private static bool TryBuildState(int[] state, bool[] rawPlayable, List<RouteCell> route, Dictionary<int, Queue<int>> navTiles, out int[] assembledState)
+		{
+			assembledState = (int[])state.Clone();
+			var used = new HashSet<int>();
+			var routeCells = new HashSet<int>();
+			var navQueues = new Dictionary<int, Queue<int>>();
+
+			foreach (var pair in navTiles)
+				navQueues[pair.Key] = new Queue<int>(pair.Value);
+
+			foreach (var cell in route)
+			{
+				routeCells.Add(cell.Index);
+				if (!navQueues.TryGetValue(cell.Nav, out var queue) || queue.Count == 0)
+					return false;
+
+				var logical = queue.Dequeue();
+				assembledState[cell.Index] = logical;
+				used.Add(logical);
+			}
+
+			var remaining = new Queue<int>();
+			for (var i = 0; i < rawPlayable.Length; i++)
+			{
+				if (!rawPlayable[i] || used.Contains(state[i]))
+					continue;
+
+				remaining.Enqueue(state[i]);
+			}
+
+			for (var i = 0; i < rawPlayable.Length; i++)
+			{
+				if (!rawPlayable[i] || routeCells.Contains(i) || remaining.Count == 0)
+					continue;
+
+				assembledState[i] = remaining.Dequeue();
+			}
+
+			return true;
+		}
+
+		private static Dictionary<int, int> CloneCounts(Dictionary<int, Queue<int>> navTiles)
+		{
+			var counts = new Dictionary<int, int>();
+			foreach (var pair in navTiles)
+				counts[pair.Key] = pair.Value.Count;
+			return counts;
+		}
+
+		private static List<int> OrderedAvailableNavMasks(Dictionary<int, int> navCounts, int incomingDirection, int current, int destinationCell, int width, int height)
 		{
 			var masks = new List<int>();
 			foreach (var pair in navCounts)
 			{
-				if (pair.Value > 0 && Navigation.CalculateNav(incomingDirection, pair.Key) != 0)
+				if (pair.Value > 0 && GetOutgoingDirections(incomingDirection, pair.Key) != 0)
 					masks.Add(pair.Key);
 			}
 
 			masks.Sort((a, b) =>
 			{
-				var distA = BestOutputDistance(index, Navigation.CalculateNav(incomingDirection, a), destinationCell, width, height);
-				var distB = BestOutputDistance(index, Navigation.CalculateNav(incomingDirection, b), destinationCell, width, height);
+				var distA = BestOutputDistance(current, GetOutgoingDirections(incomingDirection, a), destinationCell, width, height);
+				var distB = BestOutputDistance(current, GetOutgoingDirections(incomingDirection, b), destinationCell, width, height);
 				return distA.CompareTo(distB);
 			});
-
 			return masks;
 		}
 
-		private static List<int> OrderedOutputDirections(int directions, int index, int destinationCell, int width, int height)
+		private static List<int> OrderedOutputDirections(int directions, int current, int destinationCell, int width, int height)
 		{
 			var result = new List<int>();
 			foreach (var direction in Navigation.Directions)
@@ -642,17 +658,16 @@ namespace ClassicTilestorm
 
 			result.Sort((a, b) =>
 			{
-				var nextA = GetAdjacentTile(index, a, width, height);
-				var nextB = GetAdjacentTile(index, b, width, height);
+				var nextA = GetAdjacentTile(current, a, width, height);
+				var nextB = GetAdjacentTile(current, b, width, height);
 				var distA = nextA < 0 ? int.MaxValue : Manhattan(nextA, destinationCell, width);
 				var distB = nextB < 0 ? int.MaxValue : Manhattan(nextB, destinationCell, width);
 				return distA.CompareTo(distB);
 			});
-
 			return result;
 		}
 
-		private static int BestOutputDistance(int index, int directions, int destinationCell, int width, int height)
+		private static int BestOutputDistance(int current, int directions, int destinationCell, int width, int height)
 		{
 			var best = int.MaxValue;
 			foreach (var direction in Navigation.Directions)
@@ -660,7 +675,7 @@ namespace ClassicTilestorm
 				if ((directions & direction) == 0)
 					continue;
 
-				var next = GetAdjacentTile(index, direction, width, height);
+				var next = GetAdjacentTile(current, direction, width, height);
 				if (next >= 0)
 					best = Math.Min(best, Manhattan(next, destinationCell, width));
 			}
@@ -668,81 +683,80 @@ namespace ClassicTilestorm
 			return best;
 		}
 
-		private static bool TryBuildState(
-			int[] state,
-			bool[] playableArea,
-			List<RouteCell> route,
-			Dictionary<int, Queue<int>> navTiles,
-			TileRule[] rules,
-			out int[] assembledState)
+		private static int GetOutgoingDirections(int incomingDirection, int nav)
+			=> Navigation.CalculateNav(incomingDirection, nav);
+
+		private static bool HasFlexibleRouteToDest(int[] state, int sourceTile, int destinationTile, TileRule[] rules, int width, int height)
 		{
-			assembledState = (int[])state.Clone();
-			var available = new List<int>();
-			var routeCells = new HashSet<int>();
-			var used = new HashSet<int>();
-			var navQueues = new Dictionary<int, Queue<int>>();
-
-			foreach (var pair in navTiles)
-				navQueues[pair.Key] = new Queue<int>(pair.Value);
-
-			for (var index = 0; index < playableArea.Length; index++)
-			{
-				if (!playableArea[index])
-					continue;
-
-				var logicalIndex = state[index];
-				if (logicalIndex >= 0 && logicalIndex < rules.Length)
-					available.Add(logicalIndex);
-			}
-
-			foreach (var cell in route)
-			{
-				routeCells.Add(cell.Index);
-				if (!navQueues.TryGetValue(cell.Nav, out var queue) || queue.Count == 0)
-					return false;
-
-				var logicalRouteTile = queue.Dequeue();
-				assembledState[cell.Index] = logicalRouteTile;
-				used.Add(logicalRouteTile);
-			}
-
-			var remaining = new Queue<int>();
-			foreach (var logicalIndex in available)
-				if (!used.Contains(logicalIndex))
-					remaining.Enqueue(logicalIndex);
-
-			for (var index = 0; index < playableArea.Length; index++)
-			{
-				if (!playableArea[index] || routeCells.Contains(index) || remaining.Count == 0)
-					continue;
-
-				assembledState[index] = remaining.Dequeue();
-			}
-
-			return true;
-		}
-
-		private static bool TryGetRule(int[] state, int index, TileRule[] rules, out TileRule rule)
-		{
-			rule = default;
-			if (state == null || rules == null || index < 0 || index >= state.Length)
+			if (sourceTile == destinationTile || sourceTile < 0 || destinationTile < 0)
 				return false;
 
-			var logicalIndex = state[index];
-			if (logicalIndex < 0 || logicalIndex >= rules.Length)
-				return false;
+			var sourceNav = GetRuleAt(state, sourceTile, rules).Nav;
+			foreach (var direction in Navigation.Directions)
+			{
+				if ((sourceNav & direction) == 0)
+					continue;
 
-			rule = rules[logicalIndex];
-			return true;
+				var visited = new HashSet<int>();
+				if (TryFollowFlexibleRoute(state, sourceTile, direction, destinationTile, rules, width, height, visited))
+					return true;
+			}
+
+			return false;
 		}
 
-		private static TileRule GetRuleAt(int[] state, int index, TileRule[] rules)
-			=> TryGetRule(state, index, rules, out var rule) ? rule : default;
+		private static bool TryFollowFlexibleRoute(int[] state, int current, int direction, int destinationTile, TileRule[] rules, int width, int height, HashSet<int> visited)
+		{
+			var next = GetAdjacentTile(current, direction, width, height);
+			if (next < 0)
+				return false;
 
-		private static bool IsStaticNavAt(int[] state, int index, TileRule[] rules)
-			=> TryGetRule(state, index, rules, out var rule) && rule.Bake && rule.Nav != 0;
+			var nextNav = GetRuleAt(state, next, rules).Nav;
+			if ((nextNav & Navigation.GetOppositeDirection(direction)) == 0)
+				return false;
 
-		private static bool HasStaticNavConnection(int[] state, int current, int next, int direction, TileRule[] rules)
+			if (next == destinationTile)
+				return true;
+
+			var key = next * 16 + direction;
+			if (!visited.Add(key))
+				return false;
+
+			var outgoing = GetOutgoingDirections(direction, nextNav);
+			foreach (var nextDirection in Navigation.Directions)
+			{
+				if ((outgoing & nextDirection) == 0)
+					continue;
+
+				if (TryFollowFlexibleRoute(state, next, nextDirection, destinationTile, rules, width, height, visited))
+					return true;
+			}
+
+			return false;
+		}
+
+		private static bool IsPlayableAt(CellBits[] grid, int cell)
+			=> grid != null && cell >= 0 && cell < grid.Length && !grid[cell].Static;
+
+		private static bool IsStaticNavAt(CellBits[] grid, int cell)
+			=> grid != null && cell >= 0 && cell < grid.Length && grid[cell].Static && grid[cell].Nav != 0;
+
+		private static bool HasStaticConnection(CellBits[] grid, int current, int next, int direction)
+		{
+			if (!IsStaticNavAt(grid, current) || !IsStaticNavAt(grid, next))
+				return false;
+
+			return (grid[current].Nav & direction) != 0 &&
+				(grid[next].Nav & Navigation.GetOppositeDirection(direction)) != 0;
+		}
+
+		private static bool IsPlayableAt(int[] state, int cell, TileRule[] rules)
+			=> TryGetRule(state, cell, rules, out var rule) && !rule.Static;
+
+		private static bool IsStaticNavAt(int[] state, int cell, TileRule[] rules)
+			=> TryGetRule(state, cell, rules, out var rule) && rule.Static && rule.Nav != 0;
+
+		private static bool HasStaticConnection(int[] state, int current, int next, int direction, TileRule[] rules)
 		{
 			if (!IsStaticNavAt(state, current, rules) || !IsStaticNavAt(state, next, rules))
 				return false;
@@ -753,53 +767,68 @@ namespace ClassicTilestorm
 				(nextNav & Navigation.GetOppositeDirection(direction)) != 0;
 		}
 
-		private static int NavToDest(int[] state, int sourceTile, int destinationTile, TileRule[] rules, int width, int height)
+		private static bool TryGetRule(int[] state, int cell, TileRule[] rules, out TileRule rule)
 		{
-			if (sourceTile == destinationTile || sourceTile < 0 || destinationTile < 0)
+			rule = default;
+			if (state == null || rules == null || cell < 0 || cell >= state.Length)
+				return false;
+
+			var logical = state[cell];
+			if (logical < 0 || logical >= rules.Length)
+				return false;
+
+			rule = rules[logical];
+			return true;
+		}
+
+		private static TileRule GetRuleAt(int[] state, int cell, TileRule[] rules)
+			=> TryGetRule(state, cell, rules, out var rule) ? rule : default;
+
+		private static int CountNavTiles(Dictionary<int, Queue<int>> navTiles)
+		{
+			var count = 0;
+			foreach (var pair in navTiles)
+				count += pair.Value.Count;
+			return count;
+		}
+
+		private static int CountReusableCrossroads(Dictionary<int, Queue<int>> navTiles)
+			=> navTiles != null && navTiles.TryGetValue((int)DefinitionFlags.DirMask, out var crossroads) ? crossroads.Count : 0;
+
+		private static int Count(bool[] area)
+		{
+			var count = 0;
+			if (area == null)
 				return 0;
 
-			foreach (var direction in Navigation.Directions)
-			{
-				var currentTile = sourceTile;
-				var currentNav = GetRuleAt(state, sourceTile, rules).Nav & direction;
-
-				while (currentNav != 0)
-				{
-					if (currentTile == destinationTile)
-						return direction;
-
-					var nextTile = GetAdjacentTile(currentTile, currentNav, width, height);
-					if (nextTile < 0 || nextTile == sourceTile)
-						break;
-
-					var nextRule = GetRuleAt(state, nextTile, rules);
-					if (nextRule.Nav == 0)
-						break;
-
-					currentNav = Navigation.CalculateNav(currentNav, nextRule.Nav);
-					currentTile = nextTile;
-				}
-			}
-
-			return 0;
+			for (var i = 0; i < area.Length; i++)
+				if (area[i])
+					count++;
+			return count;
 		}
 
-		private static int GetAdjacentTile(int index, int direction, int width, int height)
+		private static string DescribeNavTiles(Dictionary<int, Queue<int>> navTiles)
 		{
-			var dx = ((direction & 4) >> 2) - ((direction & 8) >> 3);
-			var dy = ((direction & 1) >> 0) - ((direction & 2) >> 1);
+			if (navTiles == null || navTiles.Count == 0)
+				return "<none>";
 
-			var x = (index % width) + dx;
-			var y = (index / width) + dy;
+			var parts = new List<string>();
+			foreach (var pair in navTiles)
+				parts.Add($"{DescribeNav(pair.Key)}x{pair.Value.Count}");
 
-			if (x < 0 || x >= width || y < 0 || y >= height)
-				return -1;
-
-			return y * width + x;
+			parts.Sort(StringComparer.Ordinal);
+			return string.Join(",", parts);
 		}
 
-		private static bool IsSingleDirection(int direction)
-			=> direction is 1 or 2 or 4 or 8;
+		private static string DescribeNav(int nav)
+		{
+			var result = "";
+			if ((nav & (int)DefinitionFlags.North) != 0) result += "N";
+			if ((nav & (int)DefinitionFlags.South) != 0) result += "S";
+			if ((nav & (int)DefinitionFlags.East) != 0) result += "E";
+			if ((nav & (int)DefinitionFlags.West) != 0) result += "W";
+			return string.IsNullOrEmpty(result) ? "-" : result;
+		}
 
 		private static int Manhattan(int a, int b, int width)
 		{
@@ -810,94 +839,17 @@ namespace ClassicTilestorm
 			return Math.Abs(ax - bx) + Math.Abs(ay - by);
 		}
 
-		private static int Count(bool[] area)
+		private static int GetAdjacentTile(int cell, int direction, int width, int height)
 		{
-			var count = 0;
-			for (var i = 0; i < area.Length; i++)
-				if (area[i])
-					count++;
-			return count;
-		}
+			var dx = ((direction & (int)DefinitionFlags.East) >> 2) - ((direction & (int)DefinitionFlags.West) >> 3);
+			var dy = ((direction & (int)DefinitionFlags.North) >> 0) - ((direction & (int)DefinitionFlags.South) >> 1);
+			var x = cell % width + dx;
+			var y = cell / width + dy;
 
-		private static int CountNavTiles(Dictionary<int, Queue<int>> navTiles)
-		{
-			var count = 0;
-			foreach (var pair in navTiles)
-				count += pair.Value.Count;
-			return count;
-		}
+			if (x < 0 || x >= width || y < 0 || y >= height)
+				return -1;
 
-		private static int CountNavTiles(int[] state, bool[] area, TileRule[] rules)
-		{
-			var count = 0;
-			if (state == null || area == null || rules == null)
-				return count;
-
-			for (var i = 0; i < area.Length; i++)
-			{
-				if (area[i] && TryGetRule(state, i, rules, out var rule) && !rule.Bake && rule.Nav != 0)
-					count++;
-			}
-
-			return count;
-		}
-
-		private static bool IsPermutationOf(int[] expected, int[] actual, out string error)
-		{
-			error = null;
-
-			if (expected == null || actual == null)
-			{
-				error = "assembled state was null.";
-				return false;
-			}
-
-			if (expected.Length != actual.Length)
-			{
-				error = $"assembled state length {actual.Length} did not match expected length {expected.Length}.";
-				return false;
-			}
-
-			var seenExpected = new int[expected.Length];
-			var seenActual = new int[actual.Length];
-
-			for (var i = 0; i < expected.Length; i++)
-			{
-				var expectedIndex = expected[i];
-				var actualIndex = actual[i];
-
-				if (expectedIndex < 0 || expectedIndex >= expected.Length)
-				{
-					error = $"expected state contained out-of-range tile index {expectedIndex} at position {i}.";
-					return false;
-				}
-
-				if (actualIndex < 0 || actualIndex >= actual.Length)
-				{
-					error = $"assembled state contained out-of-range tile index {actualIndex} at position {i}.";
-					return false;
-				}
-
-				seenExpected[expectedIndex]++;
-				seenActual[actualIndex]++;
-			}
-
-			for (var i = 0; i < expected.Length; i++)
-			{
-				if (seenExpected[i] != 1)
-				{
-					error = $"expected state is not a permutation: tile index {i} appears {seenExpected[i]} times.";
-					return false;
-				}
-
-				if (seenActual[i] != 1)
-				{
-					error = $"assembled state is not a permutation: tile index {i} appears {seenActual[i]} times.";
-					return false;
-				}
-			}
-
-			return true;
+			return y * width + x;
 		}
 	}
 }

@@ -220,7 +220,7 @@ namespace ClassicTilestorm
 
 			foreach (var nav in OrderedNavMasks(navCounts, incomingDirection, index, destinationCell, map.Width, map.Height))
 			{
-				var outgoingDirections = Navigation.CalculateNav(incomingDirection, nav);
+				var outgoingDirections = GetOutgoingDirections(incomingDirection, nav);
 				if (outgoingDirections == 0)
 					continue;
 
@@ -417,6 +417,7 @@ namespace ClassicTilestorm
 			out int culledTiles)
 		{
 			navTileBudget = CountNavTiles(map, playableArea);
+			var reusableCrossroads = CountReusableCrossroads(map, playableArea);
 			culledTiles = 0;
 
 			if (map == null || playableArea == null || playableArea.Length != map.Count ||
@@ -443,7 +444,7 @@ namespace ClassicTilestorm
 
 					var canReachBothEnds = sourceDistance[i] >= 0 && destinationDistance[i] >= 0;
 					var fillValue = canReachBothEnds
-						? sourceDistance[i] + destinationDistance[i] + 1
+						? AdjustRouteLengthForReusableCrossroads(sourceDistance[i], destinationDistance[i], reusableCrossroads)
 						: int.MaxValue;
 
 					if (canReachBothEnds && fillValue <= navTileBudget)
@@ -457,6 +458,16 @@ namespace ClassicTilestorm
 			return solutionArea;
 		}
 
+		private static int AdjustRouteLengthForReusableCrossroads(int sourceDistance, int destinationDistance, int reusableCrossroads)
+		{
+			var routeLength = sourceDistance + destinationDistance + 1;
+			if (reusableCrossroads <= 0 || sourceDistance <= 0 || destinationDistance <= 0)
+				return routeLength;
+
+			var doubleChargeCredit = Math.Min(reusableCrossroads, Math.Min(sourceDistance, destinationDistance));
+			return routeLength - doubleChargeCredit;
+		}
+
 		private static int CountNavTiles(Map map, bool[] area)
 		{
 			var count = 0;
@@ -466,6 +477,22 @@ namespace ClassicTilestorm
 			for (var i = 0; i < area.Length; i++)
 			{
 				if (area[i] && map.GetTile(i).Nav != 0)
+					count++;
+			}
+
+			return count;
+		}
+
+		private static int CountReusableCrossroads(Map map, bool[] area)
+		{
+			var count = 0;
+			if (map == null || area == null)
+				return count;
+
+			for (var i = 0; i < area.Length; i++)
+			{
+				var tile = map.GetTile(i);
+				if (area[i] && !tile.IsBake && tile.Nav == (int)DefinitionFlags.DirMask)
 					count++;
 			}
 
@@ -566,14 +593,14 @@ namespace ClassicTilestorm
 			var masks = new List<int>();
 			foreach (var pair in navCounts)
 			{
-				if (pair.Value > 0 && Navigation.CalculateNav(incomingDirection, pair.Key) != 0)
+				if (pair.Value > 0 && GetOutgoingDirections(incomingDirection, pair.Key) != 0)
 					masks.Add(pair.Key);
 			}
 
 			masks.Sort((a, b) =>
 			{
-				var distA = BestOutputDistance(index, Navigation.CalculateNav(incomingDirection, a), destinationCell, width, height);
-				var distB = BestOutputDistance(index, Navigation.CalculateNav(incomingDirection, b), destinationCell, width, height);
+				var distA = BestOutputDistance(index, GetOutgoingDirections(incomingDirection, a), destinationCell, width, height);
+				var distB = BestOutputDistance(index, GetOutgoingDirections(incomingDirection, b), destinationCell, width, height);
 				return distA.CompareTo(distB);
 			});
 
@@ -621,6 +648,9 @@ namespace ClassicTilestorm
 
 			return best;
 		}
+
+		private static int GetOutgoingDirections(int incomingDirection, int nav)
+			=> Navigation.CalculateNav(incomingDirection, nav);
 
 		private static int Manhattan(int a, int b, int width)
 		{
