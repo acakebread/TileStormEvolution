@@ -522,17 +522,15 @@ namespace ClassicTilestorm
 					if ((outgoing & exitDirection) != 0)
 						return true;
 				}
-				else
-				{
-					foreach (var direction in OrderedOutputDirections(outgoing, current, destinationCell, width, height))
-					{
-						var next = GetAdjacentTile(current, direction, width, height);
-						if (!CanAcceptIncoming(grid, next, direction, destinationCell, exitDirection, solutionArea, navCounts))
-							continue;
 
-						if (TryExtendRoute(grid, next, direction, destinationCell, exitDirection, solutionArea, navCounts, visited, navVisits, route, width, height, ref nodes))
-							return true;
-					}
+				foreach (var direction in OrderedOutputDirections(outgoing, current, destinationCell, width, height))
+				{
+					var next = GetAdjacentTile(current, direction, width, height);
+					if (!CanAcceptIncoming(grid, next, direction, destinationCell, exitDirection, solutionArea, navCounts))
+						continue;
+
+					if (TryExtendRoute(grid, next, direction, destinationCell, exitDirection, solutionArea, navCounts, visited, navVisits, route, width, height, ref nodes))
+						return true;
 				}
 
 				route.RemoveAt(route.Count - 1);
@@ -558,7 +556,7 @@ namespace ClassicTilestorm
 			if (grid[cell].Nav != 0)
 			{
 				var outgoing = GetOutgoingDirections(incomingDirection, grid[cell].Nav);
-				return cell == destinationCell ? (outgoing & exitDirection) != 0 : outgoing != 0;
+				return outgoing != 0;
 			}
 
 			if (!solutionArea[cell])
@@ -573,8 +571,7 @@ namespace ClassicTilestorm
 				if (outgoing == 0)
 					continue;
 
-				if (cell != destinationCell || (outgoing & exitDirection) != 0)
-					return true;
+				return true;
 			}
 
 			return false;

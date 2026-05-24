@@ -232,25 +232,23 @@ namespace ClassicTilestorm
 					if ((outgoingDirections & exitDirection) != 0)
 						return true;
 				}
-				else
+
+				foreach (var nextDirection in OrderedOutputDirections(outgoingDirections, index, destinationCell, map.Width, map.Height))
 				{
-					foreach (var nextDirection in OrderedOutputDirections(outgoingDirections, index, destinationCell, map.Width, map.Height))
+					var next = GetAdjacentTile(index, nextDirection, map.Width, map.Height);
+					if (TryFindSpatialRoute(
+						map,
+						next,
+						nextDirection,
+						destinationCell,
+						exitDirection,
+						playableArea,
+						navCounts,
+						visited,
+						route,
+						ref nodes))
 					{
-						var next = GetAdjacentTile(index, nextDirection, map.Width, map.Height);
-						if (TryFindSpatialRoute(
-							map,
-							next,
-							nextDirection,
-							destinationCell,
-							exitDirection,
-							playableArea,
-							navCounts,
-							visited,
-							route,
-							ref nodes))
-						{
-							return true;
-						}
+						return true;
 					}
 				}
 
