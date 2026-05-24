@@ -87,12 +87,13 @@ namespace ClassicTilestorm
 
 			foreach (var sourceAnchor in sourceAnchors)
 			{
-				var rawPlayable = FloodPlayableArea(baseGrid, sourceAnchor.PlayableCell, map.Width, map.Height);
+				var destinationAnchors = new List<Anchor>();
+				var rawPlayable = FloodPlayableArea(baseGrid, sourceAnchor.PlayableCell, sourceAnchor.StaticCell, destinationAnchors, map.Width, map.Height);
+				FilterReachableExits(baseGrid, rawPlayable, destinationAnchors, destinationTile, map.Width, map.Height);
 				var navTiles = CollectMovableNavTiles(state, rawPlayable, rules);
 				var navBudget = CountNavTiles(navTiles);
 				var reusableCrossroads = CountReusableCrossroads(navTiles);
 				var rawCount = Count(rawPlayable);
-				var destinationAnchors = FindAnchors(baseGrid, destinationTile, rawPlayable, map.Width, map.Height);
 
 				foreach (var destinationAnchor in destinationAnchors)
 				{
@@ -161,7 +162,7 @@ namespace ClassicTilestorm
 				}
 
 				if (destinationAnchors.Count == 0)
-					lastSummary = $"source {sourceAnchor.StaticCell}->{sourceAnchor.PlayableCell}, area {rawCount}, pool {DescribeNavTiles(navTiles)}, no destination anchor in raw flood.";
+					lastSummary = $"source {sourceAnchor.StaticCell}->{sourceAnchor.PlayableCell}, area {rawCount}, pool {DescribeNavTiles(navTiles)}, no static-nav exit in raw flood.";
 			}
 
 			result = new Result
@@ -277,7 +278,7 @@ namespace ClassicTilestorm
 			anchors.Add(anchor);
 		}
 
-		private static bool[] FloodPlayableArea(CellBits[] grid, int source, int width, int height)
+		private static bool[] FloodPlayableArea(CellBits[] grid, int source, int ignoredStaticExit, List<Anchor> exits, int width, int height)
 		{
 			var area = new bool[grid.Length];
 			if (source < 0 || source >= grid.Length || !IsPlayableAt(grid, source))
@@ -293,15 +294,97 @@ namespace ClassicTilestorm
 				foreach (var direction in Navigation.Directions)
 				{
 					var next = GetAdjacentTile(current, direction, width, height);
-					if (next < 0 || area[next] || !IsPlayableAt(grid, next))
+					if (next < 0 || area[next])
 						continue;
 
-					area[next] = true;
-					queue.Enqueue(next);
+					if (IsPlayableAt(grid, next))
+					{
+						area[next] = true;
+						queue.Enqueue(next);
+						continue;
+					}
+
+					if (next == ignoredStaticExit || !IsStaticNavAt(grid, next))
+						continue;
+
+					var staticToPlayableDirection = Navigation.GetOppositeDirection(direction);
+					if ((grid[next].Nav & staticToPlayableDirection) != 0)
+						AddAnchor(exits, new Anchor(next, current, staticToPlayableDirection));
 				}
 			}
 
 			return area;
+		}
+
+		private static void FilterReachableExits(CellBits[] grid, bool[] playableArea, List<Anchor> exits, int destinationTile, int width, int height)
+		{
+			if (grid == null || playableArea == null || exits == null)
+				return;
+
+			for (var i = exits.Count - 1; i >= 0; i--)
+			{
+				if (!ExitCanReachDestinationOrNewIsland(grid, playableArea, exits[i], destinationTile, width, height))
+					exits.RemoveAt(i);
+			}
+		}
+
+		private readonly struct TraceDirectionState
+		{
+			public readonly int Cell;
+			public readonly int IncomingDirection;
+
+			public TraceDirectionState(int cell, int incomingDirection)
+			{
+				Cell = cell;
+				IncomingDirection = incomingDirection;
+			}
+		}
+
+		private static bool ExitCanReachDestinationOrNewIsland(CellBits[] grid, bool[] playableArea, Anchor exit, int destinationTile, int width, int height)
+		{
+			if (exit.StaticCell == destinationTile)
+				return true;
+
+			var queue = new Queue<TraceDirectionState>();
+			var visited = new HashSet<int>();
+			var initialIncoming = Navigation.GetOppositeDirection(exit.Direction);
+			queue.Enqueue(new TraceDirectionState(exit.StaticCell, initialIncoming));
+
+			while (queue.Count > 0 && visited.Count < NodeBudget)
+			{
+				var currentState = queue.Dequeue();
+				var current = currentState.Cell;
+				var incoming = currentState.IncomingDirection;
+				var visitKey = current * 16 + incoming;
+				if (!visited.Add(visitKey))
+					continue;
+
+				var outgoing = Navigation.CalculateNav(incoming, grid[current].Nav);
+				if (outgoing == 0)
+					continue;
+
+				var next = GetAdjacentTile(current, outgoing, width, height);
+				if (next < 0 || next >= grid.Length)
+					continue;
+
+				if (next == destinationTile)
+					return true;
+
+				if (IsPlayableAt(grid, next))
+				{
+					if (!playableArea[next])
+						return true;
+
+					continue;
+				}
+
+				if (!IsStaticNavAt(grid, next))
+					continue;
+
+				queue.Enqueue(new TraceDirectionState(next, outgoing));
+			}
+
+			return false;
 		}
 
 		private static Dictionary<int, Queue<int>> CollectMovableNavTiles(int[] state, bool[] rawPlayable, TileRule[] rules)

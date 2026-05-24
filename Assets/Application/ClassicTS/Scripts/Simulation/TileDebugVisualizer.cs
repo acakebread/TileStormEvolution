@@ -60,8 +60,12 @@ namespace ClassicTilestorm
 
 			foreach (var candidateSourceProbe in sourceProbes)
 			{
-				var candidatePlayableArea = BuildPlayableArea(map, candidateSourceProbe.PlayableTile);
-				var candidateDestinationProbe = ResolveDestinationConnection(map, destinationTile, candidatePlayableArea);
+				var candidateDestinationProbes = new List<ConnectionProbe>();
+				var candidatePlayableArea = BuildPlayableArea(map, candidateSourceProbe.PlayableTile, candidateSourceProbe.StaticTile, candidateDestinationProbes);
+				FilterReachableExits(map, candidatePlayableArea, candidateDestinationProbes, destinationTile);
+				var candidateDestinationProbe = candidateDestinationProbes.Count > 0
+					? candidateDestinationProbes[0]
+					: new ConnectionProbe(-1, -1, 0, false);
 
 				if (!sourceProbe.Found)
 				{
@@ -70,7 +74,7 @@ namespace ClassicTilestorm
 					destinationProbe = candidateDestinationProbe;
 				}
 
-				if (!candidateDestinationProbe.Found)
+				if (candidateDestinationProbes.Count == 0)
 					continue;
 
 				sourceProbe = candidateSourceProbe;
@@ -682,7 +686,7 @@ namespace ClassicTilestorm
 			return $"{index} ({tileName})";
 		}
 
-		private static bool[] BuildPlayableArea(Map map, int sourceTile)
+		private static bool[] BuildPlayableArea(Map map, int sourceTile, int ignoredStaticExit, List<ConnectionProbe> exits)
 		{
 			var area = new bool[map.Count];
 			var queue = new Queue<int>();
@@ -695,15 +699,83 @@ namespace ClassicTilestorm
 				foreach (var direction in Navigation.Directions)
 				{
 					var next = GetAdjacentTile(current, direction, map.Width, map.Height);
-					if (next < 0 || next >= map.Count || area[next] || !IsPlayable(map, next))
+					if (next < 0 || next >= map.Count || area[next])
 						continue;
 
-					area[next] = true;
-					queue.Enqueue(next);
+					if (IsPlayable(map, next))
+					{
+						area[next] = true;
+						queue.Enqueue(next);
+						continue;
+					}
+
+					if (next == ignoredStaticExit || !IsStaticNav(map, next))
+						continue;
+
+					var staticToPlayableDirection = Navigation.GetOppositeDirection(direction);
+					if ((map.GetTile(next).Nav & staticToPlayableDirection) != 0)
+						AddUniqueProbe(exits, new ConnectionProbe(next, current, staticToPlayableDirection, true));
 				}
 			}
 
 			return area;
+		}
+
+		private static void FilterReachableExits(Map map, bool[] playableArea, List<ConnectionProbe> exits, int destinationTile)
+		{
+			if (map == null || playableArea == null || exits == null)
+				return;
+
+			for (var i = exits.Count - 1; i >= 0; i--)
+			{
+				if (!ExitCanReachDestinationOrNewIsland(map, playableArea, exits[i], destinationTile))
+					exits.RemoveAt(i);
+			}
+		}
+
+		private static bool ExitCanReachDestinationOrNewIsland(Map map, bool[] playableArea, ConnectionProbe exit, int destinationTile)
+		{
+			if (exit.StaticTile == destinationTile)
+				return true;
+
+			var queue = new Queue<(int Tile, int IncomingDirection)>();
+			var visited = new HashSet<int>();
+			var initialIncoming = Navigation.GetOppositeDirection(exit.Direction);
+			queue.Enqueue((exit.StaticTile, initialIncoming));
+
+			while (queue.Count > 0 && visited.Count < RouteNodeBudget)
+			{
+				var currentState = queue.Dequeue();
+				var visitKey = currentState.Tile * 16 + currentState.IncomingDirection;
+				if (!visited.Add(visitKey))
+					continue;
+
+				var outgoing = Navigation.CalculateNav(currentState.IncomingDirection, map.GetTile(currentState.Tile).Nav);
+				if (outgoing == 0)
+					continue;
+
+				var next = GetAdjacentTile(currentState.Tile, outgoing, map.Width, map.Height);
+				if (next < 0 || next >= map.Count)
+					continue;
+
+				if (next == destinationTile)
+					return true;
+
+				if (IsPlayable(map, next))
+				{
+					if (!playableArea[next])
+						return true;
+
+					continue;
+				}
+
+				if (!IsStaticNav(map, next))
+					continue;
+
+				queue.Enqueue((next, outgoing));
+			}
+
+			return false;
 		}
 
 		private static void TrySeedPlayable(Map map, int index, bool[] area, Queue<int> queue)
