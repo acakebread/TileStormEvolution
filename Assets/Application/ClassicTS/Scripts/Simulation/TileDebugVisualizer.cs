@@ -1,5 +1,3 @@
-#define TILE_ROUTE_VISUAL_DEBUG
-
 using System;
 using System.Collections.Generic;
 using UnityEngine;
