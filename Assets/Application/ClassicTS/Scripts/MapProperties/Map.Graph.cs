@@ -213,6 +213,16 @@ namespace ClassicTilestorm
 			UpdateGraph();
 		}
 
+		public bool ApplyState(int[] newState)
+		{
+			if (newState == null || newState.Length != width * height)
+				return false;
+
+			state = (int[])newState.Clone();
+			UpdateGraph();
+			return true;
+		}
+
 		public Tile GetTile(Vector3 pos, bool logicalIndex = true) => GetTile(VectorToIndex(pos), logicalIndex);
 		public Tile GetTile(int index, bool logicalIndex = true) => state == null || index < 0 || index >= state.Length ? default : GetGraphTile(logicalIndex ? state[index] : index);
 

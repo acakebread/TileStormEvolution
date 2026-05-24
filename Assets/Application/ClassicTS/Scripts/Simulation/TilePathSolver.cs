@@ -80,10 +80,23 @@ namespace ClassicTilestorm
 			public readonly bool[] Cells;
 			public readonly int[] Incoming;
 			public readonly int[] Outgoing;
+			public readonly bool[] SearchArea;
+			public readonly int SearchAreaCount;
+			public readonly int CulledCells;
+			public readonly int NavTileBudget;
 
 			public int Length => Path?.Length ?? 0;
 
-			private RoutePlan(bool possible, int exploredNodes, int[] path, bool[] cells, int[] incoming, int[] outgoing)
+			private RoutePlan(
+				bool possible,
+				int exploredNodes,
+				int[] path,
+				bool[] cells,
+				int[] incoming,
+				int[] outgoing,
+				bool[] searchArea,
+				int culledCells,
+				int navTileBudget)
 			{
 				Possible = possible;
 				ExploredNodes = exploredNodes;
@@ -91,13 +104,34 @@ namespace ClassicTilestorm
 				Cells = cells;
 				Incoming = incoming;
 				Outgoing = outgoing;
+				SearchArea = searchArea;
+				SearchAreaCount = Count(searchArea);
+				CulledCells = culledCells;
+				NavTileBudget = navTileBudget;
 			}
 
-			public static RoutePlan Found(int exploredNodes, List<int> path, bool[] cells, int[] incoming, int[] outgoing)
-				=> new(true, exploredNodes, path.ToArray(), (bool[])cells.Clone(), (int[])incoming.Clone(), (int[])outgoing.Clone());
+			public static RoutePlan Found(
+				int exploredNodes,
+				List<int> path,
+				bool[] cells,
+				int[] incoming,
+				int[] outgoing,
+				bool[] searchArea,
+				int culledCells,
+				int navTileBudget)
+				=> new(
+					true,
+					exploredNodes,
+					path.ToArray(),
+					(bool[])cells.Clone(),
+					(int[])incoming.Clone(),
+					(int[])outgoing.Clone(),
+					(bool[])searchArea.Clone(),
+					culledCells,
+					navTileBudget);
 
-			public static RoutePlan Missing(int exploredNodes)
-				=> new(false, exploredNodes, Array.Empty<int>(), null, null, null);
+			public static RoutePlan Missing(int exploredNodes, bool[] searchArea = null, int culledCells = 0, int navTileBudget = 0)
+				=> new(false, exploredNodes, Array.Empty<int>(), null, null, null, searchArea, culledCells, navTileBudget);
 		}
 
 		private sealed class SearchQueue
@@ -301,8 +335,8 @@ namespace ClassicTilestorm
 			}
 
 			var routeSummary = routePlan.Possible
-				? $"route length {routePlan.Length}, route nodes {routePlan.ExploredNodes}"
-				: $"no unordered route found, route nodes {routePlan.ExploredNodes}";
+				? $"route length {routePlan.Length}, route nodes {routePlan.ExploredNodes}, route area {rootPlayableCount}->{routePlan.SearchAreaCount}, culled {routePlan.CulledCells}, nav budget {routePlan.NavTileBudget}"
+				: $"no unordered route found, route nodes {routePlan.ExploredNodes}, route area {rootPlayableCount}->{routePlan.SearchAreaCount}, culled {routePlan.CulledCells}, nav budget {routePlan.NavTileBudget}";
 			LastFailureReason = timedOut
 				? $"no legal incremental move was found within {MaxSearchMilliseconds}ms ({nodes} nodes, depth {maxDepthReached}, playable area {rootPlayableCount}-{maxPlayableCount} tiles, {routeSummary})."
 				: $"no legal incremental move was found within the solver budget ({nodes} nodes, depth {maxDepthReached}, playable area {rootPlayableCount}-{maxPlayableCount} tiles, {routeSummary}).";
@@ -334,7 +368,8 @@ namespace ClassicTilestorm
 					if (!seen.Add(StripKey(strip)))
 						continue;
 
-					if (playableArea != null && !IntersectsArea(strip, playableArea))
+					var candidateArea = routePlan?.SearchArea ?? playableArea;
+					if (candidateArea != null && !IntersectsArea(strip, candidateArea))
 						continue;
 
 					var score = ScoreStrip(strip, sourceTile, destinationTile, width);
@@ -416,6 +451,17 @@ namespace ClassicTilestorm
 			if ((uint)destinationTile < routeArea.Length)
 				routeArea[destinationTile] = true;
 
+			routeArea = CullToReachableRouteArea(
+				state,
+				routeArea,
+				sourceTile,
+				destinationTile,
+				rules,
+				width,
+				height,
+				out var routeAreaCulled,
+				out var navTileBudget);
+
 			var navCounts = new int[16];
 			var navCount = 0;
 			for (var i = 0; i < routeArea.Length; i++)
@@ -432,7 +478,7 @@ namespace ClassicTilestorm
 			}
 
 			if (navCount == 0)
-				return RoutePlan.Missing(0);
+				return RoutePlan.Missing(0, routeArea, routeAreaCulled, navTileBudget);
 
 			var visited = new bool[state.Length];
 			var cells = new bool[state.Length];
@@ -470,7 +516,7 @@ namespace ClassicTilestorm
 						height,
 						ref explored))
 					{
-						return RoutePlan.Found(explored, path, cells, incoming, outgoing);
+						return RoutePlan.Found(explored, path, cells, incoming, outgoing, routeArea, routeAreaCulled, navTileBudget);
 					}
 
 					UnmarkRouteCell(sourceTile, visited, cells, incoming, outgoing, path);
@@ -478,7 +524,103 @@ namespace ClassicTilestorm
 				}
 			}
 
-			return RoutePlan.Missing(explored);
+			return RoutePlan.Missing(explored, routeArea, routeAreaCulled, navTileBudget);
+		}
+
+		private static bool[] CullToReachableRouteArea(
+			int[] state,
+			bool[] routeArea,
+			int sourceTile,
+			int destinationTile,
+			TileRule[] rules,
+			int width,
+			int height,
+			out int culledCells,
+			out int navTileBudget)
+		{
+			culledCells = 0;
+			navTileBudget = 0;
+
+			if (routeArea == null || routeArea.Length == 0)
+				return routeArea;
+
+			var result = (bool[])routeArea.Clone();
+			var previousCount = -1;
+
+			while (previousCount != Count(result))
+			{
+				previousCount = Count(result);
+				navTileBudget = CountMovableNavTiles(state, result, rules);
+				if (navTileBudget <= 0)
+					break;
+
+				var sourceDistance = BuildDistanceMap(result, sourceTile, width, height);
+				var destinationDistance = BuildDistanceMap(result, destinationTile, width, height);
+				var maxRouteCells = navTileBudget + 2; // two fixed blue/static anchors bracket the movable route.
+
+				for (var i = 0; i < result.Length; i++)
+				{
+					if (!result[i] || i == sourceTile || i == destinationTile)
+						continue;
+
+					var canReachBothEnds = sourceDistance[i] >= 0 && destinationDistance[i] >= 0;
+					var minimumRouteCells = canReachBothEnds
+						? sourceDistance[i] + destinationDistance[i] + 1
+						: int.MaxValue;
+
+					if (canReachBothEnds && minimumRouteCells <= maxRouteCells)
+						continue;
+
+					result[i] = false;
+					culledCells++;
+				}
+			}
+
+			return result;
+		}
+
+		private static int CountMovableNavTiles(int[] state, bool[] area, TileRule[] rules)
+		{
+			var count = 0;
+			for (var i = 0; i < area.Length; i++)
+			{
+				if (!area[i] || !TryGetRule(state, i, rules, out var rule))
+					continue;
+
+				if (!rule.Bake && rule.Nav != 0)
+					count++;
+			}
+
+			return count;
+		}
+
+		private static int[] BuildDistanceMap(bool[] area, int source, int width, int height)
+		{
+			var distance = new int[area.Length];
+			Array.Fill(distance, -1);
+
+			if (source < 0 || source >= area.Length || !area[source])
+				return distance;
+
+			var queue = new Queue<int>();
+			distance[source] = 0;
+			queue.Enqueue(source);
+
+			while (queue.Count > 0)
+			{
+				var current = queue.Dequeue();
+				foreach (var direction in Navigation.Directions)
+				{
+					var next = GetAdjacentTile(current, direction, width, height);
+					if (next < 0 || !area[next] || distance[next] >= 0)
+						continue;
+
+					distance[next] = distance[current] + 1;
+					queue.Enqueue(next);
+				}
+			}
+
+			return distance;
 		}
 
 		private static bool TryFindRouteFrom(

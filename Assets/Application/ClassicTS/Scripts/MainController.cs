@@ -425,26 +425,28 @@ namespace ClassicTilestorm
 					return;
 				}
 
+				if (TileDebugVisualizer.Enabled)
+				{
+					Debug.Log(TileDebugVisualizer.Visualize(CurrentMap, eggbotController.CurrentTile, destinationTile));
+				}
+
 				if (eggbotController.NavDirection(CurrentMap) != 0)
 				{
 					Debug.Log("Solve step skipped: the current path is already complete.");
 					return;
 				}
 
-				if (!TilePathSolver.TrySolveNextStep(CurrentMap, eggbotController.CurrentTile, destinationTile, ApplicationSettings.Difficulty, out var strip))
+				if (TileRouteAssembler.TryAssemble(CurrentMap, eggbotController.CurrentTile, destinationTile, out var assembled))
 				{
-					var reason = string.IsNullOrWhiteSpace(TilePathSolver.LastFailureReason)
-						? "no legal incremental move was found within the solver budget."
-						: TilePathSolver.LastFailureReason;
-					Debug.Log($"Solve step skipped: {reason}");
+					if (CurrentMap.ApplyState(assembled.State))
+						Debug.Log($"Solve assembled candidate state: {assembled.Summary}");
+					else
+						Debug.LogWarning("Solve assembly found a state but failed to apply it.");
 					return;
 				}
 
-				if (!TileStripHelper.RollStrip(CurrentMap, strip))
-				{
-					Debug.LogWarning("Solve step failed to apply the planned strip roll.");
-					return;
-				}
+				Debug.Log($"Solve assembly skipped: {assembled?.Summary ?? "no candidate route state found."}");
+				return;
 			}
 
 		}

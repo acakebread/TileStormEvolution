@@ -32,6 +32,12 @@ namespace ClassicTilestorm
 	{
 		public static GameObject SpareTile; // Public static spare tile
 
+		public static void ClearSpareTile()
+		{
+			if (null != SpareTile)
+				SpareTile.SetActive(false);
+		}
+
 		public static TileStrip GetTileStrip(IMapPlay map, int startIndex, int stride, bool difficult = false)
 		{
 			var strip = new TileStrip { First = -1, Count = 0, Stride = 0 };
