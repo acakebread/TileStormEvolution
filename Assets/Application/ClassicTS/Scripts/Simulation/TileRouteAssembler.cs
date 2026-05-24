@@ -6,7 +6,7 @@ namespace ClassicTilestorm
 {
 	internal static class TileRouteAssembler
 	{
-		private const int NodeBudget = 100000;
+		private const int NodeBudget = 500000;
 		private const int IslandDepthBudget = 8;
 
 		public sealed class Result
@@ -287,6 +287,7 @@ namespace ClassicTilestorm
 			var visited = new bool[state.Length];
 			var navVisits = new HashSet<int>();
 			var nodes = 0;
+			var searchBudgetExhausted = false;
 			summary = $"source {sourceAnchor.StaticCell}->{sourceAnchor.PlayableCell}, destination {destinationAnchor.StaticCell}<-{destinationAnchor.PlayableCell}, area {rawCount}->{Count(solutionArea)}, pool {DescribeNavTiles(navTiles)}, nodes {nodes}.";
 
 			if (!solutionArea[sourceAnchor.PlayableCell] || !solutionArea[destinationAnchor.PlayableCell])
@@ -308,9 +309,13 @@ namespace ClassicTilestorm
 				route,
 				width,
 				height,
-				ref nodes))
+				ref nodes,
+				ref searchBudgetExhausted))
 			{
-				summary = $"source {sourceAnchor.StaticCell}->{sourceAnchor.PlayableCell}, destination {destinationAnchor.StaticCell}<-{destinationAnchor.PlayableCell}, area {rawCount}->{Count(solutionArea)}, pool {DescribeNavTiles(navTiles)}, nodes {nodes}, no compatible chain.";
+				var reason = searchBudgetExhausted
+					? $"search budget exhausted at {nodes}/{NodeBudget} nodes"
+					: "no compatible chain";
+				summary = $"source {sourceAnchor.StaticCell}->{sourceAnchor.PlayableCell}, destination {destinationAnchor.StaticCell}<-{destinationAnchor.PlayableCell}, area {rawCount}->{Count(solutionArea)}, pool {DescribeNavTiles(navTiles)}, nodes {nodes}, {reason}.";
 				return false;
 			}
 
@@ -947,7 +952,8 @@ namespace ClassicTilestorm
 			List<RouteCell> route,
 			int width,
 			int height,
-			ref int nodes)
+			ref int nodes,
+			ref bool searchBudgetExhausted)
 		{
 			if (current < 0 || current >= solutionArea.Length)
 				return false;
@@ -967,6 +973,7 @@ namespace ClassicTilestorm
 
 				if (++nodes > NodeBudget)
 				{
+					searchBudgetExhausted = true;
 					navVisits.Remove(visitKey);
 					return false;
 				}
@@ -976,7 +983,7 @@ namespace ClassicTilestorm
 
 				foreach (var direction in OrderedOutputDirections(outgoing, current, destinationCell, width, height))
 				{
-					if (TryExtendRoute(grid, GetAdjacentTile(current, direction, width, height), direction, destinationCell, exitDirection, solutionArea, navCounts, visited, navVisits, route, width, height, ref nodes))
+					if (TryExtendRoute(grid, GetAdjacentTile(current, direction, width, height), direction, destinationCell, exitDirection, solutionArea, navCounts, visited, navVisits, route, width, height, ref nodes, ref searchBudgetExhausted))
 						return true;
 				}
 
@@ -1011,7 +1018,7 @@ namespace ClassicTilestorm
 					if (!CanAcceptIncoming(grid, next, direction, destinationCell, exitDirection, solutionArea, navCounts))
 						continue;
 
-					if (TryExtendRoute(grid, next, direction, destinationCell, exitDirection, solutionArea, navCounts, visited, navVisits, route, width, height, ref nodes))
+					if (TryExtendRoute(grid, next, direction, destinationCell, exitDirection, solutionArea, navCounts, visited, navVisits, route, width, height, ref nodes, ref searchBudgetExhausted))
 						return true;
 				}
 
