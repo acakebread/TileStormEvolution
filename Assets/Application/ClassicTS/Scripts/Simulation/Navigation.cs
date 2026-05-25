@@ -94,10 +94,28 @@ namespace ClassicTilestorm
 		}
 
 		public static int GetAdjacentTile(IMapPlay map, int index, int dir)
+			=> GetAdjacentTile(index, dir, map.Width, map.Height);
+
+		public static int GetAdjacentTile(int index, int dir, int width, int height)
 		{
 			var dx = ((dir & E) >> 2) - ((dir & W) >> 3);
 			var dz = ((dir & N) >> 0) - ((dir & S) >> 1);
-			return ((index / map.Width) + dz) * map.Width + (index % map.Width) + dx;
+			var x = index % width + dx;
+			var z = index / width + dz;
+
+			if (x < 0 || x >= width || z < 0 || z >= height)
+				return -1;
+
+			return z * width + x;
+		}
+
+		public static int ManhattanDistance(int a, int b, int width)
+		{
+			var ax = a % width;
+			var ay = a / width;
+			var bx = b % width;
+			var by = b / width;
+			return Mathf.Abs(ax - bx) + Mathf.Abs(ay - by);
 		}
 
 		//public static float LengthDir(IMap map, int src, int dst, int dir)
