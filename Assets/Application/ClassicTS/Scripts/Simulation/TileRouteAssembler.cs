@@ -306,6 +306,12 @@ namespace ClassicTilestorm
 				return true;
 			}
 
+			if (IsFullyOccupiedByNavTiles(island))
+			{
+				summary = $"source {sourceAnchor.StaticCell}->{sourceAnchor.PlayableCell}, destination {destinationAnchor.StaticCell}<-{destinationAnchor.PlayableCell}, area {island.RawCount}, pool {DescribeNavTiles(island.NavTiles)}, island is fully occupied by movable nav tiles and cannot be rearranged.";
+				return false;
+			}
+
 			var solutionArea = CullSolutionArea(
 				island.BaseGrid,
 				island.RawPlayable,
@@ -375,6 +381,9 @@ namespace ClassicTilestorm
 			summary = $"assembled route with {route.Count} movable tile(s), area {island.RawCount}->{Count(solutionArea)}, pool {DescribeNavTiles(island.NavTiles)}, anchors {sourceAnchor.StaticCell}->{sourceAnchor.PlayableCell} and {destinationAnchor.StaticCell}<-{destinationAnchor.PlayableCell}, nodes {nodes}.";
 			return true;
 		}
+
+		private static bool IsFullyOccupiedByNavTiles(IslandContext island)
+			=> island != null && island.RawCount > 0 && island.NavBudget == island.RawCount;
 
 		private static int[] BuildRules(Map map)
 		{
