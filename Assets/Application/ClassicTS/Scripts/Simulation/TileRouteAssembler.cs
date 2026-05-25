@@ -117,9 +117,6 @@ namespace ClassicTilestorm
 		}
 
 		public static bool TryAssemble(Map map, int sourceTile, int destinationTile, out Result result)
-			=> TryAssemble(map, sourceTile, destinationTile, -1, out result);
-
-		public static bool TryAssemble(Map map, int sourceTile, int destinationTile, int previousTile, out Result result)
 		{
 			result = null;
 
@@ -133,6 +130,7 @@ namespace ClassicTilestorm
 
 			var scratch = BuildScratchGrid(state, rules);
 			var sourceAnchors = FindAnchors(scratch, sourceTile, null, map.Width, map.Height);
+			var previousTile = FindPreviousWaypointTile(map, sourceTile);
 			FilterReverseSourceAnchors(BuildLiveNavGrid(state, rules), sourceAnchors, sourceTile, previousTile, map.Width, map.Height);
 
 			var lastSummary = "no source anchors.";
@@ -327,6 +325,21 @@ namespace ClassicTilestorm
 		// ===================================================================
 		// All original helper methods from your code
 		// ===================================================================
+
+		private static int FindPreviousWaypointTile(Map map, int sourceTile)
+		{
+			var waypoints = map?.GetWaypoints();
+			if (waypoints == null)
+				return -1;
+
+			for (var i = 1; i < waypoints.Length; i++)
+			{
+				if (waypoints[i].tile == sourceTile)
+					return waypoints[i - 1].tile;
+			}
+
+			return -1;
+		}
 
 		private static bool IsFullyOccupiedByNavTiles(IslandContext island)
 			=> island != null && island.RawCount > 0 && island.NavBudget == island.RawCount;

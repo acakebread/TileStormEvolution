@@ -436,8 +436,7 @@ namespace ClassicTilestorm
 					return;
 				}
 
-				var previousTile = PreviousWaypointTile(CurrentMap, eggbotController.DestinationWaypointIndex);
-				if (TileRouteAssembler.TryAssemble(CurrentMap, eggbotController.CurrentTile, destinationTile, previousTile, out var assembled))
+				if (TileRouteAssembler.TryAssemble(CurrentMap, eggbotController.CurrentTile, destinationTile, out var assembled))
 				{
 					if (CurrentMap.ApplyState(assembled.State))
 						Debug.Log($"Solve assembled candidate state: {assembled.Summary}");
@@ -450,15 +449,6 @@ namespace ClassicTilestorm
 				return;
 			}
 
-		}
-
-		private static int PreviousWaypointTile(IMapPlay map, int destinationWaypointIndex)
-		{
-			var waypoints = map?.GetWaypoints();
-			if (waypoints == null || destinationWaypointIndex <= 1 || destinationWaypointIndex >= waypoints.Length)
-				return -1;
-
-			return waypoints[destinationWaypointIndex - 2].tile;
 		}
 
 		public void LoadDatabase()
