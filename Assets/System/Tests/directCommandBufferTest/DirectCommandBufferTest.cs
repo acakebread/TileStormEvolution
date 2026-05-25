@@ -150,6 +150,8 @@ namespace MassiveHadronLtd
 
 		public bool HasCommands(RenderPassEvent evt) => commands.ContainsKey(evt) && commands[evt] != null;
 
+		public bool RequiresColorTexture(RenderPassEvent evt) => false;
+
 		public void ExecuteCommands(RenderPassEvent evt, RasterCommandBuffer commandBuffer, Camera camera)
 		{
 			if (commands.ContainsKey(evt) && commands[evt] != null)
