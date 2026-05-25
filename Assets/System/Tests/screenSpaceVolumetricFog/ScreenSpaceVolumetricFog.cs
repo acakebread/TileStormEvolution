@@ -18,6 +18,7 @@ public class ScreenSpaceVolumetricFog : MonoBehaviour, IDirectCommandProvider
     private static readonly int BlobDriftAmountId = Shader.PropertyToID("_BlobDriftAmount");
     private static readonly int FieldPhaseOffsetId = Shader.PropertyToID("_FieldPhaseOffset");
     private static readonly int BlobPhaseOffsetId = Shader.PropertyToID("_BlobPhaseOffset");
+    private static readonly int SphericalRepeatPowerId = Shader.PropertyToID("_SphericalRepeatPower");
 
     [Header("Input")]
     [SerializeField] private Texture2D causticTexture;
@@ -39,6 +40,7 @@ public class ScreenSpaceVolumetricFog : MonoBehaviour, IDirectCommandProvider
     [SerializeField] private Vector2 blobDriftAmount = new Vector2(0.06f, 0.05f);
     [SerializeField] private float fieldPhaseOffset = 0f;
     [SerializeField] private float blobPhaseOffset = 1.5708f;
+    [SerializeField, Range(0f, 6f)] private float sphericalRepeatPower = 0f;
 
     [Header("Render")]
     [SerializeField] private RenderPassEvent renderPassEvent = RenderPassEvent.AfterRenderingPostProcessing;
@@ -122,6 +124,7 @@ public class ScreenSpaceVolumetricFog : MonoBehaviour, IDirectCommandProvider
         fogMaterial.SetVector(BlobDriftAmountId, new Vector4(blobDriftAmount.x, blobDriftAmount.y, 0f, 0f));
         fogMaterial.SetFloat(FieldPhaseOffsetId, fieldPhaseOffset);
         fogMaterial.SetFloat(BlobPhaseOffsetId, blobPhaseOffset);
+        fogMaterial.SetFloat(SphericalRepeatPowerId, sphericalRepeatPower);
     }
 
     public bool HasCommands(RenderPassEvent evt)

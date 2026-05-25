@@ -380,6 +380,7 @@ MonoBehaviour:
   blobDriftAmount: {x: 0.07, y: 0.05}
   fieldPhaseOffset: 0
   blobPhaseOffset: 1.5708
+  sphericalRepeatPower: 2
   renderPassEvent: 600
 --- !u!114 &542556267
 MonoBehaviour:

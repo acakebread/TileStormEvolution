@@ -15,6 +15,7 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
         _BlobDriftAmount("Blob Drift Amount", Vector) = (0.06, 0.05, 0, 0)
         _FieldPhaseOffset("Field Phase Offset", Float) = 0
         _BlobPhaseOffset("Blob Phase Offset", Float) = 1.5708
+        _SphericalRepeatPower("Spherical Repeat Power", Range(0, 6)) = 0
     }
 
     SubShader
@@ -58,6 +59,7 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
                 float4 _BlobDriftAmount;
                 float _FieldPhaseOffset;
                 float _BlobPhaseOffset;
+                float _SphericalRepeatPower;
             CBUFFER_END
 
             float3 GetWorldViewDirection(float2 screenUV)
@@ -90,6 +92,8 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
 
                 float3 worldViewDir = GetWorldViewDirection(screenUV);
                 float2 sphereUV = DirectionToSphericalUV(worldViewDir);
+                float sphericalRepeat = exp2(_SphericalRepeatPower);
+                sphereUV *= sphericalRepeat;
 
                 float time = _Time.y * _DriftSpeed;
                 float2 fieldDrift = _FieldDriftAmount.xy * time;
