@@ -367,20 +367,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e76c56808f13c6f429c4e59280be6618, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ScreenSpaceVolumetricFog
-  causticTexture: {fileID: 2800000, guid: e1fc538fcea7b784e8640df6bfec4ac4, type: 3}
-  fieldTint: {r: 1, g: 1, b: 1, a: 1}
-  fieldScale: {x: 1, y: 1}
-  fieldOffset: {x: 0, y: 0}
-  fieldBias: 0
-  blobTint: {r: 1, g: 1, b: 1, a: 1}
-  blobScale: {x: 1, y: 1}
-  blobOffset: {x: 0.19, y: -0.11}
-  driftSpeed: 1.32
-  fieldDriftAmount: {x: 0.03, y: 0.03}
-  blobDriftAmount: {x: 0.07, y: 0.05}
-  fieldPhaseOffset: 0
-  blobPhaseOffset: 1.5708
-  sphericalRepeatPower: 2
   renderPassEvent: 600
 --- !u!114 &542556267
 MonoBehaviour:

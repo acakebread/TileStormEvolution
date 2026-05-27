@@ -2,20 +2,6 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
 {
     Properties
     {
-        _CausticTexture("Caustic Texture", 2D) = "white" {}
-        _FieldTint("Field Tint", Color) = (1, 1, 1, 1)
-        _BlobTint("Blob Tint", Color) = (0.7, 0.0, 1.0, 1.0)
-        _FieldScale("Field Scale", Vector) = (1, 1, 0, 0)
-        _FieldOffset("Field Offset", Vector) = (0, 0, 0, 0)
-        _BlobScale("Blob Scale", Vector) = (1, 1, 0, 0)
-        _BlobOffset("Blob Offset", Vector) = (0.19, -0.11, 0, 0)
-        _FieldBias("Field Bias", Range(-1, 1)) = 0
-        _DriftSpeed("Drift Speed", Float) = 0.35
-        _FieldDriftAmount("Field Drift Amount", Vector) = (0.04, 0.03, 0, 0)
-        _BlobDriftAmount("Blob Drift Amount", Vector) = (0.06, 0.05, 0, 0)
-        _FieldPhaseOffset("Field Phase Offset", Float) = 0
-        _BlobPhaseOffset("Blob Phase Offset", Float) = 1.5708
-        _SphericalRepeatPower("Spherical Repeat Power", Range(0, 6)) = 0
     }
 
     SubShader
@@ -40,26 +26,9 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
             #pragma fragment Frag
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
-            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareDepthTexture.hlsl"
             #include "Packages/com.unity.render-pipelines.core/Runtime/Utilities/Blit.hlsl"
 
-            TEXTURE2D(_CausticTexture);
-            SAMPLER(sampler_CausticTexture);
-
             CBUFFER_START(UnityPerMaterial)
-                float4 _FieldTint;
-                float4 _BlobTint;
-                float4 _FieldScale;
-                float4 _FieldOffset;
-                float4 _BlobScale;
-                float4 _BlobOffset;
-                float _FieldBias;
-                float _DriftSpeed;
-                float4 _FieldDriftAmount;
-                float4 _BlobDriftAmount;
-                float _FieldPhaseOffset;
-                float _BlobPhaseOffset;
-                float _SphericalRepeatPower;
             CBUFFER_END
 
             float3 GetWorldViewDirection(float2 screenUV)
@@ -72,53 +41,73 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
                 return normalize(mul(UNITY_MATRIX_I_V, float4(viewDir, 0.0)).xyz);
             }
 
-            float2 DirectionToSphericalUV(float3 directionWS)
+            float Hash31(float3 p)
             {
-                float azimuth = atan2(directionWS.x, directionWS.z);
-                float elevation = asin(clamp(directionWS.y, -1.0, 1.0));
+                p = frac(p * 0.1031);
+                p += dot(p, p.yzx + 33.33);
+                return frac((p.x + p.y) * p.z);
+            }
 
-                float2 sphericalUV;
-                sphericalUV.x = azimuth * 0.15915494309 + 0.5;
-                sphericalUV.y = 0.5 - elevation * 0.31830988618;
-                return sphericalUV;
+            float ValueNoise3D(float3 p)
+            {
+                float3 i = floor(p);
+                float3 f = frac(p);
+                float3 u = f * f * (3.0 - 2.0 * f);
+
+                float n000 = Hash31(i + float3(0, 0, 0));
+                float n100 = Hash31(i + float3(1, 0, 0));
+                float n010 = Hash31(i + float3(0, 1, 0));
+                float n110 = Hash31(i + float3(1, 1, 0));
+                float n001 = Hash31(i + float3(0, 0, 1));
+                float n101 = Hash31(i + float3(1, 0, 1));
+                float n011 = Hash31(i + float3(0, 1, 1));
+                float n111 = Hash31(i + float3(1, 1, 1));
+
+                float nx00 = lerp(n000, n100, u.x);
+                float nx10 = lerp(n010, n110, u.x);
+                float nx01 = lerp(n001, n101, u.x);
+                float nx11 = lerp(n011, n111, u.x);
+
+                float nxy0 = lerp(nx00, nx10, u.y);
+                float nxy1 = lerp(nx01, nx11, u.y);
+
+                return lerp(nxy0, nxy1, u.z);
+            }
+
+            float Fbm(float3 p)
+            {
+                float sum = 0.0;
+                float amplitude = 0.5;
+                float frequency = 1.0;
+
+                [unroll]
+                for (int i = 0; i < 4; i++)
+                {
+                    sum += amplitude * ValueNoise3D(p * frequency);
+                    frequency *= 2.0;
+                    amplitude *= 0.5;
+                }
+
+                return sum;
             }
 
             half4 Frag(Varyings input) : SV_Target
             {
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
                 float2 screenUV = GetNormalizedScreenSpaceUV(input.positionCS);
-                float rawDepth = SampleSceneDepth(screenUV);
-                float sceneDepth01 = saturate(Linear01Depth(rawDepth, _ZBufferParams));
-
                 float3 worldViewDir = GetWorldViewDirection(screenUV);
-                float2 sphereUV = DirectionToSphericalUV(worldViewDir);
-                float sphericalRepeat = exp2(_SphericalRepeatPower);
-                sphereUV *= sphericalRepeat;
 
-                float time = _Time.y * _DriftSpeed;
-                float2 fieldDrift = _FieldDriftAmount.xy * time;
-                float2 blobDrift = _BlobDriftAmount.xy * time;
+                float3 p = worldViewDir * 5.0;
+                float clouds = Fbm(p);
+                float detail = Fbm(p * 2.75 + 17.0);
+                float field = saturate(clouds * 0.75 + detail * 0.25);
 
-                float2 fieldUv = frac(sphereUV * _FieldScale.xy + _FieldOffset.xy + fieldDrift + float2(_FieldPhaseOffset, -_FieldPhaseOffset));
-                float2 blobUv = frac(sphereUV * _BlobScale.xy + _BlobOffset.xy + blobDrift + float2(_BlobPhaseOffset, -_BlobPhaseOffset));
+                float3 baseColor = float3(0.16, 0.78, 0.78);
+                float3 cloudColor = float3(0.62, 0.42, 0.95);
+                float3 skyColor = lerp(baseColor, cloudColor, smoothstep(0.35, 0.8, field));
+                skyColor = lerp(skyColor, skyColor * 0.75 + float3(0.15, 0.15, 0.18), saturate((worldViewDir.y + 0.2) * 0.8));
 
-                float fieldDepth = SAMPLE_TEXTURE2D(_CausticTexture, sampler_CausticTexture, fieldUv).r;
-                float blobDepth = SAMPLE_TEXTURE2D(_CausticTexture, sampler_CausticTexture, blobUv).r;
-
-                fieldDepth = saturate(fieldDepth + _FieldBias);
-                blobDepth = saturate(blobDepth + _FieldBias);
-
-                half4 sceneColor = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, screenUV);
-                float delta = min(blobDepth, sceneDepth01) - fieldDepth;
-
-                half3 finalColor = sceneColor.rgb;
-                if (delta > 0.0)
-                {
-                    float blobBlend = saturate(delta);
-                    finalColor = lerp(sceneColor.rgb, _BlobTint.rgb, blobBlend);
-                }
-
-                return half4(finalColor, 1.0);
+                return half4(skyColor, 1.0);
             }
             ENDHLSL
         }
