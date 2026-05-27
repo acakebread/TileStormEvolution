@@ -6,12 +6,14 @@ using MassiveHadronLtd;
 public class ScreenSpaceVolumetricFog : MonoBehaviour, IDirectCommandProvider
 {
     private static readonly int FogColorId = Shader.PropertyToID("_FogColor");
+    private static readonly int PseudoDepthId = Shader.PropertyToID("_PseudoDepth");
 
     [Header("Render")]
     [SerializeField] private RenderPassEvent renderPassEvent = RenderPassEvent.AfterRenderingPostProcessing;
 
     [Header("Fog")]
     [SerializeField] private Color fogColor = new Color(0.75f, 0.55f, 1.0f, 1.0f);
+    [SerializeField, Range(0.0f, 4.0f)] private float pseudoDepth;
 
     private Material fogMaterial;
 
@@ -49,6 +51,7 @@ public class ScreenSpaceVolumetricFog : MonoBehaviour, IDirectCommandProvider
     private void ApplyMaterialParameters()
     {
         fogMaterial.SetColor(FogColorId, fogColor);
+        fogMaterial.SetFloat(PseudoDepthId, pseudoDepth);
     }
 
     public bool HasCommands(RenderPassEvent evt)
