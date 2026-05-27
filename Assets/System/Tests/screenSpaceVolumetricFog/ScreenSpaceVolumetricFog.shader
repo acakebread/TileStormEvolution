@@ -26,9 +26,11 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
             #pragma fragment Frag
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareDepthTexture.hlsl"
             #include "Packages/com.unity.render-pipelines.core/Runtime/Utilities/Blit.hlsl"
 
             CBUFFER_START(UnityPerMaterial)
+                float4 _FogColor;
             CBUFFER_END
 
             float3 GetWorldViewDirection(float2 screenUV)
@@ -91,23 +93,41 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
                 return sum;
             }
 
+            float LayerDepth(float3 worldViewDir, float3 layerOffset, float layerFrequency)
+            {
+                float3 p = worldViewDir * layerFrequency + layerOffset;
+                float clouds = Fbm(p);
+                float detail = Fbm(p * 2.75 + 17.0);
+                float depth = saturate(clouds * 0.75 + detail * 0.25);
+                return saturate((depth - 0.32) * 2.78);
+            }
+
+            float NormalizedSceneDepth(float2 screenUV)
+            {
+                float rawDepth = SampleSceneDepth(screenUV);
+                float eyeDepth = LinearEyeDepth(rawDepth, _ZBufferParams);
+                return saturate((eyeDepth - _ProjectionParams.y) / max(_ProjectionParams.z - _ProjectionParams.y, 1e-6));
+            }
+
             half4 Frag(Varyings input) : SV_Target
             {
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+
                 float2 screenUV = GetNormalizedScreenSpaceUV(input.positionCS);
                 float3 worldViewDir = GetWorldViewDirection(screenUV);
 
-                float3 p = worldViewDir * 5.0;
-                float clouds = Fbm(p);
-                float detail = Fbm(p * 2.75 + 17.0);
-                float field = saturate(clouds * 0.75 + detail * 0.25);
+                float sceneDepth01 = NormalizedSceneDepth(screenUV);
 
-                float3 baseColor = float3(0.16, 0.78, 0.78);
-                float3 cloudColor = float3(0.62, 0.42, 0.95);
-                float3 skyColor = lerp(baseColor, cloudColor, smoothstep(0.35, 0.8, field));
-                skyColor = lerp(skyColor, skyColor * 0.75 + float3(0.15, 0.15, 0.18), saturate((worldViewDir.y + 0.2) * 0.8));
+                float nearDepth = LayerDepth(worldViewDir, float3(0.0, 0.0, 0.0), 4.0);
+                float farDepth = 1.0 - LayerDepth(-worldViewDir, float3(6.13, -9.47, 2.71), 4.0);
 
-                return half4(skyColor, 1.0);
+                float clippedFarDepth = min(farDepth, sceneDepth01);
+                float fogAmount = saturate(clippedFarDepth - nearDepth);
+
+                float3 sceneColor = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, screenUV).rgb;
+                float3 finalColor = lerp(sceneColor, _FogColor.rgb, fogAmount);
+
+                return half4(finalColor, 1.0);
             }
             ENDHLSL
         }

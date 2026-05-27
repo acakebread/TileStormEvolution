@@ -5,8 +5,13 @@ using MassiveHadronLtd;
 
 public class ScreenSpaceVolumetricFog : MonoBehaviour, IDirectCommandProvider
 {
+    private static readonly int FogColorId = Shader.PropertyToID("_FogColor");
+
     [Header("Render")]
     [SerializeField] private RenderPassEvent renderPassEvent = RenderPassEvent.AfterRenderingPostProcessing;
+
+    [Header("Fog")]
+    [SerializeField] private Color fogColor = new Color(0.75f, 0.55f, 1.0f, 1.0f);
 
     private Material fogMaterial;
 
@@ -43,6 +48,7 @@ public class ScreenSpaceVolumetricFog : MonoBehaviour, IDirectCommandProvider
 
     private void ApplyMaterialParameters()
     {
+        fogMaterial.SetColor(FogColorId, fogColor);
     }
 
     public bool HasCommands(RenderPassEvent evt)
