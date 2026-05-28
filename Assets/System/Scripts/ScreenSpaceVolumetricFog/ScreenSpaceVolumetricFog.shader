@@ -37,7 +37,6 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
                 float _PseudoDepth;
                 float _DepthLayerCount;
                 float _FogFarPlane;
-                float _FogMultiplier;
                 float _FogSeedOffset;
                 float _DebugFog;
             CBUFFER_END
@@ -198,7 +197,7 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
                 }
 
                 float3 sceneColor = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, screenUV).rgb;
-                float fogAlpha = saturate(fogAmount * _FogMultiplier);
+                float fogAlpha = saturate(fogAmount * (_FogColor.a * 4.0));
                 float fogMask = fogAmount > 1e-5 ? 1.0 : 0.0;
                 float fogDebugShade = 1.0 - nearestFogStartDepth;
                 float3 debugFogColor = float3(fogDebugShade, fogDebugShade, fogDebugShade);
