@@ -277,7 +277,7 @@ Camera:
     width: 1
     height: 1
   near clip plane: 0.1
-  far clip plane: 20
+  far clip plane: 250
   field of view: 60
   orthographic: 0
   orthographic size: 5
@@ -305,7 +305,7 @@ Transform:
   m_GameObject: {fileID: 542556260}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 2, z: -6}
+  m_LocalPosition: {x: 0, y: 3, z: -6}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -369,6 +369,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ScreenSpaceVolumetricFog
   renderPassEvent: 600
   fogColor: {r: 0.75, g: 0.55, b: 1, a: 1}
+  pseudoDepth: 0
+  fogFarPlane: 10
+  depthLayerCount: 2
+  layerPairScale: 1
 --- !u!114 &542556267
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -731,7 +735,7 @@ Transform:
   m_GameObject: {fileID: 1310372533}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 3, z: 0}
+  m_LocalPosition: {x: 0, y: 0.2, z: 0}
   m_LocalScale: {x: 2, y: 2, z: 2}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -969,7 +973,7 @@ SceneRoots:
   - {fileID: 542556263}
   - {fileID: 65409916}
   - {fileID: 1310372538}
+  - {fileID: 1203413085}
   - {fileID: 989289687}
   - {fileID: 1482459444}
-  - {fileID: 1203413085}
   - {fileID: 1580198247}

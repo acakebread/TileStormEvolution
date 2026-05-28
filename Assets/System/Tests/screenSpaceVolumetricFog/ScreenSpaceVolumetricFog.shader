@@ -29,9 +29,13 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareDepthTexture.hlsl"
             #include "Packages/com.unity.render-pipelines.core/Runtime/Utilities/Blit.hlsl"
 
+            #define MAX_DEPTH_LAYER_COUNT 8
+
             CBUFFER_START(UnityPerMaterial)
                 float4 _FogColor;
                 float _PseudoDepth;
+                float _DepthLayerCount;
+                float _FogFarPlane;
             CBUFFER_END
 
             float3 GetWorldViewDirection(float2 screenUV)
@@ -106,8 +110,12 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
             float NormalizedSceneDepth(float2 screenUV)
             {
                 float rawDepth = SampleSceneDepth(screenUV);
+                // Convert the perspective depth buffer into fog-range space
+                // while accounting for the camera near clip, so the normalized
+                // scene depth matches the fog layer span endpoints.
                 float eyeDepth = LinearEyeDepth(rawDepth, _ZBufferParams);
-                return saturate((eyeDepth - _ProjectionParams.y) / max(_ProjectionParams.z - _ProjectionParams.y, 1e-6));
+                float fogRange = max(_FogFarPlane - _ProjectionParams.y, 1e-6);
+                return saturate((eyeDepth - _ProjectionParams.y) / fogRange);
             }
 
             float DebugLayerRead(float3 worldViewDir, int layerIndex, bool isEndLayer)
@@ -127,37 +135,42 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
 
                 float sceneDepth01 = NormalizedSceneDepth(screenUV);
 
-                float pseudoDepth = max(_PseudoDepth, 0.0);
-                float layerScale = 0.5;
+                float pseudoDepth = _PseudoDepth;
+                int depthLayerCount = clamp((int)round(_DepthLayerCount), 1, MAX_DEPTH_LAYER_COUNT);
+                float layerScale = rcp((float)depthLayerCount);
                 int firstLayerIndex = -(int)floor(pseudoDepth) - 1;
                 float fogAmount = 0.0;
-                float fogDebugShade = 0.0;
+                float nearestFogStartDepth = 1.0;
 
                 [unroll]
-                for (int localLayerIndex = 0; localLayerIndex < 4; localLayerIndex++)
+                for (int localLayerIndex = 0; localLayerIndex < MAX_DEPTH_LAYER_COUNT + 2; localLayerIndex++)
                 {
-                    int layerIndex = firstLayerIndex + localLayerIndex;
-                    float rawBandStart = (pseudoDepth + (float)layerIndex) * layerScale;
-                    float rawBandEnd = rawBandStart + layerScale;
-                    float visibleBandStart = max(rawBandStart, 0.0);
-                    float visibleBandEnd = min(rawBandEnd, 1.0);
-                    float visibleBandWidth = max(visibleBandEnd - visibleBandStart, 0.0);
-
-                    if (visibleBandWidth > 1e-5)
+                    if (localLayerIndex < depthLayerCount + 2)
                     {
-                        float layer0Depth = rawBandStart + DebugLayerRead(worldViewDir, layerIndex, false) * layerScale;
-                        float layer1Depth = rawBandStart + DebugLayerRead(worldViewDir, layerIndex, true) * layerScale;
-                        float clippedStartDepth = max(layer0Depth, 0.0);
-                        float clippedEndDepth = min(min(layer1Depth, sceneDepth01), 1.0);
-                        float bandFogAmount = max(clippedEndDepth - clippedStartDepth, 0.0);
+                        int layerIndex = firstLayerIndex + localLayerIndex;
+                        float rawBandStart = (pseudoDepth + (float)layerIndex) * layerScale;
+                        float rawBandEnd = rawBandStart + layerScale;
+                        float visibleBandStart = max(rawBandStart, 0.0);
+                        float visibleBandEnd = min(rawBandEnd, 1.0);
+                        float visibleBandWidth = max(visibleBandEnd - visibleBandStart, 0.0);
 
-                        fogAmount += bandFogAmount;
-                        fogDebugShade = max(fogDebugShade, saturate(bandFogAmount / visibleBandWidth));
+                        if (visibleBandWidth > 1e-5)
+                        {
+                            float layer0Depth = rawBandStart + DebugLayerRead(worldViewDir, layerIndex, false) * layerScale;
+                            float layer1Depth = rawBandStart + DebugLayerRead(worldViewDir, layerIndex, true) * layerScale;
+                            float clippedStartDepth = max(layer0Depth, 0.0);
+                            float clippedEndDepth = min(min(layer1Depth, sceneDepth01), 1.0);
+                            float bandFogAmount = max(clippedEndDepth - clippedStartDepth, 0.0);
+
+                            fogAmount += bandFogAmount;
+                            nearestFogStartDepth = bandFogAmount > 1e-5 ? min(nearestFogStartDepth, saturate(clippedStartDepth)) : nearestFogStartDepth;
+                        }
                     }
                 }
 
                 float3 sceneColor = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, screenUV).rgb;
                 float fogMask = fogAmount > 1e-5 ? 1.0 : 0.0;
+                float fogDebugShade = 1.0 - nearestFogStartDepth;
                 float3 finalColor = lerp(sceneColor, float3(fogDebugShade, fogDebugShade, fogDebugShade), fogMask);
 
                 return half4(finalColor, 1.0);
@@ -166,3 +179,9 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
         }
     }
 }
+
+
+
+
+
+
