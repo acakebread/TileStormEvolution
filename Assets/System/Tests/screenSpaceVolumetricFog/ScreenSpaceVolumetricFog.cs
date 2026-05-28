@@ -12,6 +12,7 @@ public class ScreenSpaceVolumetricFog : MonoBehaviour, IDirectCommandProvider
     private static readonly int PseudoDepthId = Shader.PropertyToID("_PseudoDepth");
     private static readonly int DepthLayerCountId = Shader.PropertyToID("_DepthLayerCount");
     private static readonly int FogFarPlaneId = Shader.PropertyToID("_FogFarPlane");
+    private static readonly int DebugFogId = Shader.PropertyToID("_DebugFog");
     private static readonly int LayerRotationCompensationsId = Shader.PropertyToID("_LayerRotationCompensations");
 
     [Header("Render")]
@@ -22,6 +23,7 @@ public class ScreenSpaceVolumetricFog : MonoBehaviour, IDirectCommandProvider
     [SerializeField, Range(-2.0f, 2.0f)] private float pseudoDepth;
     [SerializeField, Min(0.01f)] private float fogFarPlane = 20.0f;
     [SerializeField, Range(1, 8)] private int depthLayerCount = 2;
+    [SerializeField] private bool debugFog = true;
 
     private Material fogMaterial;
     private Camera trackedDepthCamera;
@@ -30,7 +32,9 @@ public class ScreenSpaceVolumetricFog : MonoBehaviour, IDirectCommandProvider
     private bool hasCameraDepthTracking;
     private Camera trackedRotationCamera;
     private Quaternion lastCameraRotation;
+    private int lastRotationFirstLayerIndex;
     private bool hasLayerRotationTracking;
+    private readonly Quaternion[] remappedLayerRotations = new Quaternion[MaxVisibleDepthLayerCount];
     private readonly Quaternion[] layerRotations = new Quaternion[MaxVisibleDepthLayerCount];
     private readonly Vector4[] layerRotationCompensationVectors = new Vector4[MaxVisibleDepthLayerCount];
 
@@ -74,6 +78,7 @@ public class ScreenSpaceVolumetricFog : MonoBehaviour, IDirectCommandProvider
         hasCameraDepthTracking = false;
         trackedRotationCamera = null;
         lastCameraRotation = Quaternion.identity;
+        lastRotationFirstLayerIndex = 0;
         hasLayerRotationTracking = false;
     }
 
@@ -132,14 +137,62 @@ public class ScreenSpaceVolumetricFog : MonoBehaviour, IDirectCommandProvider
             rotation.w * inverseMagnitude);
     }
 
-    private void UpdateLayerRotations(Camera camera)
+    private float GetLayerRotationScale(float resolvedPseudoDepth, int localLayerIndex)
+    {
+        int activeDepthLayerCount = Mathf.Clamp(depthLayerCount, 1, MaxDepthLayerCount);
+        float layerScale = 1.0f / activeDepthLayerCount;
+        int firstLayerIndex = GetFirstLayerIndex(resolvedPseudoDepth);
+        int layerIndex = firstLayerIndex + localLayerIndex;
+        float rawBandStart = (resolvedPseudoDepth + layerIndex) * layerScale;
+        float rawBandEnd = rawBandStart + layerScale;
+        float visibleBandStart = Mathf.Max(rawBandStart, 0.0f);
+        float visibleBandEnd = Mathf.Min(rawBandEnd, 1.0f);
+
+        if (visibleBandEnd - visibleBandStart <= 1e-5f)
+            return 0.0f;
+
+        return Mathf.Clamp01((visibleBandStart + visibleBandEnd) * 0.5f);
+    }
+
+    private static int GetFirstLayerIndex(float resolvedPseudoDepth)
+    {
+        return -(int)Mathf.Floor(resolvedPseudoDepth) - 1;
+    }
+
+    private void RemapLayerRotations(int newFirstLayerIndex)
+    {
+        if (newFirstLayerIndex == lastRotationFirstLayerIndex)
+            return;
+
+        for (int i = 0; i < MaxVisibleDepthLayerCount; i++)
+        {
+            int logicalLayerIndex = newFirstLayerIndex + i;
+            int previousLocalIndex = logicalLayerIndex - lastRotationFirstLayerIndex;
+
+            if (previousLocalIndex < 0)
+                remappedLayerRotations[i] = layerRotations[0];
+            else if (previousLocalIndex >= MaxVisibleDepthLayerCount)
+                remappedLayerRotations[i] = layerRotations[MaxVisibleDepthLayerCount - 1];
+            else
+                remappedLayerRotations[i] = layerRotations[previousLocalIndex];
+        }
+
+        for (int i = 0; i < MaxVisibleDepthLayerCount; i++)
+            layerRotations[i] = remappedLayerRotations[i];
+
+        lastRotationFirstLayerIndex = newFirstLayerIndex;
+    }
+
+    private void UpdateLayerRotations(Camera camera, float resolvedPseudoDepth)
     {
         Quaternion currentCameraRotation = camera != null ? camera.transform.rotation : Quaternion.identity;
+        int firstLayerIndex = GetFirstLayerIndex(resolvedPseudoDepth);
 
         if (!hasLayerRotationTracking || trackedRotationCamera != camera)
         {
             trackedRotationCamera = camera;
             lastCameraRotation = currentCameraRotation;
+            lastRotationFirstLayerIndex = firstLayerIndex;
             hasLayerRotationTracking = true;
 
             for (int i = 0; i < MaxVisibleDepthLayerCount; i++)
@@ -147,14 +200,20 @@ public class ScreenSpaceVolumetricFog : MonoBehaviour, IDirectCommandProvider
         }
         else
         {
-            Quaternion cameraDelta = currentCameraRotation * Quaternion.Inverse(lastCameraRotation);
+            RemapLayerRotations(firstLayerIndex);
+
+            Quaternion cameraDelta = Quaternion.Inverse(lastCameraRotation) * currentCameraRotation;
             if (cameraDelta.w < 0.0f)
                 cameraDelta = new Quaternion(-cameraDelta.x, -cameraDelta.y, -cameraDelta.z, -cameraDelta.w);
 
             lastCameraRotation = currentCameraRotation;
 
             for (int i = 0; i < MaxVisibleDepthLayerCount; i++)
-                layerRotations[i] = Normalize(cameraDelta * layerRotations[i]);
+            {
+                float rotationScale = GetLayerRotationScale(resolvedPseudoDepth, i);
+                Quaternion layerDelta = Quaternion.SlerpUnclamped(Quaternion.identity, cameraDelta, rotationScale);
+                layerRotations[i] = Normalize(layerRotations[i] * layerDelta);
+            }
         }
 
         Quaternion inverseCameraRotation = Quaternion.Inverse(currentCameraRotation);
@@ -170,11 +229,12 @@ public class ScreenSpaceVolumetricFog : MonoBehaviour, IDirectCommandProvider
     private void ApplyMaterialParameters(Camera camera)
     {
         float resolvedPseudoDepth = ResolvePseudoDepth(camera);
-        UpdateLayerRotations(camera);
+        UpdateLayerRotations(camera, resolvedPseudoDepth);
         fogMaterial.SetColor(FogColorId, fogColor);
         fogMaterial.SetFloat(PseudoDepthId, resolvedPseudoDepth);
         fogMaterial.SetFloat(DepthLayerCountId, Mathf.Max(depthLayerCount, 1));
         fogMaterial.SetFloat(FogFarPlaneId, fogFarPlane);
+        fogMaterial.SetFloat(DebugFogId, debugFog ? 1.0f : 0.0f);
     }
 
     public bool HasCommands(RenderPassEvent evt)

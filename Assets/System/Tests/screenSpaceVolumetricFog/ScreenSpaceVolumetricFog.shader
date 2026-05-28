@@ -37,6 +37,7 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
                 float _PseudoDepth;
                 float _DepthLayerCount;
                 float _FogFarPlane;
+                float _DebugFog;
             CBUFFER_END
 
             float4 _LayerRotationCompensations[MAX_VISIBLE_DEPTH_LAYER_COUNT];
@@ -194,9 +195,13 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
                 }
 
                 float3 sceneColor = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, screenUV).rgb;
+                float fogAlpha = saturate(fogAmount);
                 float fogMask = fogAmount > 1e-5 ? 1.0 : 0.0;
                 float fogDebugShade = 1.0 - nearestFogStartDepth;
-                float3 finalColor = lerp(sceneColor, float3(fogDebugShade, fogDebugShade, fogDebugShade), fogMask);
+                float3 debugFogColor = float3(fogDebugShade, fogDebugShade, fogDebugShade);
+                float3 debugColor = lerp(sceneColor, debugFogColor, fogMask);
+                float3 fogColor = lerp(sceneColor, _FogColor.rgb, fogAlpha);
+                float3 finalColor = lerp(fogColor, debugColor, saturate(_DebugFog));
 
                 return half4(finalColor, 1.0);
             }
