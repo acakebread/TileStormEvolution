@@ -172,9 +172,11 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
                 float eyeDepth = _ProjectionParams.y + saturate(fogDepth01) * fogRange;
                 float rayDistance = eyeDepth / max(abs(dot(worldViewDir, cameraForwardWS)), 1e-4);
                 float3 fogWorldPosition = _WorldSpaceCameraPos + worldViewDir * rayDistance;
-                float height01 = saturate(max(fogWorldPosition.y, 0.0) / _GroundPlaneFalloff);
+                float heightNoise = ValueNoise3D(float3(fogWorldPosition.xz * 0.075, 19.37));
+                float variedFalloff = _GroundPlaneFalloff * lerp(0.65, 1.35, heightNoise);
+                float height01 = saturate(max(fogWorldPosition.y, 0.0) / max(variedFalloff, 1e-5));
 
-                return sqrt(saturate(1.0 - height01));
+                return saturate(1.0 - height01);
             }
 
             float GroundPlaneSpanAttenuation(float3 worldViewDir, float startDepth01, float endDepth01)
@@ -182,12 +184,17 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
                 if (_GroundPlaneFalloff <= 1e-5)
                     return 1.0;
 
-                float midDepth01 = (startDepth01 + endDepth01) * 0.5;
-                float startAttenuation = GroundPlaneAttenuation(worldViewDir, startDepth01);
-                float midAttenuation = GroundPlaneAttenuation(worldViewDir, midDepth01);
-                float endAttenuation = GroundPlaneAttenuation(worldViewDir, endDepth01);
+                float depthRange = endDepth01 - startDepth01;
+                float attenuation = 0.0;
 
-                return startAttenuation * 0.25 + midAttenuation * 0.5 + endAttenuation * 0.25;
+                [unroll]
+                for (int i = 0; i < 5; i++)
+                {
+                    float sampleDepth01 = startDepth01 + depthRange * ((float)i * 0.25);
+                    attenuation += GroundPlaneAttenuation(worldViewDir, sampleDepth01);
+                }
+
+                return attenuation * 0.2;
             }
 
             half4 Frag(Varyings input) : SV_Target
