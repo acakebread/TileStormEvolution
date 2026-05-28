@@ -1,72 +1,172 @@
 # Screen Space Volumetric Fog
 
-This folder contains the test harness for a lightweight, URP-friendly fake
-volumetric fog prototype. The reusable system lives under `Assets/System`.
+This folder contains a lightweight URP-compatible fake volumetric fog system.
+It is designed for projects where true volumetric rendering is too expensive or
+too platform-specific, especially WebGL and mobile-oriented URP builds.
 
-## What it is
+The effect is implemented as a full-screen render pass. It does not raymarch a
+real 3D volume. Instead, it builds a small set of procedural fog intervals in
+normalized depth space, clips those intervals against the camera depth buffer,
+and blends the visible result over the resolved scene color.
 
-This effect is not a true volumetric renderer. It is a screen-space compositor
-that:
+## Files
 
-1. Reconstructs a view ray for each pixel.
-2. Projects that ray into a spherical direction lookup.
-3. Samples procedural fog noise in several layered depth intervals.
-4. Clips those intervals against the scene depth buffer.
-5. Accumulates the visible portion into a fog opacity value.
-6. Blends the fog over the resolved scene color.
+- `ScreenSpaceVolumetricFogSystem.cs`
+- `ScreenSpaceVolumetricFog.shader`
+- `README.md`
+- `ScreenSpaceVolumetricFogTechnicalNotes.md`
 
-The result is a deliberately fake but very cheap approximation of volumetric fog.
+The system test scene currently uses:
 
-## Why it exists
+- `Assets/System/Tests/screenSpaceVolumetricFog/ScreenSpaceVolumetricFog.unity`
+- `Assets/System/Tests/screenSpaceVolumetricFog/ScreenSpaceVolumetricFogTest.cs`
 
-Traditional volumetric fog approaches often rely on raymarching, 3D volumes,
-shadow integration, or HDRP features. Those are usually too expensive or too
-heavy for this project's intended URP/WebGL/mobile use case.
+## What The Effect Does
 
-This prototype focuses on:
+For each screen pixel, the shader:
 
-- low runtime cost
-- easy drop-in integration
-- stable screen-space rendering
-- scene-depth awareness
-- camera-relative motion
+1. Reads the scene color.
+2. Reads and linearizes the scene depth.
+3. Reconstructs the camera ray for the pixel.
+4. Builds several synthetic fog depth intervals along that ray.
+5. Clips each fog interval against the scene depth.
+6. Optionally attenuates the visible fog by height above the world `y=0` plane.
+7. Accumulates the visible interval lengths into a final fog amount.
+8. Blends the fog color over the scene color.
 
-## Main ideas
+The important trick is that the fog is represented by sparse depth intervals
+rather than a dense volume. This keeps the pass cheap while still allowing
+objects to appear in front of, inside, or behind the fog.
 
-- The fog is built from layered depth spans rather than a continuous volume.
-- The fog noise is projected through a spherical direction map so it behaves
-  more like a world-space field than a flat overlay.
-- Camera rotation is compensated per layer so the fog does not just stick to
-  the screen.
-- Camera translation feeds a synthetic depth phase so the field appears to move
-  through space.
-- An animation seed offset can be enabled to give the fog a slow living drift.
+## Controls
 
-## Current controls
+### Render Pass Event
 
-- `Fog Color`
-- `Fog Far Plane`
-- `Fog Multiplier`
-- `Fog Animation Speed`
-- `Depth Layer Count`
-- `Debug Fog`
+Controls where the full-screen pass is injected. The test scene currently uses
+`AfterRenderingPostProcessing`.
 
-## Terminology
+### Fog Color
 
-The code still uses some prototype-style names internally, but conceptually:
+RGB is the final fog tint.
 
-- `pseudo depth` means `synthetic depth phase`
-- `span buffer` means `fog interval accumulator`
-- `fog multiplier` means `opacity multiplier`
-- `fog seed offset` means `noise phase offset`
+Alpha is used as the fog intensity control. It maps to the old multiplier range:
 
-## Current status
+```text
+opacity multiplier = FogColor.a * 4
+```
 
-The system is intentionally still a prototype. It is good enough to demonstrate
-the core technique and to hand off for further development, but it still has
-some known artifacts such as directional shearing in the animated noise field.
+Examples:
 
-## Related files
+- alpha `0.25` gives multiplier `1`
+- alpha `0.5` gives multiplier `2`
+- alpha `1.0` gives multiplier `4`
 
-- [ScreenSpaceVolumetricFogTest.cs](./ScreenSpaceVolumetricFogTest.cs)
-- [ScreenSpaceVolumetricFog.unity](./ScreenSpaceVolumetricFog.unity)
+The shader writes an opaque final pixel. The color alpha is not used as output
+alpha.
+
+### Fog Far Plane
+
+Defines the far distance of the fog volume in world units. Scene depth is
+normalized into the range between camera near clip and this value.
+
+The camera far clip can be farther than this. The fog math should be considered
+to operate in its own fog range, not directly in camera clip range.
+
+### Ground Plane Falloff
+
+Optional height attenuation against the world `y=0` plane.
+
+- `0` disables the feature.
+- Non-zero values define the approximate height over which fog fades out.
+
+The falloff is intentionally noisy in world XZ so the upper boundary is not a
+perfectly flat plane. This is useful for swamp, steam, mist, or low-lying ground
+fog. The current implementation is still approximate and may show cutoff-like
+artifacts at stronger values.
+
+### Fog Animation Speed
+
+Animates the procedural noise seed. At zero the noise field is static. Higher
+values make the fog evolve over time.
+
+The current animation is deliberately subtle. It is useful for making still fog
+feel alive, but it can show directional shearing if pushed too far.
+
+### Convection
+
+Adds a synthetic upward flow by feeding a fake vertical translation into the
+existing camera-translation/parallax system.
+
+- `0` disables the feature.
+- `1` applies the current maximum convection speed.
+
+This is controller-side only. It does not add shader uniforms or shader work.
+
+### Depth Layer Count
+
+Controls the number of active fog bands. The shader supports up to `8` logical
+layers, plus two bookend layers used for seamless cycling.
+
+Higher values can reduce obvious banding and create a richer field, but they
+increase shader work.
+
+### Debug Fog
+
+Displays a grayscale debug view of the fog contribution instead of the final
+colored blend. This is useful when checking:
+
+- depth sorting
+- layer cycling
+- scene-depth clipping
+- ground falloff
+- motion/parallax behavior
+
+## Integration
+
+Add `ScreenSpaceVolumetricFogSystem` or a subclass to an active scene object.
+The script implements `IDirectCommandProvider`, so it is picked up by the
+project's direct command buffer render feature.
+
+The system creates a runtime material from:
+
+```text
+Hidden/ScreenSpaceVolumetricFog
+```
+
+The pass requires:
+
+- a URP camera
+- a valid scene depth texture
+- access to the current camera color buffer through the existing blit texture
+  path
+
+## Performance Shape
+
+The system is cheap compared to true volumetric fog because it avoids:
+
+- raymarching through a volume texture
+- froxel buffers
+- voxel grids
+- volumetric lighting integration
+- multiple scattering
+
+The main cost comes from:
+
+- one full-screen pass
+- procedural value noise and FBM
+- up to `DepthLayerCount + 2` visible layer iterations
+- optional ground falloff sampling when enabled
+
+When `Ground Plane Falloff` is `0`, the falloff path early-outs.
+
+## Known Limitations
+
+- The effect is a visual fake, not physically correct volumetric rendering.
+- Strong ground falloff can still look like a cutoff.
+- Fog animation can show directional shearing at higher speeds.
+- The current motion model is camera-relative and synthetic.
+- It does not include volumetric shadows, light shafts, true density fields, or
+  scattering.
+
+See `ScreenSpaceVolumetricFogTechnicalNotes.md` for the full implementation
+description.

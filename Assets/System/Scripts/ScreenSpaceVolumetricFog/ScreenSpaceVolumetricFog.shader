@@ -260,13 +260,3 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
