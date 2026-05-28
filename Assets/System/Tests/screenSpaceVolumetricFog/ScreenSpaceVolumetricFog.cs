@@ -7,12 +7,14 @@ public class ScreenSpaceVolumetricFog : MonoBehaviour, IDirectCommandProvider
 {
     private const int MaxDepthLayerCount = 8;
     private const int MaxVisibleDepthLayerCount = MaxDepthLayerCount + 2;
+    private const float FogAnimationSpeedScale = 0.4f;
 
     private static readonly int FogColorId = Shader.PropertyToID("_FogColor");
     private static readonly int PseudoDepthId = Shader.PropertyToID("_PseudoDepth");
     private static readonly int DepthLayerCountId = Shader.PropertyToID("_DepthLayerCount");
     private static readonly int FogFarPlaneId = Shader.PropertyToID("_FogFarPlane");
     private static readonly int FogMultiplierId = Shader.PropertyToID("_FogMultiplier");
+    private static readonly int FogSeedOffsetId = Shader.PropertyToID("_FogSeedOffset");
     private static readonly int DebugFogId = Shader.PropertyToID("_DebugFog");
     private static readonly int LayerRotationCompensationsId = Shader.PropertyToID("_LayerRotationCompensations");
 
@@ -23,6 +25,7 @@ public class ScreenSpaceVolumetricFog : MonoBehaviour, IDirectCommandProvider
     [SerializeField] private Color fogColor = new Color(0.75f, 0.55f, 1.0f, 1.0f);
     [SerializeField, Min(0.01f)] private float fogFarPlane = 20.0f;
     [SerializeField, Range(0.0f, 4.0f)] private float fogMultiplier = 1.0f;
+    [SerializeField, Range(0.0f, 1.0f)] private float fogAnimationSpeed;
     [SerializeField, Range(1, 8)] private int depthLayerCount = 2;
     [SerializeField] private bool debugFog = true;
 
@@ -30,6 +33,7 @@ public class ScreenSpaceVolumetricFog : MonoBehaviour, IDirectCommandProvider
     private Camera trackedDepthCamera;
     private Vector3 lastCameraWorldPosition;
     private float accumulatedCameraDepth;
+    private float fogSeedOffset;
     private bool hasCameraDepthTracking;
     private Camera trackedRotationCamera;
     private Vector3 lastRotationCameraWorldPosition;
@@ -77,6 +81,7 @@ public class ScreenSpaceVolumetricFog : MonoBehaviour, IDirectCommandProvider
         trackedDepthCamera = null;
         lastCameraWorldPosition = default;
         accumulatedCameraDepth = 0.0f;
+        fogSeedOffset = 0.0f;
         hasCameraDepthTracking = false;
         trackedRotationCamera = null;
         lastRotationCameraWorldPosition = default;
@@ -250,6 +255,8 @@ public class ScreenSpaceVolumetricFog : MonoBehaviour, IDirectCommandProvider
 
     private void ApplyMaterialParameters(Camera camera)
     {
+        fogSeedOffset = Mathf.Repeat(fogSeedOffset + Time.deltaTime * fogAnimationSpeed * FogAnimationSpeedScale, 1024.0f);
+
         float resolvedPseudoDepth = ResolvePseudoDepth(camera);
         UpdateLayerRotations(camera, resolvedPseudoDepth);
         fogMaterial.SetColor(FogColorId, fogColor);
@@ -257,6 +264,7 @@ public class ScreenSpaceVolumetricFog : MonoBehaviour, IDirectCommandProvider
         fogMaterial.SetFloat(DepthLayerCountId, Mathf.Max(depthLayerCount, 1));
         fogMaterial.SetFloat(FogFarPlaneId, fogFarPlane);
         fogMaterial.SetFloat(FogMultiplierId, fogMultiplier);
+        fogMaterial.SetFloat(FogSeedOffsetId, fogSeedOffset);
         fogMaterial.SetFloat(DebugFogId, debugFog ? 1.0f : 0.0f);
     }
 

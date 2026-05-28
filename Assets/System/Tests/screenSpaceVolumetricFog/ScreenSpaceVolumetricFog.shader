@@ -38,6 +38,7 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
                 float _DepthLayerCount;
                 float _FogFarPlane;
                 float _FogMultiplier;
+                float _FogSeedOffset;
                 float _DebugFog;
             CBUFFER_END
 
@@ -124,7 +125,8 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
 
             float LayerDepth(float3 worldViewDir, float3 layerOffset, float layerFrequency)
             {
-                float3 p = worldViewDir * layerFrequency + layerOffset;
+                float3 seedDrift = _FogSeedOffset * float3(0.37, -0.61, 0.19);
+                float3 p = worldViewDir * layerFrequency + layerOffset + seedDrift;
                 float clouds = Fbm(p);
                 float detail = Fbm(p * 2.75 + 17.0);
                 float depth = saturate(clouds * 0.75 + detail * 0.25);
