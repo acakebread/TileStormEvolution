@@ -38,9 +38,15 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
                 float _FogFarPlane;
             CBUFFER_END
 
-            float3 GetWorldViewDirection(float2 screenUV)
+            float GlobalFovScale()
+            {
+                return 1.0 + 0.35 * sin(_Time.y * 0.75);
+            }
+
+            float3 GetWorldViewDirection(float2 screenUV, float fovScale)
             {
                 float2 ndc = screenUV * 2.0 - 1.0;
+                ndc *= fovScale;
                 ndc.y = -ndc.y;
                 float4 viewClip = float4(ndc, 1.0, 1.0);
                 float4 viewSpace = mul(UNITY_MATRIX_I_P, viewClip);
@@ -131,7 +137,8 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
                 float2 screenUV = GetNormalizedScreenSpaceUV(input.positionCS);
-                float3 worldViewDir = GetWorldViewDirection(screenUV);
+                float globalFovScale = GlobalFovScale();
+                float3 worldViewDir = GetWorldViewDirection(screenUV, globalFovScale);
 
                 float sceneDepth01 = NormalizedSceneDepth(screenUV);
 
@@ -179,6 +186,9 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
         }
     }
 }
+
+
+
 
 
 
