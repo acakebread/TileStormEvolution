@@ -38,9 +38,10 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
                 float _FogFarPlane;
             CBUFFER_END
 
-            float GlobalFovScale()
+            float LayerFovScale(float layerDepth01)
             {
-                return 1.0 + 0.35 * sin(_Time.y * 0.75);
+                float nearToFogFar = saturate(_ProjectionParams.y / max(_FogFarPlane, 1e-6));
+                return lerp(nearToFogFar, 1.0, saturate(layerDepth01));
             }
 
             float3 GetWorldViewDirection(float2 screenUV, float fovScale)
@@ -137,8 +138,6 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
                 float2 screenUV = GetNormalizedScreenSpaceUV(input.positionCS);
-                float globalFovScale = GlobalFovScale();
-                float3 worldViewDir = GetWorldViewDirection(screenUV, globalFovScale);
 
                 float sceneDepth01 = NormalizedSceneDepth(screenUV);
 
@@ -163,6 +162,10 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
 
                         if (visibleBandWidth > 1e-5)
                         {
+                            float visibleBandMid = (visibleBandStart + visibleBandEnd) * 0.5;
+                            float layerFovScale = LayerFovScale(visibleBandMid);
+                            float3 worldViewDir = GetWorldViewDirection(screenUV, layerFovScale);
+
                             float layer0Depth = rawBandStart + DebugLayerRead(worldViewDir, layerIndex, false) * layerScale;
                             float layer1Depth = rawBandStart + DebugLayerRead(worldViewDir, layerIndex, true) * layerScale;
                             float clippedStartDepth = max(layer0Depth, 0.0);
@@ -186,6 +189,7 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
         }
     }
 }
+
 
 
 
