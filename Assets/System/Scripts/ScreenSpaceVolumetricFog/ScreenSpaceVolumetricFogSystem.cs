@@ -8,11 +8,13 @@ public class ScreenSpaceVolumetricFogSystem : MonoBehaviour, IDirectCommandProvi
     private const int MaxDepthLayerCount = 8;
     private const int MaxVisibleDepthLayerCount = MaxDepthLayerCount + 2;
     private const float FogAnimationSpeedScale = 0.4f;
+    private const float ConvectionSpeedScale = 0.1f;
 
     private static readonly int FogColorId = Shader.PropertyToID("_FogColor");
     private static readonly int PseudoDepthId = Shader.PropertyToID("_PseudoDepth");
     private static readonly int DepthLayerCountId = Shader.PropertyToID("_DepthLayerCount");
     private static readonly int FogFarPlaneId = Shader.PropertyToID("_FogFarPlane");
+    private static readonly int GroundPlaneFalloffId = Shader.PropertyToID("_GroundPlaneFalloff");
     private static readonly int FogSeedOffsetId = Shader.PropertyToID("_FogSeedOffset");
     private static readonly int DebugFogId = Shader.PropertyToID("_DebugFog");
     private static readonly int LayerRotationCompensationsId = Shader.PropertyToID("_LayerRotationCompensations");
@@ -23,7 +25,9 @@ public class ScreenSpaceVolumetricFogSystem : MonoBehaviour, IDirectCommandProvi
     [Header("Fog")]
     [SerializeField] private Color fogColor = new Color(1.0f, 1.0f, 1.0f, 0.5f);
     [SerializeField, Min(0.01f)] private float fogFarPlane = 20.0f;
+    [SerializeField, Min(0.0f)] private float groundPlaneFalloff;
     [SerializeField, Range(0.0f, 1.0f)] private float fogAnimationSpeed;
+    [SerializeField, Range(0.0f, 1.0f)] private float convection;
     [SerializeField, Range(1, 8)] private int depthLayerCount = 2;
     [SerializeField] private bool debugFog = true;
 
@@ -224,6 +228,7 @@ public class ScreenSpaceVolumetricFogSystem : MonoBehaviour, IDirectCommandProvi
             Vector3 currentCameraPosition = camera != null ? camera.transform.position : default;
             Vector3 worldDelta = currentCameraPosition - lastRotationCameraWorldPosition;
             Vector3 cameraSpaceDelta = Quaternion.Inverse(currentCameraRotation) * worldDelta;
+            cameraSpaceDelta.y -= fogFarPlane * convection * ConvectionSpeedScale * Time.deltaTime;
             Quaternion strafeDelta = GetStrafeRotationDelta(cameraSpaceDelta);
             Quaternion cameraDelta = Quaternion.Inverse(lastCameraRotation) * currentCameraRotation;
             if (cameraDelta.w < 0.0f)
@@ -261,6 +266,7 @@ public class ScreenSpaceVolumetricFogSystem : MonoBehaviour, IDirectCommandProvi
         fogMaterial.SetFloat(PseudoDepthId, resolvedPseudoDepth);
         fogMaterial.SetFloat(DepthLayerCountId, Mathf.Max(depthLayerCount, 1));
         fogMaterial.SetFloat(FogFarPlaneId, fogFarPlane);
+        fogMaterial.SetFloat(GroundPlaneFalloffId, groundPlaneFalloff);
         fogMaterial.SetFloat(FogSeedOffsetId, fogSeedOffset);
         fogMaterial.SetFloat(DebugFogId, debugFog ? 1.0f : 0.0f);
     }

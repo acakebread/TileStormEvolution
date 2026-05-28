@@ -400,7 +400,9 @@ MonoBehaviour:
   renderPassEvent: 600
   fogColor: {r: 1, g: 1, b: 1, a: 0.5019608}
   fogFarPlane: 50
+  groundPlaneFalloff: 0
   fogAnimationSpeed: 0.2
+  convection: 0
   depthLayerCount: 2
   debugFog: 0
 --- !u!114 &542556267

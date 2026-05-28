@@ -37,6 +37,7 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
                 float _PseudoDepth;
                 float _DepthLayerCount;
                 float _FogFarPlane;
+                float _GroundPlaneFalloff;
                 float _FogSeedOffset;
                 float _DebugFog;
             CBUFFER_END
@@ -70,6 +71,16 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
                 float3 viewDir = normalize(viewSpace.xyz / max(viewSpace.w, 1e-6));
                 float3 worldViewDir = normalize(mul(UNITY_MATRIX_I_V, float4(viewDir, 0.0)).xyz);
                 return normalize(RotateByQuaternion(worldViewDir, _LayerRotationCompensations[localLayerIndex]));
+            }
+
+            float3 GetCameraWorldViewDirection(float2 screenUV)
+            {
+                float2 ndc = screenUV * 2.0 - 1.0;
+                ndc.y = -ndc.y;
+                float4 viewClip = float4(ndc, 1.0, 1.0);
+                float4 viewSpace = mul(UNITY_MATRIX_I_P, viewClip);
+                float3 viewDir = normalize(viewSpace.xyz / max(viewSpace.w, 1e-6));
+                return normalize(mul(UNITY_MATRIX_I_V, float4(viewDir, 0.0)).xyz);
             }
 
             float Hash31(float3 p)
@@ -151,6 +162,34 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
                 return LayerDepth(layerDirection, layerOffset, 4.0);
             }
 
+            float GroundPlaneAttenuation(float3 worldViewDir, float fogDepth01)
+            {
+                if (_GroundPlaneFalloff <= 1e-5)
+                    return 1.0;
+
+                float3 cameraForwardWS = normalize(mul(UNITY_MATRIX_I_V, float4(0.0, 0.0, 1.0, 0.0)).xyz);
+                float fogRange = max(_FogFarPlane - _ProjectionParams.y, 1e-6);
+                float eyeDepth = _ProjectionParams.y + saturate(fogDepth01) * fogRange;
+                float rayDistance = eyeDepth / max(abs(dot(worldViewDir, cameraForwardWS)), 1e-4);
+                float3 fogWorldPosition = _WorldSpaceCameraPos + worldViewDir * rayDistance;
+                float height01 = saturate(max(fogWorldPosition.y, 0.0) / _GroundPlaneFalloff);
+
+                return sqrt(saturate(1.0 - height01));
+            }
+
+            float GroundPlaneSpanAttenuation(float3 worldViewDir, float startDepth01, float endDepth01)
+            {
+                if (_GroundPlaneFalloff <= 1e-5)
+                    return 1.0;
+
+                float midDepth01 = (startDepth01 + endDepth01) * 0.5;
+                float startAttenuation = GroundPlaneAttenuation(worldViewDir, startDepth01);
+                float midAttenuation = GroundPlaneAttenuation(worldViewDir, midDepth01);
+                float endAttenuation = GroundPlaneAttenuation(worldViewDir, endDepth01);
+
+                return startAttenuation * 0.25 + midAttenuation * 0.5 + endAttenuation * 0.25;
+            }
+
             half4 Frag(Varyings input) : SV_Target
             {
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
@@ -158,6 +197,7 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
                 float2 screenUV = GetNormalizedScreenSpaceUV(input.positionCS);
 
                 float sceneDepth01 = NormalizedSceneDepth(screenUV);
+                float3 cameraWorldViewDir = GetCameraWorldViewDirection(screenUV);
 
                 float pseudoDepth = _PseudoDepth;
                 int depthLayerCount = clamp((int)round(_DepthLayerCount), 1, MAX_DEPTH_LAYER_COUNT);
@@ -189,6 +229,8 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
                             float clippedStartDepth = max(layer0Depth, 0.0);
                             float clippedEndDepth = min(min(layer1Depth, sceneDepth01), 1.0);
                             float bandFogAmount = max(clippedEndDepth - clippedStartDepth, 0.0);
+                            if (bandFogAmount > 1e-5)
+                                bandFogAmount *= GroundPlaneSpanAttenuation(cameraWorldViewDir, clippedStartDepth, clippedEndDepth);
 
                             fogAmount += bandFogAmount;
                             nearestFogStartDepth = bandFogAmount > 1e-5 ? min(nearestFogStartDepth, saturate(clippedStartDepth)) : nearestFogStartDepth;
@@ -198,7 +240,7 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
 
                 float3 sceneColor = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, screenUV).rgb;
                 float fogAlpha = saturate(fogAmount * (_FogColor.a * 4.0));
-                float fogMask = fogAmount > 1e-5 ? 1.0 : 0.0;
+                float fogMask = saturate(fogAmount * 4.0);
                 float fogDebugShade = 1.0 - nearestFogStartDepth;
                 float3 debugFogColor = float3(fogDebugShade, fogDebugShade, fogDebugShade);
                 float3 debugColor = lerp(sceneColor, debugFogColor, fogMask);
