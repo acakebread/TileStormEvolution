@@ -30,6 +30,7 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
             #include "Packages/com.unity.render-pipelines.core/Runtime/Utilities/Blit.hlsl"
 
             #define MAX_DEPTH_LAYER_COUNT 8
+            #define MAX_VISIBLE_DEPTH_LAYER_COUNT 10
 
             CBUFFER_START(UnityPerMaterial)
                 float4 _FogColor;
@@ -38,13 +39,26 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
                 float _FogFarPlane;
             CBUFFER_END
 
+            float4 _LayerRotationCompensations[MAX_VISIBLE_DEPTH_LAYER_COUNT];
+
             float LayerFovScale(float layerDepth01)
             {
                 float nearToFogFar = saturate(_ProjectionParams.y / max(_FogFarPlane, 1e-6));
                 return lerp(nearToFogFar, 1.0, saturate(layerDepth01));
             }
 
-            float3 GetWorldViewDirection(float2 screenUV, float fovScale)
+            float4 NormalizeQuaternion(float4 q)
+            {
+                return q * rsqrt(max(dot(q, q), 1e-8));
+            }
+
+            float3 RotateByQuaternion(float3 v, float4 q)
+            {
+                q = NormalizeQuaternion(q);
+                return v + 2.0 * cross(q.xyz, cross(q.xyz, v) + q.w * v);
+            }
+
+            float3 GetLayerWorldViewDirection(float2 screenUV, float fovScale, int localLayerIndex)
             {
                 float2 ndc = screenUV * 2.0 - 1.0;
                 ndc *= fovScale;
@@ -52,7 +66,8 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
                 float4 viewClip = float4(ndc, 1.0, 1.0);
                 float4 viewSpace = mul(UNITY_MATRIX_I_P, viewClip);
                 float3 viewDir = normalize(viewSpace.xyz / max(viewSpace.w, 1e-6));
-                return normalize(mul(UNITY_MATRIX_I_V, float4(viewDir, 0.0)).xyz);
+                float3 worldViewDir = normalize(mul(UNITY_MATRIX_I_V, float4(viewDir, 0.0)).xyz);
+                return normalize(RotateByQuaternion(worldViewDir, _LayerRotationCompensations[localLayerIndex]));
             }
 
             float Hash31(float3 p)
@@ -164,7 +179,7 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
                         {
                             float visibleBandMid = (visibleBandStart + visibleBandEnd) * 0.5;
                             float layerFovScale = LayerFovScale(visibleBandMid);
-                            float3 worldViewDir = GetWorldViewDirection(screenUV, layerFovScale);
+                            float3 worldViewDir = GetLayerWorldViewDirection(screenUV, layerFovScale, localLayerIndex);
 
                             float layer0Depth = rawBandStart + DebugLayerRead(worldViewDir, layerIndex, false) * layerScale;
                             float layer1Depth = rawBandStart + DebugLayerRead(worldViewDir, layerIndex, true) * layerScale;
