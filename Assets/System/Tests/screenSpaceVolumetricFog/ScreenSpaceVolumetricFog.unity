@@ -398,10 +398,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ScreenSpaceVolumetricFog
   renderPassEvent: 600
-  fogColor: {r: 0.75, g: 0.55, b: 1, a: 1}
-  pseudoDepth: 0
+  fogColor: {r: 1, g: 1, b: 1, a: 1}
   fogFarPlane: 50
+  fogMultiplier: 2
   depthLayerCount: 2
+  debugFog: 0
 --- !u!114 &542556267
 MonoBehaviour:
   m_ObjectHideFlags: 0

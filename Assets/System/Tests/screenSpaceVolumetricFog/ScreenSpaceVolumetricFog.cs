@@ -12,6 +12,7 @@ public class ScreenSpaceVolumetricFog : MonoBehaviour, IDirectCommandProvider
     private static readonly int PseudoDepthId = Shader.PropertyToID("_PseudoDepth");
     private static readonly int DepthLayerCountId = Shader.PropertyToID("_DepthLayerCount");
     private static readonly int FogFarPlaneId = Shader.PropertyToID("_FogFarPlane");
+    private static readonly int FogMultiplierId = Shader.PropertyToID("_FogMultiplier");
     private static readonly int DebugFogId = Shader.PropertyToID("_DebugFog");
     private static readonly int LayerRotationCompensationsId = Shader.PropertyToID("_LayerRotationCompensations");
 
@@ -20,8 +21,8 @@ public class ScreenSpaceVolumetricFog : MonoBehaviour, IDirectCommandProvider
 
     [Header("Fog")]
     [SerializeField] private Color fogColor = new Color(0.75f, 0.55f, 1.0f, 1.0f);
-    [SerializeField, Range(-2.0f, 2.0f)] private float pseudoDepth;
     [SerializeField, Min(0.01f)] private float fogFarPlane = 20.0f;
+    [SerializeField, Range(0.0f, 4.0f)] private float fogMultiplier = 1.0f;
     [SerializeField, Range(1, 8)] private int depthLayerCount = 2;
     [SerializeField] private bool debugFog = true;
 
@@ -87,7 +88,7 @@ public class ScreenSpaceVolumetricFog : MonoBehaviour, IDirectCommandProvider
     private float ResolvePseudoDepth(Camera camera)
     {
         if (camera == null)
-            return pseudoDepth;
+            return 0.0f;
 
         Transform cameraTransform = camera.transform;
         Vector3 currentCameraPosition = cameraTransform.position;
@@ -117,7 +118,7 @@ public class ScreenSpaceVolumetricFog : MonoBehaviour, IDirectCommandProvider
         // Match the shader's layer compression so one fog-range traversal
         // advances through one full pseudo-depth unit per active layer pair.
         float motionScale = Mathf.Max(depthLayerCount, 1) / fogRange;
-        return pseudoDepth + accumulatedCameraDepth * motionScale;
+        return accumulatedCameraDepth * motionScale;
     }
 
     private static Quaternion Normalize(Quaternion rotation)
@@ -255,6 +256,7 @@ public class ScreenSpaceVolumetricFog : MonoBehaviour, IDirectCommandProvider
         fogMaterial.SetFloat(PseudoDepthId, resolvedPseudoDepth);
         fogMaterial.SetFloat(DepthLayerCountId, Mathf.Max(depthLayerCount, 1));
         fogMaterial.SetFloat(FogFarPlaneId, fogFarPlane);
+        fogMaterial.SetFloat(FogMultiplierId, fogMultiplier);
         fogMaterial.SetFloat(DebugFogId, debugFog ? 1.0f : 0.0f);
     }
 
