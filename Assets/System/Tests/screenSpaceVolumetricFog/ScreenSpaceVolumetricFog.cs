@@ -31,6 +31,7 @@ public class ScreenSpaceVolumetricFog : MonoBehaviour, IDirectCommandProvider
     private float accumulatedCameraDepth;
     private bool hasCameraDepthTracking;
     private Camera trackedRotationCamera;
+    private Vector3 lastRotationCameraWorldPosition;
     private Quaternion lastCameraRotation;
     private int lastRotationFirstLayerIndex;
     private bool hasLayerRotationTracking;
@@ -77,6 +78,7 @@ public class ScreenSpaceVolumetricFog : MonoBehaviour, IDirectCommandProvider
         accumulatedCameraDepth = 0.0f;
         hasCameraDepthTracking = false;
         trackedRotationCamera = null;
+        lastRotationCameraWorldPosition = default;
         lastCameraRotation = Quaternion.identity;
         lastRotationFirstLayerIndex = 0;
         hasLayerRotationTracking = false;
@@ -159,6 +161,18 @@ public class ScreenSpaceVolumetricFog : MonoBehaviour, IDirectCommandProvider
         return -(int)Mathf.Floor(resolvedPseudoDepth) - 1;
     }
 
+    private Quaternion GetStrafeRotationDelta(Vector3 cameraSpaceDelta)
+    {
+        float fogRange = Mathf.Max(fogFarPlane, 1e-5f);
+
+        float yawDegrees = Mathf.Atan2(cameraSpaceDelta.x, fogRange) * Mathf.Rad2Deg;
+        float pitchDegrees = -Mathf.Atan2(cameraSpaceDelta.y, fogRange) * Mathf.Rad2Deg;
+
+        Quaternion yaw = Quaternion.AngleAxis(yawDegrees, Vector3.up);
+        Quaternion pitch = Quaternion.AngleAxis(pitchDegrees, Vector3.right);
+        return Normalize(yaw * pitch);
+    }
+
     private void RemapLayerRotations(int newFirstLayerIndex)
     {
         if (newFirstLayerIndex == lastRotationFirstLayerIndex)
@@ -191,6 +205,7 @@ public class ScreenSpaceVolumetricFog : MonoBehaviour, IDirectCommandProvider
         if (!hasLayerRotationTracking || trackedRotationCamera != camera)
         {
             trackedRotationCamera = camera;
+            lastRotationCameraWorldPosition = camera != null ? camera.transform.position : default;
             lastCameraRotation = currentCameraRotation;
             lastRotationFirstLayerIndex = firstLayerIndex;
             hasLayerRotationTracking = true;
@@ -202,17 +217,23 @@ public class ScreenSpaceVolumetricFog : MonoBehaviour, IDirectCommandProvider
         {
             RemapLayerRotations(firstLayerIndex);
 
+            Vector3 currentCameraPosition = camera != null ? camera.transform.position : default;
+            Vector3 worldDelta = currentCameraPosition - lastRotationCameraWorldPosition;
+            Vector3 cameraSpaceDelta = Quaternion.Inverse(currentCameraRotation) * worldDelta;
+            Quaternion strafeDelta = GetStrafeRotationDelta(cameraSpaceDelta);
             Quaternion cameraDelta = Quaternion.Inverse(lastCameraRotation) * currentCameraRotation;
             if (cameraDelta.w < 0.0f)
                 cameraDelta = new Quaternion(-cameraDelta.x, -cameraDelta.y, -cameraDelta.z, -cameraDelta.w);
 
+            lastRotationCameraWorldPosition = currentCameraPosition;
             lastCameraRotation = currentCameraRotation;
 
             for (int i = 0; i < MaxVisibleDepthLayerCount; i++)
             {
                 float rotationScale = GetLayerRotationScale(resolvedPseudoDepth, i);
                 Quaternion layerDelta = Quaternion.SlerpUnclamped(Quaternion.identity, cameraDelta, rotationScale);
-                layerRotations[i] = Normalize(layerRotations[i] * layerDelta);
+                Quaternion currentLayerRotation = Normalize(layerRotations[i] * layerDelta);
+                layerRotations[i] = Normalize(currentLayerRotation * strafeDelta);
             }
         }
 
