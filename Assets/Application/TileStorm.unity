@@ -702,12 +702,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ScreenSpaceVolumetricFogSystem
   renderPassEvent: 600
-  fogColor: {r: 1, g: 1, b: 1, a: 0.5529412}
-  fogFarPlane: 30
-  groundPlaneFalloff: 10
+  fogColor: {r: 1, g: 1, b: 1, a: 0.5019608}
+  fogFarPlane: 10
+  groundPlaneFalloff: 5
   clipBelowGround: 0
   fogAnimationSpeed: 0.3
-  convection: 0.2
+  convection: 0.25
   depthLayerCount: 2
   debugFog: 0
 --- !u!1 &1555382761

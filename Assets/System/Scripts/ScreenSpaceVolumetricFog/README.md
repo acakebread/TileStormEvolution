@@ -98,7 +98,8 @@ Adds a synthetic upward flow by feeding a fake vertical translation into the
 existing camera-translation/parallax system.
 
 - `0` disables the feature.
-- `1` applies the current maximum convection speed.
+- `-1` applies the current maximum downward convection speed.
+- `1` applies the current maximum upward convection speed.
 
 This is controller-side only. It does not add shader uniforms or shader work.
 

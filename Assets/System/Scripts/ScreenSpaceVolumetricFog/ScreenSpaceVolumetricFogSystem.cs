@@ -29,7 +29,7 @@ public class ScreenSpaceVolumetricFogSystem : MonoBehaviour, IDirectCommandProvi
     [SerializeField, Min(0.0f)] private float groundPlaneFalloff;
     [SerializeField] private bool clipBelowGround;
     [SerializeField, Range(0.0f, 1.0f)] private float fogAnimationSpeed;
-    [SerializeField, Range(0.0f, 1.0f)] private float convection;
+    [SerializeField, Range(-1.0f, 1.0f)] private float convection;
     [SerializeField, Range(1, 8)] private int depthLayerCount = 2;
     [SerializeField] private bool debugFog = true;
 
@@ -79,6 +79,14 @@ public class ScreenSpaceVolumetricFogSystem : MonoBehaviour, IDirectCommandProvi
         Debug.Log($"{GetType().Name}: runtime material created.", this);
     }
 
+    private Vector3 GetConvectionWorldDelta(Camera camera)
+    {
+        if (camera == null || convection <= 0.0f)
+            return Vector3.zero;
+
+        return Vector3.up * fogFarPlane * -convection * ConvectionSpeedScale * Time.deltaTime;
+    }
+
     [ContextMenu("Reset Camera Depth Origin")]
     private void ResetCameraDepthOrigin()
     {
@@ -101,6 +109,7 @@ public class ScreenSpaceVolumetricFogSystem : MonoBehaviour, IDirectCommandProvi
 
         Transform cameraTransform = camera.transform;
         Vector3 currentCameraPosition = cameraTransform.position;
+        Vector3 syntheticCameraPosition = currentCameraPosition + GetConvectionWorldDelta(camera);
 
         if (!hasCameraDepthTracking || trackedDepthCamera != camera)
         {
@@ -117,7 +126,7 @@ public class ScreenSpaceVolumetricFogSystem : MonoBehaviour, IDirectCommandProvi
             else
                 depthPlaneNormal.Normalize();
 
-            Plane currentDepthPlane = new Plane(depthPlaneNormal, currentCameraPosition);
+            Plane currentDepthPlane = new Plane(depthPlaneNormal, syntheticCameraPosition);
             float cameraSpaceZDelta = currentDepthPlane.GetDistanceToPoint(lastCameraWorldPosition);
             accumulatedCameraDepth += cameraSpaceZDelta;
             lastCameraWorldPosition = currentCameraPosition;
@@ -228,9 +237,9 @@ public class ScreenSpaceVolumetricFogSystem : MonoBehaviour, IDirectCommandProvi
             RemapLayerRotations(firstLayerIndex);
 
             Vector3 currentCameraPosition = camera != null ? camera.transform.position : default;
-            Vector3 worldDelta = currentCameraPosition - lastRotationCameraWorldPosition;
+            Vector3 syntheticCameraPosition = currentCameraPosition + GetConvectionWorldDelta(camera);
+            Vector3 worldDelta = syntheticCameraPosition - lastRotationCameraWorldPosition;
             Vector3 cameraSpaceDelta = Quaternion.Inverse(currentCameraRotation) * worldDelta;
-            cameraSpaceDelta.y -= fogFarPlane * convection * ConvectionSpeedScale * Time.deltaTime;
             Quaternion strafeDelta = GetStrafeRotationDelta(cameraSpaceDelta);
             Quaternion cameraDelta = Quaternion.Inverse(lastCameraRotation) * currentCameraRotation;
             if (cameraDelta.w < 0.0f)

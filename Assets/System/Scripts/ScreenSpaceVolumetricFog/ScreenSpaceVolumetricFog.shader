@@ -289,7 +289,8 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
 
                             if (bandFogAmount > 1e-5 && !debugReadCaptured)
                             {
-                                debugDepth = saturate(layer0Depth);
+                                //debugDepth = saturate(layer1Depth - layer0Depth);
+                                debugDepth = saturate(farRead - nearRead);
                                 debugReadCaptured = true;
                             }
                         }

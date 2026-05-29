@@ -379,15 +379,16 @@ like parallax through a directional fog field.
 ## Convection
 
 Convection is implemented without shader changes. The controller injects a
-synthetic vertical translation into `cameraSpaceDelta` before the strafe
-rotation is calculated:
+synthetic world-space vertical translation before the strafe rotation is
+calculated:
 
 ```csharp
-cameraSpaceDelta.y -= fogFarPlane * convection * ConvectionSpeedScale * Time.deltaTime;
+Vector3 syntheticCameraPosition = currentCameraPosition + Vector3.up * fogFarPlane * -convection * ConvectionSpeedScale * Time.deltaTime;
 ```
 
 `ConvectionSpeedScale` is currently `0.1`, so a convection value of `1` produces
-synthetic vertical motion of about `10%` of the fog range per second.
+synthetic upward motion of about `10%` of the fog range per second, while `-1`
+produces the same magnitude downward motion.
 
 This creates a rising steam or swamp mist effect by reusing the existing
 translation/parallax system.
