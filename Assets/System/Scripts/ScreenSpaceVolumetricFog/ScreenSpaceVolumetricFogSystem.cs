@@ -15,6 +15,7 @@ public class ScreenSpaceVolumetricFogSystem : MonoBehaviour, IDirectCommandProvi
     private static readonly int DepthLayerCountId = Shader.PropertyToID("_DepthLayerCount");
     private static readonly int FogFarPlaneId = Shader.PropertyToID("_FogFarPlane");
     private static readonly int GroundPlaneFalloffId = Shader.PropertyToID("_GroundPlaneFalloff");
+    private static readonly int ClipBelowGroundId = Shader.PropertyToID("_ClipBelowGround");
     private static readonly int FogSeedOffsetId = Shader.PropertyToID("_FogSeedOffset");
     private static readonly int DebugFogId = Shader.PropertyToID("_DebugFog");
     private static readonly int LayerRotationCompensationsId = Shader.PropertyToID("_LayerRotationCompensations");
@@ -26,6 +27,7 @@ public class ScreenSpaceVolumetricFogSystem : MonoBehaviour, IDirectCommandProvi
     [SerializeField] private Color fogColor = new Color(1.0f, 1.0f, 1.0f, 0.5f);
     [SerializeField, Min(0.01f)] private float fogFarPlane = 20.0f;
     [SerializeField, Min(0.0f)] private float groundPlaneFalloff;
+    [SerializeField] private bool clipBelowGround;
     [SerializeField, Range(0.0f, 1.0f)] private float fogAnimationSpeed;
     [SerializeField, Range(0.0f, 1.0f)] private float convection;
     [SerializeField, Range(1, 8)] private int depthLayerCount = 2;
@@ -267,6 +269,7 @@ public class ScreenSpaceVolumetricFogSystem : MonoBehaviour, IDirectCommandProvi
         fogMaterial.SetFloat(DepthLayerCountId, Mathf.Max(depthLayerCount, 1));
         fogMaterial.SetFloat(FogFarPlaneId, fogFarPlane);
         fogMaterial.SetFloat(GroundPlaneFalloffId, groundPlaneFalloff);
+        fogMaterial.SetFloat(ClipBelowGroundId, clipBelowGround ? 1.0f : 0.0f);
         fogMaterial.SetFloat(FogSeedOffsetId, fogSeedOffset);
         fogMaterial.SetFloat(DebugFogId, debugFog ? 1.0f : 0.0f);
     }

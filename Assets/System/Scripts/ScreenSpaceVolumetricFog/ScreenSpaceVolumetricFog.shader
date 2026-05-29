@@ -38,6 +38,7 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
                 float _DepthLayerCount;
                 float _FogFarPlane;
                 float _GroundPlaneFalloff;
+                float _ClipBelowGround;
                 float _FogSeedOffset;
                 float _DebugFog;
             CBUFFER_END
@@ -61,11 +62,17 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
                 return v + 2.0 * cross(q.xyz, cross(q.xyz, v) + q.w * v);
             }
 
-            float3 GetLayerWorldViewDirection(float2 screenUV, float fovScale, int localLayerIndex)
+            float2 ScreenUVToNdc(float2 screenUV, float fovScale)
             {
                 float2 ndc = screenUV * 2.0 - 1.0;
                 ndc *= fovScale;
-                ndc.y = -ndc.y;
+                ndc.y *= _ProjectionParams.x;
+                return ndc;
+            }
+
+            float3 GetLayerWorldViewDirection(float2 screenUV, float fovScale, int localLayerIndex)
+            {
+                float2 ndc = ScreenUVToNdc(screenUV, fovScale);
                 float4 viewClip = float4(ndc, 1.0, 1.0);
                 float4 viewSpace = mul(UNITY_MATRIX_I_P, viewClip);
                 float3 viewDir = normalize(viewSpace.xyz / max(viewSpace.w, 1e-6));
@@ -75,8 +82,7 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
 
             float3 GetCameraWorldViewDirection(float2 screenUV)
             {
-                float2 ndc = screenUV * 2.0 - 1.0;
-                ndc.y = -ndc.y;
+                float2 ndc = ScreenUVToNdc(screenUV, 1.0);
                 float4 viewClip = float4(ndc, 1.0, 1.0);
                 float4 viewSpace = mul(UNITY_MATRIX_I_P, viewClip);
                 float3 viewDir = normalize(viewSpace.xyz / max(viewSpace.w, 1e-6));
@@ -162,6 +168,41 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
                 return LayerDepth(layerDirection, layerOffset, 4.0);
             }
 
+            float WorldHeightAtFogDepth(float3 worldViewDir, float fogDepth01)
+            {
+                float3 cameraForwardWS = normalize(mul(UNITY_MATRIX_I_V, float4(0.0, 0.0, 1.0, 0.0)).xyz);
+                float fogRange = max(_FogFarPlane - _ProjectionParams.y, 1e-6);
+                float eyeDepth = _ProjectionParams.y + saturate(fogDepth01) * fogRange;
+                float rayDistance = eyeDepth / max(abs(dot(worldViewDir, cameraForwardWS)), 1e-4);
+                float3 fogWorldPosition = _WorldSpaceCameraPos + worldViewDir * rayDistance;
+                return fogWorldPosition.y;
+            }
+
+            float ClipSpanAgainstGround(float3 worldViewDir, inout float startDepth01, inout float endDepth01)
+            {
+                if (_ClipBelowGround <= 0.5)
+                    return 1.0;
+
+                float startHeight = WorldHeightAtFogDepth(worldViewDir, startDepth01);
+                float endHeight = WorldHeightAtFogDepth(worldViewDir, endDepth01);
+
+                if (startHeight < 0.0 && endHeight < 0.0)
+                    return 0.0;
+
+                if (startHeight >= 0.0 && endHeight >= 0.0)
+                    return 1.0;
+
+                float crossingT = saturate(startHeight / (startHeight - endHeight));
+                float crossingDepth01 = lerp(startDepth01, endDepth01, crossingT);
+
+                if (startHeight < 0.0)
+                    startDepth01 = crossingDepth01;
+                else
+                    endDepth01 = crossingDepth01;
+
+                return endDepth01 > startDepth01 ? 1.0 : 0.0;
+            }
+
             float GroundPlaneAttenuation(float3 worldViewDir, float fogDepth01)
             {
                 if (_GroundPlaneFalloff <= 1e-5)
@@ -235,7 +276,8 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
                             float layer1Depth = rawBandStart + DebugLayerRead(worldViewDir, layerIndex, true) * layerScale;
                             float clippedStartDepth = max(layer0Depth, 0.0);
                             float clippedEndDepth = min(min(layer1Depth, sceneDepth01), 1.0);
-                            float bandFogAmount = max(clippedEndDepth - clippedStartDepth, 0.0);
+                            float spanIsVisible = ClipSpanAgainstGround(cameraWorldViewDir, clippedStartDepth, clippedEndDepth);
+                            float bandFogAmount = max(clippedEndDepth - clippedStartDepth, 0.0) * spanIsVisible;
                             if (bandFogAmount > 1e-5)
                                 bandFogAmount *= GroundPlaneSpanAttenuation(cameraWorldViewDir, clippedStartDepth, clippedEndDepth);
 

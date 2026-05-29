@@ -371,7 +371,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ClassicTilestorm.ApplicationSettings
   loadMapName: Industrial 01
-  scrambled: 1
   difficulty: 0
   music: 1
   showEditorGrid: 1
@@ -537,6 +536,7 @@ GameObject:
   - component: {fileID: 1146321624}
   - component: {fileID: 1146321629}
   - component: {fileID: 1146321630}
+  - component: {fileID: 1146321631}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -689,6 +689,27 @@ MonoBehaviour:
   rippleOffset: 0
   reflectionStrength: 0.95
   fresnelSharpness: 12
+--- !u!114 &1146321631
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1146321623}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e76c56808f13c6f429c4e59280be6618, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ScreenSpaceVolumetricFogSystem
+  renderPassEvent: 600
+  fogColor: {r: 1, g: 1, b: 1, a: 0.5529412}
+  fogFarPlane: 30
+  groundPlaneFalloff: 10
+  clipBelowGround: 1
+  fogAnimationSpeed: 0.3
+  convection: 0.2
+  depthLayerCount: 2
+  debugFog: 0
 --- !u!1 &1555382761
 GameObject:
   m_ObjectHideFlags: 0
