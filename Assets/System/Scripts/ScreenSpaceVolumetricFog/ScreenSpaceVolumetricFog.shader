@@ -128,7 +128,7 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
                 float amplitude = 0.5;
                 float frequency = 1.0;
 
-                [unroll]
+                [loop]
                 for (int i = 0; i < 4; i++)
                 {
                     sum += amplitude * ValueNoise3D(p * frequency);
@@ -228,7 +228,7 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
                 float depthRange = endDepth01 - startDepth01;
                 float attenuation = 0.0;
 
-                [unroll]
+                [loop]
                 for (int i = 0; i < 5; i++)
                 {
                     float sampleDepth01 = startDepth01 + depthRange * ((float)i * 0.25);
@@ -254,7 +254,7 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
                 float fogAmount = 0.0;
                 float nearestFogStartDepth = 1.0;
 
-                [unroll]
+                [loop]
                 for (int localLayerIndex = 0; localLayerIndex < MAX_DEPTH_LAYER_COUNT + 2; localLayerIndex++)
                 {
                     if (localLayerIndex < depthLayerCount + 2)
