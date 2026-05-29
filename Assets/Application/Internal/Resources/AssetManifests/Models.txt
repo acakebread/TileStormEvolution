@@ -112,6 +112,11 @@ ECR3n5	EvolutionMedieval/Geometry/med_trim_tile
 AWj8wn	EvolutionMedieval/Geometry/med_trim_tile_outer_corner
 86mE6p	EvolutionMedieval/Geometry/med_trim_tile_wedge
 3WeA5j	EvolutionMedieval/Geometry/med_well
+1EPPpV	EvolutionMedieval/Geometry/new_med_corner
+13C5pD	EvolutionMedieval/Geometry/new_med_corner_static
+0pn6fh	EvolutionMedieval/Geometry/new_med_gate
+4AmxEK	EvolutionMedieval/Geometry/new_med_straight
+5jEafa	EvolutionMedieval/Geometry/new_med_straight_static
 2x4AMP	Global/Geometry/primitive_box
 0vMNGm	Global/Geometry/primitive_box_chamfer
 5Fq58J	Global/Geometry/primitive_box_chamfer2
