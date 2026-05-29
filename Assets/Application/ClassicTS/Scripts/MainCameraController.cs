@@ -13,6 +13,9 @@ namespace ClassicTilestorm
 		private EggbotController eggbotController;
 		private SpatialBucketSystem spatialSystem;
 		private GestureController gestureController;
+		private ScreenSpaceVolumetricFogSystem screenSpaceFogSystem;
+		private CameraBase detailLevelAppliedSystem;
+		private int detailLevelAppliedValue = int.MinValue;
 		public PostProcessingCameraController postProcessingController { get; private set; }
 
 		private const int MaxFocusPoints = 50;
@@ -89,6 +92,7 @@ namespace ClassicTilestorm
 			}
 			var initialMode = PreviewModeToCameraMode(ApplicationSettings.CurrentMode);
 			Initialise(initialMode ?? CameraModeRegistry.Preset);
+			UpdatePostProcessingLevel(ApplicationSettings.DetailLevel);
 			GestureControllerEnabled = false;
 			UpdateGestureControllerState();
 
@@ -123,7 +127,7 @@ namespace ClassicTilestorm
 			if (waypoints.Length > 0)
 			{
 				var tile = waypoints[0].tile;
-				// Use extension method — returns the View or null
+				// Use extension method - returns the View or null
 				var view = iMap.GetAttachmentOfType<View>(tile);
 
 				if (view != null)
@@ -272,6 +276,7 @@ namespace ClassicTilestorm
 		protected override void Update()
 		{
 			base.Update();
+			ApplyDetailLevelIfNeeded();
 			UpdateCinemaMode();
 			UpdateEditorPostProcessing();
 		}
@@ -293,24 +298,61 @@ namespace ClassicTilestorm
 			if (null == activeSystem)
 				return;
 
+			detailLevelAppliedSystem = activeSystem;
+			detailLevelAppliedValue = value;
+
 			if (activeSystem is GameCameraEditor)
 			{
-				activeSystem.PostProcessingEnabled = value > 1;
+				var postProcessingEnabled = value > 1;
+				activeSystem.PostProcessingEnabled = postProcessingEnabled;
 				var volume = getVolume(activeSystem.controller.gameObject);
-				volume.enabled = value > 1;
-				VolumeUtils.EnableDepthOfField(volume, value > 1);
+				volume.enabled = postProcessingEnabled;
+				VolumeUtils.EnableDepthOfField(volume, postProcessingEnabled);
 				VolumeUtils.SetDepthOfFieldDistance(volume, 8f);
+				UpdateScreenSpaceFogLevel(postProcessingEnabled);
 				return;
 			}
 			else if (activeSystem is not GameCameraEditor)
 			{
-				activeSystem.PostProcessingEnabled = value > 0;
+				var postProcessingEnabled = value > 0;
+				activeSystem.PostProcessingEnabled = postProcessingEnabled;
 				var volume = getVolume(activeSystem.controller.gameObject);
-				volume.enabled = value > 0;
-				VolumeUtils.EnableDepthOfField(volume, value > 0);
+				volume.enabled = postProcessingEnabled;
+				VolumeUtils.EnableDepthOfField(volume, postProcessingEnabled);
 				VolumeUtils.SetDepthOfFieldDistance(volume, 8f);
+				UpdateScreenSpaceFogLevel(postProcessingEnabled);
 			}
 			static UnityEngine.Rendering.Volume getVolume(GameObject root) => root.GetComponentInChildren<UnityEngine.Rendering.Volume>(true);
+		}
+
+		private void ApplyDetailLevelIfNeeded()
+		{
+			if (detailLevelAppliedSystem == activeSystem && detailLevelAppliedValue == ApplicationSettings.DetailLevel)
+				return;
+
+			UpdatePostProcessingLevel(ApplicationSettings.DetailLevel);
+		}
+
+		private void UpdateScreenSpaceFogLevel(bool enabled)
+		{
+			var fogSystem = GetScreenSpaceFogSystem();
+			if (fogSystem != null)
+				fogSystem.enabled = enabled;
+		}
+
+		private ScreenSpaceVolumetricFogSystem GetScreenSpaceFogSystem()
+		{
+			if (screenSpaceFogSystem != null)
+				return screenSpaceFogSystem;
+
+			var mainCamera = Camera.main;
+			if (mainCamera != null)
+				screenSpaceFogSystem = mainCamera.GetComponent<ScreenSpaceVolumetricFogSystem>();
+
+			if (screenSpaceFogSystem == null)
+				screenSpaceFogSystem = FindAnyObjectByType<ScreenSpaceVolumetricFogSystem>(FindObjectsInactive.Include);
+
+			return screenSpaceFogSystem;
 		}
 
 		private void UpdateEditorPostProcessing()
