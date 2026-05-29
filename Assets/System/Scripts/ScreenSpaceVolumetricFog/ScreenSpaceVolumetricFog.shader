@@ -253,7 +253,8 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
                 float layerScale = rcp((float)depthLayerCount);
                 int firstLayerIndex = -(int)floor(pseudoDepth) - 1;
                 float fogAmount = 0.0;
-                float nearestFogStartDepth = 1.0;
+                float debugDepth = 0.0;
+                bool debugReadCaptured = false;
 
                 [loop]
                 for (int localLayerIndex = 0; localLayerIndex < MAX_DEPTH_LAYER_COUNT + 2; localLayerIndex++)
@@ -273,8 +274,10 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
                             float layerFovScale = LayerFovScale(visibleBandMid);
                             float3 worldViewDir = GetLayerWorldViewDirection(screenUV, layerFovScale, localLayerIndex);
 
-                            float layer0Depth = rawBandStart + DebugLayerRead(worldViewDir, layerIndex, false) * layerScale;
-                            float layer1Depth = rawBandStart + DebugLayerRead(worldViewDir, layerIndex, true) * layerScale;
+                            float nearRead = DebugLayerRead(worldViewDir, layerIndex, false);
+                            float farRead = DebugLayerRead(worldViewDir, layerIndex, true);
+                            float layer0Depth = rawBandStart + nearRead * layerScale;
+                            float layer1Depth = rawBandStart + farRead * layerScale;
                             float clippedStartDepth = max(layer0Depth, 0.0);
                             float clippedEndDepth = min(min(layer1Depth, sceneDepth01), 1.0);
                             float spanIsVisible = ClipSpanAgainstGround(cameraWorldViewDir, clippedStartDepth, clippedEndDepth);
@@ -283,21 +286,36 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
                                 bandFogAmount *= GroundPlaneSpanAttenuation(cameraWorldViewDir, clippedStartDepth, clippedEndDepth);
 
                             fogAmount += bandFogAmount;
-                            nearestFogStartDepth = bandFogAmount > 1e-5 ? min(nearestFogStartDepth, saturate(clippedStartDepth)) : nearestFogStartDepth;
+
+                            if (bandFogAmount > 1e-5 && !debugReadCaptured)
+                            {
+                                debugDepth = saturate(layer0Depth);
+                                debugReadCaptured = true;
+                            }
                         }
                     }
                 }
 
                 float3 sceneColor = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, screenUV).rgb;
-                float fogAlpha = saturate(fogAmount * (_FogColor.a * 4.0));
-                float fogMask = saturate(fogAmount * 4.0);
-                float fogDebugShade = 1.0 - nearestFogStartDepth;
-                float3 debugFogColor = float3(fogDebugShade, fogDebugShade, fogDebugShade);
-                float3 debugColor = lerp(sceneColor, debugFogColor, fogMask);
-                float3 fogColor = lerp(sceneColor, _FogColor.rgb, fogAlpha);
-                float3 finalColor = lerp(fogColor, debugColor, saturate(_DebugFog));
+                float3 debugColor;
+                if (saturate(_DebugFog) > 0.5)
+                {
+                    if (!debugReadCaptured)
+                    {
+                        debugColor = sceneColor;
+                    }
+                    else
+                    {
+                        debugColor = debugDepth.xxx;
+                    }
+                }
+                else
+                {
+                    float fogAlpha = saturate(fogAmount * (_FogColor.a * 4.0));
+                    debugColor = lerp(sceneColor, _FogColor.rgb, fogAlpha);
+                }
 
-                return half4(finalColor, 1.0);
+                return half4(debugColor, 1.0);
             }
             ENDHLSL
         }
