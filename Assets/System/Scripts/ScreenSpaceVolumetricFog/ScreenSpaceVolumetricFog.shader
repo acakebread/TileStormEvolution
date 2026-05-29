@@ -43,6 +43,7 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
                 float _DebugFog;
             CBUFFER_END
 
+            TEXTURE2D_X_FLOAT(_DirectCameraDepthTexture);
             float4 _LayerRotationCompensations[MAX_VISIBLE_DEPTH_LAYER_COUNT];
 
             float LayerFovScale(float layerDepth01)
@@ -151,7 +152,7 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
 
             float NormalizedSceneDepth(float2 screenUV)
             {
-                float rawDepth = SampleSceneDepth(screenUV);
+                float rawDepth = SAMPLE_TEXTURE2D_X(_DirectCameraDepthTexture, sampler_PointClamp, UnityStereoTransformScreenSpaceTex(screenUV)).r;
                 // Convert the perspective depth buffer into fog-range space
                 // while accounting for the camera near clip, so the normalized
                 // scene depth matches the fog layer span endpoints.

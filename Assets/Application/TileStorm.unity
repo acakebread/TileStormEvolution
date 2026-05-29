@@ -705,7 +705,7 @@ MonoBehaviour:
   fogColor: {r: 1, g: 1, b: 1, a: 0.5529412}
   fogFarPlane: 30
   groundPlaneFalloff: 10
-  clipBelowGround: 1
+  clipBelowGround: 0
   fogAnimationSpeed: 0.3
   convection: 0.2
   depthLayerCount: 2

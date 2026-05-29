@@ -14,9 +14,15 @@ namespace MassiveHadronLtd
 		void ExecuteCommands(RenderPassEvent evt, RasterCommandBuffer commandBuffer, Camera camera);
 	}
 
+	public interface IDirectDepthTextureProvider
+	{
+		bool RequiresActiveDepthTexture(RenderPassEvent evt);
+	}
+
 	public class DirectCommandBufferPass : ScriptableRenderPass
 	{
 		private static readonly int BlitTextureId = Shader.PropertyToID("_BlitTexture");
+		private static readonly int DirectCameraDepthTextureId = Shader.PropertyToID("_DirectCameraDepthTexture");
 		private readonly string passNameStr;
 
 		public DirectCommandBufferPass(RenderPassEvent renderEvent)
@@ -37,6 +43,7 @@ namespace MassiveHadronLtd
 				return;
 
 			TextureHandle sourceColor = TextureHandle.nullHandle;
+			TextureHandle sourceDepth = TextureHandle.nullHandle;
 			if (provider.RequiresColorTexture(renderPassEvent))
 			{
 				var sourceDesc = renderGraph.GetTextureDesc(resourceData.activeColorTexture);
@@ -47,11 +54,17 @@ namespace MassiveHadronLtd
 				renderGraph.AddBlitPass(resourceData.activeColorTexture, sourceColor, Vector2.one, Vector2.zero, passName: $"{passNameStr}_CopySource");
 			}
 
+			bool requiresActiveDepthTexture = provider is IDirectDepthTextureProvider depthProvider
+				&& depthProvider.RequiresActiveDepthTexture(renderPassEvent);
+			if (requiresActiveDepthTexture)
+				sourceDepth = resourceData.cameraDepth;
+
 			using (var builder = renderGraph.AddRasterRenderPass<PassData>(passNameStr, out var passData))
 			{
 				passData.camera = cam;
 				passData.provider = provider;
 				passData.colorSource = sourceColor;
+				passData.depthSource = sourceDepth;
 
 				var colorTarget = resourceData.activeColorTexture;
 				var depthTarget = resourceData.cameraDepth;
@@ -60,9 +73,13 @@ namespace MassiveHadronLtd
 				{
 					builder.UseTexture(passData.colorSource, AccessFlags.Read);
 				}
+				if (requiresActiveDepthTexture)
+				{
+					builder.UseTexture(passData.depthSource, AccessFlags.Read);
+				}
 
 				builder.SetRenderAttachment(colorTarget, 0, AccessFlags.ReadWrite);
-				if (renderPassEvent != RenderPassEvent.BeforeRendering)
+				if (renderPassEvent != RenderPassEvent.BeforeRendering && !requiresActiveDepthTexture)
 					builder.SetRenderAttachmentDepth(depthTarget, AccessFlags.ReadWrite);
 
 				builder.AllowPassCulling(false);
@@ -72,6 +89,8 @@ namespace MassiveHadronLtd
 				{
 					if (data.colorSource.IsValid())
 						context.cmd.SetGlobalTexture(BlitTextureId, data.colorSource);
+					if (data.depthSource.IsValid())
+						context.cmd.SetGlobalTexture(DirectCameraDepthTextureId, data.depthSource);
 
 					data.provider.ExecuteCommands(renderPassEvent, context.cmd, data.camera);
 				});
@@ -83,6 +102,7 @@ namespace MassiveHadronLtd
 			public IDirectCommandProvider provider;
 			public Camera camera;
 			public TextureHandle colorSource;
+			public TextureHandle depthSource;
 		}
 	}
 

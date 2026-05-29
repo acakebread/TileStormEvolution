@@ -3,7 +3,7 @@ using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using MassiveHadronLtd;
 
-public class ScreenSpaceVolumetricFogSystem : MonoBehaviour, IDirectCommandProvider
+public class ScreenSpaceVolumetricFogSystem : MonoBehaviour, IDirectCommandProvider, IDirectDepthTextureProvider
 {
     private const int MaxDepthLayerCount = 8;
     private const int MaxVisibleDepthLayerCount = MaxDepthLayerCount + 2;
@@ -282,6 +282,11 @@ public class ScreenSpaceVolumetricFogSystem : MonoBehaviour, IDirectCommandProvi
     }
 
     public bool RequiresColorTexture(RenderPassEvent evt)
+    {
+        return evt == renderPassEvent;
+    }
+
+    public bool RequiresActiveDepthTexture(RenderPassEvent evt)
     {
         return evt == renderPassEvent;
     }
