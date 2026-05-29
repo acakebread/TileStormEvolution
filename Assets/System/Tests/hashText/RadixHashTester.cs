@@ -287,7 +287,7 @@ public class RadixHashCollisionTester : MonoBehaviour
 		countMap64.Clear();
 		countMapBig.Clear();
 
-		if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
+		if (InputX.GetKey(KeyCode.LeftShift) || InputX.GetKey(KeyCode.RightShift))
 		{
 			PrintFinalSummary();
 			isRunning = false;

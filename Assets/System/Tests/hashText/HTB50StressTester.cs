@@ -239,7 +239,7 @@ namespace MassiveHadronLtd
 
 			PrintBatchSummary();
 
-			if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
+			if (InputX.GetKey(KeyCode.LeftShift) || InputX.GetKey(KeyCode.RightShift))
 			{
 				isRunning = false;
 				statusMessage = $"Batch {currentBatch} finished (Shift was held)";

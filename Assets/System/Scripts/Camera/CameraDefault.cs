@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem.UI;
 namespace MassiveHadronLtd
 {
 	public class CameraDefault : CameraBase
@@ -38,7 +39,7 @@ namespace MassiveHadronLtd
 			skipNextScroll = false;
 
 			// Ensure EventSystem exists
-			if (!Object.FindAnyObjectByType<EventSystem>()) new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
+			if (!Object.FindAnyObjectByType<EventSystem>()) new GameObject("EventSystem", typeof(InputSystemUIInputModule));
 		}
 
 		public override void Update()

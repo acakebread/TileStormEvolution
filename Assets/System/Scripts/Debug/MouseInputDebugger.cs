@@ -34,9 +34,6 @@ namespace DebugTools
 				dx = delta.x;
 				dy = delta.y;
 			}
-#elif ENABLE_LEGACY_INPUT_MANAGER
-            dx = Input.GetAxisRaw("Mouse X");
-            dy = Input.GetAxisRaw("Mouse Y");
 #endif
 
 			float rawMag = Mathf.Sqrt(dx * dx + dy * dy);

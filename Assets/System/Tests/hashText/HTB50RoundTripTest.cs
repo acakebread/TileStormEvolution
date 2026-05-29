@@ -23,7 +23,7 @@ public class HTB50ExhaustiveRoundTripTest : MonoBehaviour
 	{
 		if (!isRunning) return;
 
-		if (Input.GetKeyDown(KeyCode.Escape))
+		if (MassiveHadronLtd.InputX.GetKeyDown(KeyCode.Escape))
 		{
 			isRunning = false;
 			Debug.LogWarning("Test stopped early by user (ESC pressed).");

@@ -126,10 +126,10 @@ namespace ClassicTilestorm
 
 		private static bool HasUserGesture()
 		{
-			return Input.anyKeyDown ||
-				   Input.GetMouseButtonDown(0) ||
-				   Input.GetMouseButtonDown(1) ||
-				   Input.touchCount > 0;
+			return InputX.anyKeyDown ||
+				   InputX.GetMouseButtonDown(0) ||
+				   InputX.GetMouseButtonDown(1) ||
+				   InputX.touchCount > 0;
 		}
 
 		void OnDisable()

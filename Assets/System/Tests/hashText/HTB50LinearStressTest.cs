@@ -183,7 +183,7 @@ namespace MassiveHadronLtd
 
 			currentIntensity = Mathf.Min(currentIntensity + 1, 20);  // cap growth
 
-			if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
+			if (InputX.GetKey(KeyCode.LeftShift) || InputX.GetKey(KeyCode.RightShift))
 			{
 				isRunning = false;
 				statusMessage = "Stopped (Shift held)";

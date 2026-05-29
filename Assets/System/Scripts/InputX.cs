@@ -37,6 +37,7 @@ namespace MassiveHadronLtd
 		public static bool GetKeyDown(Key key) => key != Key.None && Keyboard.current != null && Keyboard.current[key].wasPressedThisFrame;
 		public static bool GetKey(Key key) => key != Key.None && Keyboard.current != null && Keyboard.current[key].isPressed;
 		public static bool GetKeyUp(Key key) => key != Key.None && Keyboard.current != null && Keyboard.current[key].wasReleasedThisFrame;
+		public static bool anyKeyDown => Keyboard.current != null && Keyboard.current.anyKey.wasPressedThisFrame;
 
 		public static bool GetKeyDown(KeyCode key) => GetKeyDown(key.ToKey());
 		public static bool GetKey(KeyCode key) => GetKey(key.ToKey());

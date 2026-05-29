@@ -7,6 +7,7 @@ using System.Runtime.InteropServices;
 using MassiveHadronLtd;
 using MassiveHadronLtd.FileBrowserUtil;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem.UI;
 using ClassicTilestorm.Assets;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -86,7 +87,7 @@ namespace ClassicTilestorm
 			gameObject.AddComponent<AudioManager>();
 			AssetConfiguration.Initialize();
 
-			if (!FindAnyObjectByType<EventSystem>()) new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
+			if (!FindAnyObjectByType<EventSystem>()) new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
 
 #if UNITY_WEBGL && !UNITY_EDITOR
 			WebGLPersistentStorage.EnsureLoaded(_ => CompleteStartupInitialization());
