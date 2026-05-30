@@ -9,6 +9,12 @@ public class ScreenSpaceVolumetricFogTemporalSystem : ScreenSpaceVolumetricFogSy
     [Header("Temporal")]
     [Tooltip("Blends fog opacity with the previous frame. Zero disables temporal history.")]
     [SerializeField, Range(0.0f, 0.95f)] private float temporalAccumulation = 0.82f;
+    [Tooltip("Automatically ignores temporal history after a sudden camera jump or cut.")]
+    [SerializeField] private bool resetTemporalOnCameraCut = true;
+    [Tooltip("Camera translation threshold for history reset, as a fraction of the fog far plane.")]
+    [SerializeField, Range(0.0f, 1.0f)] private float temporalCutDistanceFraction = 0.2f;
+    [Tooltip("Camera rotation threshold in degrees for history reset.")]
+    [SerializeField, Range(0.0f, 180.0f)] private float temporalCutRotationDegrees = 35.0f;
 
     private RenderTexture previousTemporalHistoryTexture;
     private RenderTexture currentTemporalHistoryTexture;
@@ -18,6 +24,10 @@ public class ScreenSpaceVolumetricFogTemporalSystem : ScreenSpaceVolumetricFogSy
     private int temporalHistoryHeight;
     private bool temporalHistoryValid;
     private bool temporalHistoryPreparedThisFrame;
+    private Camera temporalHistoryCamera;
+    private Vector3 lastTemporalCameraPosition;
+    private Quaternion lastTemporalCameraRotation;
+    private bool hasTemporalCameraPose;
 
     public bool RequiresTemporalHistory(RenderPassEvent evt)
     {
@@ -39,6 +49,7 @@ public class ScreenSpaceVolumetricFogTemporalSystem : ScreenSpaceVolumetricFogSy
             && temporalHistoryHeight == height)
         {
             temporalHistoryPreparedThisFrame = true;
+            ResetTemporalHistoryIfCameraCut(camera);
             return;
         }
 
@@ -52,6 +63,7 @@ public class ScreenSpaceVolumetricFogTemporalSystem : ScreenSpaceVolumetricFogSy
         currentTemporalHistoryHandle = RTHandles.Alloc(currentTemporalHistoryTexture);
         temporalHistoryValid = false;
         temporalHistoryPreparedThisFrame = true;
+        ResetTemporalCameraPose(camera);
     }
 
     public RTHandle GetPreviousTemporalHistory(RenderPassEvent evt)
@@ -73,6 +85,7 @@ public class ScreenSpaceVolumetricFogTemporalSystem : ScreenSpaceVolumetricFogSy
         (previousTemporalHistoryHandle, currentTemporalHistoryHandle) = (currentTemporalHistoryHandle, previousTemporalHistoryHandle);
         temporalHistoryValid = true;
         temporalHistoryPreparedThisFrame = false;
+        ResetTemporalCameraPose(camera);
     }
 
     protected override void ApplyMaterialParameters(Camera camera)
@@ -124,6 +137,49 @@ public class ScreenSpaceVolumetricFogTemporalSystem : ScreenSpaceVolumetricFogSy
         temporalHistoryPreparedThisFrame = false;
         temporalHistoryWidth = 0;
         temporalHistoryHeight = 0;
+        temporalHistoryCamera = null;
+        lastTemporalCameraPosition = default;
+        lastTemporalCameraRotation = Quaternion.identity;
+        hasTemporalCameraPose = false;
+    }
+
+    private void ResetTemporalHistoryIfCameraCut(Camera camera)
+    {
+        if (!resetTemporalOnCameraCut || camera == null)
+            return;
+
+        if (!hasTemporalCameraPose || temporalHistoryCamera != camera)
+        {
+            temporalHistoryValid = false;
+            ResetTemporalCameraPose(camera);
+            return;
+        }
+
+        Transform cameraTransform = camera.transform;
+        float fogRange = Mathf.Max(ResolveFogFarPlane(camera), 1e-5f);
+        float cutDistance = fogRange * temporalCutDistanceFraction;
+        float positionDelta = Vector3.Distance(lastTemporalCameraPosition, cameraTransform.position);
+        float rotationDelta = Quaternion.Angle(lastTemporalCameraRotation, cameraTransform.rotation);
+
+        if ((cutDistance > 1e-5f && positionDelta > cutDistance)
+            || (temporalCutRotationDegrees > 1e-5f && rotationDelta > temporalCutRotationDegrees))
+            temporalHistoryValid = false;
+    }
+
+    private void ResetTemporalCameraPose(Camera camera)
+    {
+        if (camera == null)
+        {
+            temporalHistoryCamera = null;
+            hasTemporalCameraPose = false;
+            return;
+        }
+
+        Transform cameraTransform = camera.transform;
+        temporalHistoryCamera = camera;
+        lastTemporalCameraPosition = cameraTransform.position;
+        lastTemporalCameraRotation = cameraTransform.rotation;
+        hasTemporalCameraPose = true;
     }
 
     private static void ReleaseTemporalHistoryTexture(RenderTexture texture)
