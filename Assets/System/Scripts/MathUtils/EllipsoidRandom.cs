@@ -39,7 +39,7 @@ namespace MassiveHadronLtd
 		// --------------------------------------------------------------
 		private static float Gaussian()
 		{
-			float u = 1f - Random.value;               // avoid log(0)
+			float u = Mathf.Max(1e-7f, 1f - Random.value); // Unity Random.value can very rarely be exactly 1.
 			float v = Random.value;
 			return Mathf.Sqrt(-2f * Mathf.Log(u)) * Mathf.Cos(Mathf.PI * 2f * v);
 		}

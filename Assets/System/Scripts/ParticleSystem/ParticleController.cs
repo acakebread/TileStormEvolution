@@ -326,7 +326,7 @@ namespace MassiveHadronLtd
 			// Uniform distribution on spherical cap
 			float z = Random.Range(Mathf.Cos(maxHalfAngleRad), 1f);
 			float theta = Random.Range(0f, Mathf.PI * 2f);
-			float r = Mathf.Sqrt(1f - z * z);
+			float r = Mathf.Sqrt(Mathf.Max(0f, 1f - z * z));
 
 			Vector3 localDir = new Vector3(r * Mathf.Cos(theta), r * Mathf.Sin(theta), z);
 
