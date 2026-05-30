@@ -38,7 +38,6 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
                 float _DepthLayerCount;
                 float _FogFarPlane;
                 float _GroundPlaneFalloff;
-                float _ClipBelowGround;
                 float _FogSeedOffset;
                 float _DebugFog;
             CBUFFER_END
@@ -46,9 +45,24 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
             TEXTURE2D_X_FLOAT(_DirectCameraDepthTexture);
             float4 _LayerRotationCompensations[MAX_VISIBLE_DEPTH_LAYER_COUNT];
 
+            float GetFogFarPlane()
+            {
+                return (_FogFarPlane > 1e-6) ? _FogFarPlane : _ProjectionParams.z;
+            }
+
+            float GetFogNearPlane()
+            {
+                return _ProjectionParams.y;
+            }
+
+            float GetFogRange()
+            {
+                return max(GetFogFarPlane() - GetFogNearPlane(), 1e-6);
+            }
+
             float LayerFovScale(float layerDepth01)
             {
-                float nearToFogFar = saturate(_ProjectionParams.y / max(_FogFarPlane, 1e-6));
+                float nearToFogFar = saturate(GetFogNearPlane() / max(GetFogFarPlane(), 1e-6));
                 return lerp(nearToFogFar, 1.0, saturate(layerDepth01));
             }
 
@@ -157,8 +171,9 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
                 // while accounting for the camera near clip, so the normalized
                 // scene depth matches the fog layer span endpoints.
                 float eyeDepth = LinearEyeDepth(rawDepth, _ZBufferParams);
-                float fogRange = max(_FogFarPlane - _ProjectionParams.y, 1e-6);
-                return saturate((eyeDepth - _ProjectionParams.y) / fogRange);
+                float fogNear = GetFogNearPlane();
+                float fogRange = GetFogRange();
+                return saturate((eyeDepth - fogNear) / fogRange);
             }
 
             float DebugLayerRead(float3 worldViewDir, int layerIndex, bool isEndLayer)
@@ -169,49 +184,15 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
                 return LayerDepth(layerDirection, layerOffset, 4.0);
             }
 
-            float WorldHeightAtFogDepth(float3 worldViewDir, float fogDepth01)
-            {
-                float3 cameraForwardWS = normalize(mul(UNITY_MATRIX_I_V, float4(0.0, 0.0, 1.0, 0.0)).xyz);
-                float fogRange = max(_FogFarPlane - _ProjectionParams.y, 1e-6);
-                float eyeDepth = _ProjectionParams.y + saturate(fogDepth01) * fogRange;
-                float rayDistance = eyeDepth / max(abs(dot(worldViewDir, cameraForwardWS)), 1e-4);
-                float3 fogWorldPosition = _WorldSpaceCameraPos + worldViewDir * rayDistance;
-                return fogWorldPosition.y;
-            }
-
-            float ClipSpanAgainstGround(float3 worldViewDir, inout float startDepth01, inout float endDepth01)
-            {
-                if (_ClipBelowGround <= 0.5)
-                    return 1.0;
-
-                float startHeight = WorldHeightAtFogDepth(worldViewDir, startDepth01);
-                float endHeight = WorldHeightAtFogDepth(worldViewDir, endDepth01);
-
-                if (startHeight < 0.0 && endHeight < 0.0)
-                    return 0.0;
-
-                if (startHeight >= 0.0 && endHeight >= 0.0)
-                    return 1.0;
-
-                float crossingT = saturate(startHeight / (startHeight - endHeight));
-                float crossingDepth01 = lerp(startDepth01, endDepth01, crossingT);
-
-                if (startHeight < 0.0)
-                    startDepth01 = crossingDepth01;
-                else
-                    endDepth01 = crossingDepth01;
-
-                return endDepth01 > startDepth01 ? 1.0 : 0.0;
-            }
-
             float GroundPlaneAttenuation(float3 worldViewDir, float fogDepth01)
             {
                 if (_GroundPlaneFalloff <= 1e-5)
                     return 1.0;
 
                 float3 cameraForwardWS = normalize(mul(UNITY_MATRIX_I_V, float4(0.0, 0.0, 1.0, 0.0)).xyz);
-                float fogRange = max(_FogFarPlane - _ProjectionParams.y, 1e-6);
-                float eyeDepth = _ProjectionParams.y + saturate(fogDepth01) * fogRange;
+                float fogNear = GetFogNearPlane();
+                float fogRange = GetFogRange();
+                float eyeDepth = fogNear + saturate(fogDepth01) * fogRange;
                 float rayDistance = eyeDepth / max(abs(dot(worldViewDir, cameraForwardWS)), 1e-4);
                 float3 fogWorldPosition = _WorldSpaceCameraPos + worldViewDir * rayDistance;
                 float heightNoise = ValueNoise3D(float3(fogWorldPosition.xz * 0.075, 19.37));
@@ -280,8 +261,7 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
                             float layer1Depth = rawBandStart + farRead * layerScale;
                             float clippedStartDepth = max(layer0Depth, 0.0);
                             float clippedEndDepth = min(min(layer1Depth, sceneDepth01), 1.0);
-                            float spanIsVisible = ClipSpanAgainstGround(cameraWorldViewDir, clippedStartDepth, clippedEndDepth);
-                            float bandFogAmount = max(clippedEndDepth - clippedStartDepth, 0.0) * spanIsVisible;
+                            float bandFogAmount = max(clippedEndDepth - clippedStartDepth, 0.0);
                             if (bandFogAmount > 1e-5)
                                 bandFogAmount *= GroundPlaneSpanAttenuation(cameraWorldViewDir, clippedStartDepth, clippedEndDepth);
 
