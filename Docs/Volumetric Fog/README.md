@@ -30,9 +30,8 @@ For each screen pixel, the shader:
 3. Reconstructs the camera ray for the pixel.
 4. Builds several synthetic fog depth intervals along that ray.
 5. Clips each fog interval against the scene depth.
-6. Optionally attenuates the visible fog by height above the world `y=0` plane.
-7. Accumulates the visible interval lengths into a final fog amount.
-8. Blends the fog color over the scene color.
+6. Accumulates the visible interval lengths into a final fog amount.
+7. Blends the fog color over the scene color.
 
 The important trick is that the fog is represented by sparse depth intervals
 rather than a dense volume. This keeps the pass cheap while still allowing
@@ -67,22 +66,21 @@ alpha.
 ### Fog Far Plane
 
 Defines the far distance of the fog volume in world units. Scene depth is
-normalized into the range between camera near clip and this value.
+normalized into the range between the fog near plane and this value.
 
 The camera far clip can be farther than this. The fog math should be considered
 to operate in its own fog range, not directly in camera clip range.
 
-### Ground Plane Falloff
+### Fog Near Plane
 
-Optional height attenuation against the world `y=0` plane.
+Defines the near distance used for fog-depth normalization when `Override Fog
+Clipping` is enabled.
 
-- `0` disables the feature.
-- Non-zero values define the approximate height over which fog fades out.
+### Override Fog Clipping
 
-The falloff is intentionally noisy in world XZ so the upper boundary is not a
-perfectly flat plane. This is useful for swamp, steam, mist, or low-lying ground
-fog. The current implementation is still approximate and may show cutoff-like
-artifacts at stronger values.
+When disabled, the shader uses the camera near clip for fog-depth normalization.
+When enabled, the inspector `Fog Near Plane` and `Fog Far Plane` values are used
+instead.
 
 ### Fog Animation Speed
 
@@ -119,7 +117,6 @@ colored blend. This is useful when checking:
 - depth sorting
 - layer cycling
 - scene-depth clipping
-- ground falloff
 - motion/parallax behavior
 
 ## Integration
@@ -156,14 +153,10 @@ The main cost comes from:
 - one full-screen pass
 - procedural value noise and FBM
 - up to `DepthLayerCount + 2` visible layer iterations
-- optional ground falloff sampling when enabled
-
-When `Ground Plane Falloff` is `0`, the falloff path early-outs.
 
 ## Known Limitations
 
 - The effect is a visual fake, not physically correct volumetric rendering.
-- Strong ground falloff can still look like a cutoff.
 - Fog animation can show directional shearing at higher speeds.
 - The current motion model is camera-relative and synthetic.
 - It does not include volumetric shadows, light shafts, true density fields, or

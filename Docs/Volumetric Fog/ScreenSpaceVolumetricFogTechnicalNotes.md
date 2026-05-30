@@ -63,21 +63,20 @@ float eyeDepth = LinearEyeDepth(rawDepth, _ZBufferParams);
 ```
 
 The fog system uses its own far plane, `_FogFarPlane`, rather than the camera far
-clip. Depth is normalized into fog space with the camera near clip accounted for:
+clip. Depth is normalized into fog space with either the camera near clip or the
+override near plane, depending on the inspector toggle:
 
 ```hlsl
-float fogRange = max(_FogFarPlane - _ProjectionParams.y, 1e-6);
-float sceneDepth01 = saturate((eyeDepth - _ProjectionParams.y) / fogRange);
+float fogNear = (_OverrideFogClipping > 0.5) ? _FogNearPlane : _ProjectionParams.y;
+float fogRange = max(_FogFarPlane - fogNear, 1e-6);
+float sceneDepth01 = saturate((eyeDepth - fogNear) / fogRange);
 ```
 
 All fog interval endpoints are compared in this normalized fog depth space.
 
 ## Camera Ray Reconstruction
 
-Two world-space rays are reconstructed:
-
-1. The layer ray, used for fog/noise lookup.
-2. The true camera ray, used for world-space ground falloff.
+One world-space ray is reconstructed for fog/noise lookup.
 
 The base reconstruction is:
 
@@ -99,7 +98,7 @@ Near fog layers should sample a smaller angular region than far layers, creating
 a cheap approximation of depth scale.
 
 ```hlsl
-float nearToFogFar = saturate(_ProjectionParams.y / max(_FogFarPlane, 1e-6));
+float nearToFogFar = saturate(_FogNearPlane / max(_FogFarPlane, 1e-6));
 float fovScale = lerp(nearToFogFar, 1.0, saturate(layerDepth01));
 ```
 
@@ -412,52 +411,6 @@ float3 seedDrift = _FogSeedOffset * float3(0.37, -0.61, 0.19);
 This causes the procedural field to evolve over time. It is useful at low
 values, but high values can show directional shearing.
 
-## Ground Plane Falloff
-
-The optional ground falloff attenuates fog based on reconstructed world height
-above the `y=0` plane.
-
-The falloff path is disabled when `_GroundPlaneFalloff <= 1e-5`.
-
-When enabled, the shader reconstructs a world position for several depths across
-the clipped fog interval. The reconstruction uses the true camera ray rather
-than the layer-compensated fog lookup ray:
-
-```hlsl
-float3 cameraForwardWS = normalize(mul(UNITY_MATRIX_I_V, float4(0, 0, 1, 0)).xyz);
-float eyeDepth = _ProjectionParams.y + saturate(fogDepth01) * fogRange;
-float rayDistance = eyeDepth / max(abs(dot(worldViewDir, cameraForwardWS)), 1e-4);
-float3 fogWorldPosition = _WorldSpaceCameraPos + worldViewDir * rayDistance;
-```
-
-The effective falloff height is varied with static world-space XZ noise:
-
-```hlsl
-float heightNoise = ValueNoise3D(float3(fogWorldPosition.xz * 0.075, 19.37));
-float variedFalloff = _GroundPlaneFalloff * lerp(0.65, 1.35, heightNoise);
-```
-
-The attenuation is currently linear:
-
-```hlsl
-float height01 = saturate(max(fogWorldPosition.y, 0.0) / max(variedFalloff, 1e-5));
-return saturate(1.0 - height01);
-```
-
-Five depth samples are averaged across each visible interval:
-
-```hlsl
-for (int i = 0; i < 5; i++)
-{
-    float sampleDepth01 = startDepth01 + depthRange * ((float)i * 0.25);
-    attenuation += GroundPlaneAttenuation(worldViewDir, sampleDepth01);
-}
-return attenuation * 0.2;
-```
-
-This reduces, but does not entirely remove, cutoff-like artifacts. For subtle
-ground mist values it is useful enough for demonstration.
-
 ## Required Shader Inputs
 
 The material receives:
@@ -467,7 +420,8 @@ _FogColor
 _PseudoDepth
 _DepthLayerCount
 _FogFarPlane
-_GroundPlaneFalloff
+_FogNearPlane
+_OverrideFogClipping
 _FogSeedOffset
 _DebugFog
 _LayerRotationCompensations[]
