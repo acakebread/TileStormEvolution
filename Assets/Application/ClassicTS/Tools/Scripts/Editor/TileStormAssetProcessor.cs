@@ -17,6 +17,15 @@ namespace ClassicTilestorm.Editor
 			return normalized.EndsWith(".fbx") || normalized.EndsWith(".obj");
 		}
 
+		private static bool IsClassicTsMusicPath(string path)
+		{
+			if (string.IsNullOrEmpty(path)) return false;
+
+			var normalized = path.Replace('\\', '/');
+			return normalized.StartsWith("Assets/Application/Resources/ClassicTS/Music/", System.StringComparison.OrdinalIgnoreCase) &&
+				   normalized.EndsWith(".mp3", System.StringComparison.OrdinalIgnoreCase);
+		}
+
 		void OnPreprocessModel()
 		{
 			if (!IsGeometryModelPath(assetPath))
@@ -32,6 +41,23 @@ namespace ClassicTilestorm.Editor
 			// Keep imported model vertices exact for tile seam alignment.
 			if (importer.meshCompression != ModelImporterMeshCompression.Off)
 				importer.meshCompression = ModelImporterMeshCompression.Off;
+		}
+
+		void OnPreprocessAudio()
+		{
+			if (!IsClassicTsMusicPath(assetPath))
+				return;
+
+			if (assetImporter is not AudioImporter importer)
+				return;
+
+			var webGlSettings = importer.GetOverrideSampleSettings("WebGL");
+			if (webGlSettings.loadType == AudioClipLoadType.CompressedInMemory)
+				return;
+
+			// Streaming music clips produce browser blob-source failures in WebGL builds.
+			webGlSettings.loadType = AudioClipLoadType.CompressedInMemory;
+			importer.SetOverrideSampleSettings("WebGL", webGlSettings);
 		}
 
 		void OnPostprocessModel(GameObject gameObject)
