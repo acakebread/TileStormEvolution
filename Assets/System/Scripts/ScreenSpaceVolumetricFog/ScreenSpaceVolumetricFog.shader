@@ -13,18 +13,7 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
             "Queue" = "Transparent"
         }
 
-        Pass
-        {
-            Name "ScreenSpaceVolumetricFog"
-            ZWrite Off
-            ZTest Always
-            Cull Off
-            Blend Off
-
-            HLSLPROGRAM
-            #pragma vertex Vert
-            #pragma fragment Frag
-
+        HLSLINCLUDE
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareDepthTexture.hlsl"
             #include "Packages/com.unity.render-pipelines.core/Runtime/Utilities/Blit.hlsl"
@@ -40,10 +29,22 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
                 float _GroundPlaneFalloff;
                 float _FogSeedOffset;
                 float _DebugFog;
+                float _TemporalHistoryBlend;
             CBUFFER_END
 
             TEXTURE2D_X_FLOAT(_DirectCameraDepthTexture);
+            TEXTURE2D_X(_DirectTemporalHistoryTexture);
             float4 _LayerRotationCompensations[MAX_VISIBLE_DEPTH_LAYER_COUNT];
+
+            struct FogResolve
+            {
+                float2 screenUV;
+                float sceneDepth01;
+                float3 sceneColor;
+                float fogAmount;
+                float debugDepth;
+                float debugReadCaptured;
+            };
 
             float GetFogFarPlane()
             {
@@ -167,9 +168,6 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
             float NormalizedSceneDepth(float2 screenUV)
             {
                 float rawDepth = SAMPLE_TEXTURE2D_X(_DirectCameraDepthTexture, sampler_PointClamp, UnityStereoTransformScreenSpaceTex(screenUV)).r;
-                // Convert the perspective depth buffer into fog-range space
-                // while accounting for the camera near clip, so the normalized
-                // scene depth matches the fog layer span endpoints.
                 float eyeDepth = LinearEyeDepth(rawDepth, _ZBufferParams);
                 float fogNear = GetFogNearPlane();
                 float fogRange = GetFogRange();
@@ -220,22 +218,28 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
                 return attenuation * 0.2;
             }
 
-            half4 Frag(Varyings input) : SV_Target
+            float ResolveFogAlpha(float fogAmount)
+            {
+                return saturate(fogAmount * (_FogColor.a * 4.0));
+            }
+
+            FogResolve ResolveFog(Varyings input)
             {
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
-                float2 screenUV = GetNormalizedScreenSpaceUV(input.positionCS);
+                FogResolve resolved;
+                resolved.screenUV = GetNormalizedScreenSpaceUV(input.positionCS);
+                resolved.sceneDepth01 = NormalizedSceneDepth(resolved.screenUV);
+                resolved.sceneColor = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, resolved.screenUV).rgb;
+                resolved.fogAmount = 0.0;
+                resolved.debugDepth = 0.0;
+                resolved.debugReadCaptured = 0.0;
 
-                float sceneDepth01 = NormalizedSceneDepth(screenUV);
-                float3 cameraWorldViewDir = GetCameraWorldViewDirection(screenUV);
-
+                float3 cameraWorldViewDir = GetCameraWorldViewDirection(resolved.screenUV);
                 float pseudoDepth = _PseudoDepth;
                 int depthLayerCount = clamp((int)round(_DepthLayerCount), 1, MAX_DEPTH_LAYER_COUNT);
                 float layerScale = rcp((float)depthLayerCount);
                 int firstLayerIndex = -(int)floor(pseudoDepth) - 1;
-                float fogAmount = 0.0;
-                float debugDepth = 0.0;
-                bool debugReadCaptured = false;
 
                 [loop]
                 for (int localLayerIndex = 0; localLayerIndex < MAX_DEPTH_LAYER_COUNT + 2; localLayerIndex++)
@@ -253,51 +257,100 @@ Shader "Hidden/ScreenSpaceVolumetricFog"
                         {
                             float visibleBandMid = (visibleBandStart + visibleBandEnd) * 0.5;
                             float layerFovScale = LayerFovScale(visibleBandMid);
-                            float3 worldViewDir = GetLayerWorldViewDirection(screenUV, layerFovScale, localLayerIndex);
+                            float3 worldViewDir = GetLayerWorldViewDirection(resolved.screenUV, layerFovScale, localLayerIndex);
 
                             float nearRead = DebugLayerRead(worldViewDir, layerIndex, false);
                             float farRead = DebugLayerRead(worldViewDir, layerIndex, true);
                             float layer0Depth = rawBandStart + nearRead * layerScale;
                             float layer1Depth = rawBandStart + farRead * layerScale;
                             float clippedStartDepth = max(layer0Depth, 0.0);
-                            float clippedEndDepth = min(min(layer1Depth, sceneDepth01), 1.0);
+                            float clippedEndDepth = min(min(layer1Depth, resolved.sceneDepth01), 1.0);
                             float bandFogAmount = max(clippedEndDepth - clippedStartDepth, 0.0);
                             if (bandFogAmount > 1e-5)
                                 bandFogAmount *= GroundPlaneSpanAttenuation(cameraWorldViewDir, clippedStartDepth, clippedEndDepth);
 
-                            fogAmount += bandFogAmount;
+                            resolved.fogAmount += bandFogAmount;
 
-                            if (bandFogAmount > 1e-5 && !debugReadCaptured)
+                            if (bandFogAmount > 1e-5 && resolved.debugReadCaptured < 0.5)
                             {
-                                //debugDepth = saturate(layer1Depth - layer0Depth);
-                                debugDepth = saturate(farRead - nearRead);
-                                debugReadCaptured = true;
+                                resolved.debugDepth = saturate(farRead - nearRead);
+                                resolved.debugReadCaptured = 1.0;
                             }
                         }
                     }
                 }
 
-                float3 sceneColor = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, screenUV).rgb;
-                float3 debugColor;
-                if (saturate(_DebugFog) > 0.5)
-                {
-                    if (!debugReadCaptured)
-                    {
-                        debugColor = sceneColor;
-                    }
-                    else
-                    {
-                        debugColor = debugDepth.xxx;
-                    }
-                }
-                else
-                {
-                    float fogAlpha = saturate(fogAmount * (_FogColor.a * 4.0));
-                    debugColor = lerp(sceneColor, _FogColor.rgb, fogAlpha);
-                }
-
-                return half4(debugColor, 1.0);
+                return resolved;
             }
+
+            float3 ResolveFogColor(FogResolve resolved, float fogAlpha)
+            {
+                return lerp(resolved.sceneColor, _FogColor.rgb, saturate(fogAlpha));
+            }
+
+            float3 ResolveCurrentFogColor(FogResolve resolved)
+            {
+                if (saturate(_DebugFog) > 0.5)
+                    return resolved.debugReadCaptured > 0.5 ? resolved.debugDepth.xxx : resolved.sceneColor;
+
+                return ResolveFogColor(resolved, ResolveFogAlpha(resolved.fogAmount));
+            }
+
+            half4 Frag(Varyings input) : SV_Target
+            {
+                FogResolve resolved = ResolveFog(input);
+                return half4(ResolveCurrentFogColor(resolved), 1.0);
+            }
+
+            struct TemporalOutput
+            {
+                half4 color : SV_Target0;
+                half4 history : SV_Target1;
+            };
+
+            TemporalOutput FragTemporal(Varyings input)
+            {
+                FogResolve resolved = ResolveFog(input);
+
+                float currentFogAlpha = ResolveFogAlpha(resolved.fogAmount);
+                float4 previousHistory = SAMPLE_TEXTURE2D_X(_DirectTemporalHistoryTexture, sampler_LinearClamp, UnityStereoTransformScreenSpaceTex(resolved.screenUV));
+                float depthConfidence = saturate(1.0 - abs(previousHistory.g - resolved.sceneDepth01) * 32.0);
+                float historyBlend = saturate(_TemporalHistoryBlend) * depthConfidence;
+                float previousFogAlpha = min(previousHistory.r, currentFogAlpha + 0.08);
+                float temporalFogAlpha = lerp(currentFogAlpha, previousFogAlpha, historyBlend);
+
+                TemporalOutput output;
+                output.color = half4(ResolveFogColor(resolved, temporalFogAlpha), 1.0);
+                output.history = half4(temporalFogAlpha, resolved.sceneDepth01, 0.0, 1.0);
+                return output;
+            }
+        ENDHLSL
+
+        Pass
+        {
+            Name "ScreenSpaceVolumetricFog"
+            ZWrite Off
+            ZTest Always
+            Cull Off
+            Blend Off
+
+            HLSLPROGRAM
+            #pragma vertex Vert
+            #pragma fragment Frag
+            ENDHLSL
+        }
+
+        Pass
+        {
+            Name "ScreenSpaceVolumetricFogTemporal"
+            ZWrite Off
+            ZTest Always
+            Cull Off
+            Blend Off
+
+            HLSLPROGRAM
+            #pragma vertex Vert
+            #pragma fragment FragTemporal
             ENDHLSL
         }
     }

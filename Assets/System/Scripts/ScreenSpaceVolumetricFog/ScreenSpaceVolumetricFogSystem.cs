@@ -1,12 +1,13 @@
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
-using MassiveHadronLtd;
 
-public class ScreenSpaceVolumetricFogSystem : MonoBehaviour, IDirectCommandProvider, IDirectDepthTextureProvider
+public class ScreenSpaceVolumetricFogSystem : MonoBehaviour
 {
     private const int MaxDepthLayerCount = 8;
     private const int MaxVisibleDepthLayerCount = MaxDepthLayerCount + 2;
+    protected const int FogPass = 0;
+    protected const int TemporalFogPass = 1;
     private const float FogAnimationSpeedScale = 0.4f;
     private const float ConvectionSpeedScale = 0.1f;
 
@@ -26,10 +27,10 @@ public class ScreenSpaceVolumetricFogSystem : MonoBehaviour, IDirectCommandProvi
     [SerializeField] private Color fogColor = new Color(1.0f, 1.0f, 1.0f, 0.5f);
     [SerializeField, Min(0.0f)] private float fogFarPlane;
     [SerializeField, Min(0.0f)] private float groundPlaneFalloff;
-    [SerializeField, Range(0.0f, 1.0f)] private float fogAnimationSpeed;
-    [SerializeField, Range(-1.0f, 1.0f)] private float convection;
+    [SerializeField, Range(0.0f, 1.0f)] private float fogAnimationSpeed = 0.3f;
+    [SerializeField, Range(-1.0f, 1.0f)] private float convection = 0.25f;
     [SerializeField, Range(1, 8)] private int depthLayerCount = 2;
-    [SerializeField] private bool debugFog = true;
+    [SerializeField] private bool debugFog = false;
 
     private Material fogMaterial;
     private Camera trackedDepthCamera;
@@ -45,6 +46,9 @@ public class ScreenSpaceVolumetricFogSystem : MonoBehaviour, IDirectCommandProvi
     private readonly Quaternion[] remappedLayerRotations = new Quaternion[MaxVisibleDepthLayerCount];
     private readonly Quaternion[] layerRotations = new Quaternion[MaxVisibleDepthLayerCount];
     private readonly Vector4[] layerRotationCompensationVectors = new Vector4[MaxVisibleDepthLayerCount];
+
+    protected Material FogMaterial => fogMaterial;
+    protected bool DebugFogEnabled => debugFog;
 
     private void Awake()
     {
@@ -82,7 +86,15 @@ public class ScreenSpaceVolumetricFogSystem : MonoBehaviour, IDirectCommandProvi
         if (camera == null || Mathf.Abs(convection) <= 1e-6f)
             return Vector3.zero;
 
-        return Vector3.up * fogFarPlane * -convection * ConvectionSpeedScale * Time.deltaTime;
+        return Vector3.up * ResolveFogFarPlane(camera) * -convection * ConvectionSpeedScale * Time.deltaTime;
+    }
+
+    protected float ResolveFogFarPlane(Camera camera)
+    {
+        if (fogFarPlane > 1e-6f)
+            return fogFarPlane;
+
+        return camera != null ? Mathf.Max(camera.farClipPlane, 1e-5f) : 1.0f;
     }
 
     [ContextMenu("Reset Camera Depth Origin")]
@@ -130,7 +142,7 @@ public class ScreenSpaceVolumetricFogSystem : MonoBehaviour, IDirectCommandProvi
             lastCameraWorldPosition = currentCameraPosition;
         }
 
-        float fogRange = Mathf.Max(fogFarPlane, 1e-5f);
+        float fogRange = ResolveFogFarPlane(camera);
         // Match the shader's layer compression so one fog-range traversal
         // advances through one full pseudo-depth unit per active layer pair.
         float motionScale = Mathf.Max(depthLayerCount, 1) / fogRange;
@@ -178,9 +190,9 @@ public class ScreenSpaceVolumetricFogSystem : MonoBehaviour, IDirectCommandProvi
         return -(int)Mathf.Floor(resolvedPseudoDepth) - 1;
     }
 
-    private Quaternion GetStrafeRotationDelta(Vector3 cameraSpaceDelta)
+    private Quaternion GetStrafeRotationDelta(Vector3 cameraSpaceDelta, Camera camera)
     {
-        float fogRange = Mathf.Max(fogFarPlane, 1e-5f);
+        float fogRange = ResolveFogFarPlane(camera);
 
         float yawDegrees = Mathf.Atan2(cameraSpaceDelta.x, fogRange) * Mathf.Rad2Deg;
         float pitchDegrees = -Mathf.Atan2(cameraSpaceDelta.y, fogRange) * Mathf.Rad2Deg;
@@ -238,7 +250,7 @@ public class ScreenSpaceVolumetricFogSystem : MonoBehaviour, IDirectCommandProvi
             Vector3 syntheticCameraPosition = currentCameraPosition + GetConvectionWorldDelta(camera);
             Vector3 worldDelta = syntheticCameraPosition - lastRotationCameraWorldPosition;
             Vector3 cameraSpaceDelta = Quaternion.Inverse(currentCameraRotation) * worldDelta;
-            Quaternion strafeDelta = GetStrafeRotationDelta(cameraSpaceDelta);
+            Quaternion strafeDelta = GetStrafeRotationDelta(cameraSpaceDelta, camera);
             Quaternion cameraDelta = Quaternion.Inverse(lastCameraRotation) * currentCameraRotation;
             if (cameraDelta.w < 0.0f)
                 cameraDelta = new Quaternion(-cameraDelta.x, -cameraDelta.y, -cameraDelta.z, -cameraDelta.w);
@@ -265,7 +277,7 @@ public class ScreenSpaceVolumetricFogSystem : MonoBehaviour, IDirectCommandProvi
         fogMaterial.SetVectorArray(LayerRotationCompensationsId, layerRotationCompensationVectors);
     }
 
-    private void ApplyMaterialParameters(Camera camera)
+    protected virtual void ApplyMaterialParameters(Camera camera)
     {
         fogSeedOffset = Mathf.Repeat(fogSeedOffset + Time.deltaTime * fogAnimationSpeed * FogAnimationSpeedScale, 1024.0f);
 
@@ -280,33 +292,38 @@ public class ScreenSpaceVolumetricFogSystem : MonoBehaviour, IDirectCommandProvi
         fogMaterial.SetFloat(DebugFogId, debugFog ? 1.0f : 0.0f);
     }
 
-    public bool HasCommands(RenderPassEvent evt)
+    public virtual bool HasCommands(RenderPassEvent evt)
     {
         return isActiveAndEnabled
             && evt == renderPassEvent
             && fogMaterial != null;
     }
 
-    public bool RequiresColorTexture(RenderPassEvent evt)
+    public virtual bool RequiresColorTexture(RenderPassEvent evt)
     {
         return evt == renderPassEvent;
     }
 
-    public bool RequiresActiveDepthTexture(RenderPassEvent evt)
+    public virtual bool RequiresActiveDepthTexture(RenderPassEvent evt)
     {
         return evt == renderPassEvent;
     }
 
-    public void ExecuteCommands(RenderPassEvent evt, RasterCommandBuffer commandBuffer, Camera camera)
+    protected virtual int GetMaterialPassIndex(RenderPassEvent evt)
+    {
+        return FogPass;
+    }
+
+    public virtual void ExecuteCommands(RenderPassEvent evt, RasterCommandBuffer commandBuffer, Camera camera)
     {
         if (!HasCommands(evt))
             return;
 
         ApplyMaterialParameters(camera);
-        commandBuffer.DrawProcedural(Matrix4x4.identity, fogMaterial, 0, MeshTopology.Triangles, 3, 1);
+        commandBuffer.DrawProcedural(Matrix4x4.identity, fogMaterial, GetMaterialPassIndex(evt), MeshTopology.Triangles, 3, 1);
     }
 
-    private void OnDestroy()
+    protected virtual void OnDestroy()
     {
         if (fogMaterial == null)
             return;
@@ -317,6 +334,7 @@ public class ScreenSpaceVolumetricFogSystem : MonoBehaviour, IDirectCommandProvi
             DestroyImmediate(fogMaterial);
     }
 }
+
 
 
 

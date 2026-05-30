@@ -9,9 +9,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 950962774191c194aa0e9319910247e7, type: 3}
-  m_Name: CommandBufferDirectRenderFeature
-  m_EditorClassIdentifier: Assembly-CSharp::MassiveHadronLtd.CommandBufferDirectRenderFeature
+  m_Script: {fileID: 11500000, guid: 1a67d992bf4f4ab7aa2b7607efe506b8, type: 3}
+  m_Name: ScreenSpaceVolumetricFogRenderFeature
+  m_EditorClassIdentifier: Assembly-CSharp::ScreenSpaceVolumetricFogRenderFeature
   m_Active: 1
 --- !u!114 &-5186205543463430786
 MonoBehaviour:
