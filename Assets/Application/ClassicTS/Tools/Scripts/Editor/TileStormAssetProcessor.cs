@@ -28,6 +28,10 @@ namespace ClassicTilestorm.Editor
 			// TODO: Remove the need for Readable Meshes
 			if (!importer.isReadable)
 				importer.isReadable = true;
+
+			// Keep imported model vertices exact for tile seam alignment.
+			if (importer.meshCompression != ModelImporterMeshCompression.Off)
+				importer.meshCompression = ModelImporterMeshCompression.Off;
 		}
 
 		void OnPostprocessModel(GameObject gameObject)
