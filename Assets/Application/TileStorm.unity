@@ -698,9 +698,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 1146321623}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5e4ad8ac7f8a4ab4b8c4fd855e19f03b, type: 3}
+  m_Script: {fileID: 11500000, guid: e76c56808f13c6f429c4e59280be6618, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ScreenSpaceVolumetricFogTemporalSystem
+  m_EditorClassIdentifier: Assembly-CSharp::ScreenSpaceVolumetricFogSystem
   renderPassEvent: 600
   fogColor: {r: 1, g: 1, b: 1, a: 0.5}
   fogFarPlane: 10
@@ -709,7 +709,10 @@ MonoBehaviour:
   convection: 0.25
   depthLayerCount: 2
   debugFog: 0
-  temporalAccumulation: 0.82
+  temporalAccumulation: 0.6
+  resetTemporalOnCameraCut: 1
+  temporalCutDistanceFraction: 0.2
+  temporalCutRotationDegrees: 15
 --- !u!1 &1555382761
 GameObject:
   m_ObjectHideFlags: 0

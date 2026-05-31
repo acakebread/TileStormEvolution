@@ -1,5 +1,5 @@
 using UnityEngine;
 
-public class ScreenSpaceVolumetricFogTest : ScreenSpaceVolumetricFogTemporalSystem
+public class ScreenSpaceVolumetricFogTest : ScreenSpaceVolumetricFogSystem
 {
 }
