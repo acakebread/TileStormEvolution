@@ -21,7 +21,6 @@ namespace MassiveHadronLtd.EditorTools
 
 			var targetState = !GetMaximizeOnPlay(gameView);
 			SetMaximizeOnPlay(gameView, targetState);
-			EditorApplication.ExecuteMenuItem("Window/General/Game");
 			gameView.maximized = targetState;
 			gameView.Focus();
 		}
@@ -34,9 +33,16 @@ namespace MassiveHadronLtd.EditorTools
 			if (GameViewType == null)
 				return null;
 
-			return Resources.FindObjectsOfTypeAll(GameViewType)
+			var existing = Resources.FindObjectsOfTypeAll(GameViewType)
 				.OfType<EditorWindow>()
+				.Where(window => window != null && window.GetType() == GameViewType)
 				.FirstOrDefault();
+
+			if (existing != null)
+				return existing;
+
+			var opened = EditorWindow.GetWindow(GameViewType, false, "Game", true);
+			return opened != null && opened.GetType() == GameViewType ? opened : null;
 		}
 
 		private static bool GetMaximizeOnPlay(EditorWindow gameView)
